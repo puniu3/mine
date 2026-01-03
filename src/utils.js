@@ -314,19 +314,28 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
             const firstHeight = segmentHeights[0];
 
             if (firstHeight !== previousHeight) {
+                const maxSlopeStep = 1; // 45-degree maximum grade (1 height per tile)
+
                 if (firstHeight > previousHeight) {
-                    const slopeLength = Math.min(8, length);
-                    for (let i = 0; i < slopeLength; i++) {
-                        const t = (i + 1) / slopeLength;
-                        segmentHeights[i] = Math.round(lerp(previousHeight, segmentHeights[i], t));
+                    let lastHeight = previousHeight;
+                    for (let i = 0; i < length; i++) {
+                        const target = segmentHeights[i];
+                        const delta = clamp(target - lastHeight, -maxSlopeStep, maxSlopeStep);
+                        const adjustedHeight = lastHeight + delta;
+                        segmentHeights[i] = adjustedHeight;
+                        lastHeight = adjustedHeight;
                     }
                 } else {
-                    const slopeLength = Math.min(8, x - lastSegmentStart);
-                    const prevSlice = heights.slice(x - slopeLength, x);
-                    for (let i = 0; i < slopeLength; i++) {
-                        const t = (i + 1) / slopeLength;
-                        const idx = x - slopeLength + i;
-                        heights[idx] = Math.round(lerp(prevSlice[i], firstHeight, t));
+                    const available = x - lastSegmentStart;
+                    const prevSlice = heights.slice(x - available, x);
+                    let nextHeight = firstHeight;
+                    for (let i = prevSlice.length - 1; i >= 0; i--) {
+                        const target = prevSlice[i];
+                        const delta = clamp(target - nextHeight, -maxSlopeStep, maxSlopeStep);
+                        const adjustedHeight = nextHeight + delta;
+                        const idx = x - prevSlice.length + i;
+                        heights[idx] = adjustedHeight;
+                        nextHeight = adjustedHeight;
                     }
                 }
             }
