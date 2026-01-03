@@ -1,140 +1,48 @@
-# Block Craft 2D XL - Project Structure
+# Block Craft 2D XL
 
-Source code structure for a 2D Minecraft clone game.
+A 2D Minecraft-inspired sandbox that runs directly in the browser. Open `index.html` in a modern browser (or host it via any static server) to play.
 
-## Directory Structure
-
+## Directory layout
 ```
 mine/
-├── index.html    # Main HTML file (entry point)
-├── style.css     # Stylesheet
-├── utils.js      # Pure function utilities
-├── audio.js      # Audio module
-├── main.js       # Main game logic
-└── README.md     # This file
+├── index.html          # Entry point wiring the canvas and UI
+├── styles/
+│   └── style.css       # Global layout and responsive styles
+├── src/
+│   ├── actions.js      # Pointer-driven block placement and destruction
+│   ├── audio.js        # Web Audio API helpers for jump, mining, and UI sounds
+│   ├── constants.js    # Block IDs, physics constants, and block metadata
+│   ├── crafting.js     # Crafting modal UI and recipe validation
+│   ├── fireworks.js    # Firework particle effects for celebration moments
+│   ├── input.js        # Keyboard, mouse, and touch bindings
+│   ├── inventory.js    # Hotbar UI state and inventory bookkeeping
+│   ├── main.js         # Game loop, player controller, and initialization hub
+│   ├── texture_gen.js  # Procedural block textures rendered on canvas
+│   ├── utils.js        # Math helpers, collision checks, and visibility math
+│   └── world.js        # World generation and block storage
+└── README.md
 ```
 
-## File Descriptions
+## Module responsibilities
+- **index.html**: Declares the canvas and UI scaffolding and loads `src/main.js` as an ES module.
+- **styles/style.css**: Defines the pixel-art viewport, hotbar layout, and touch controls.
+- **src/main.js**: Composes all modules, runs `update` / `draw` loops, and coordinates player movement.
+- **src/constants.js**: Centralizes block identifiers, physics values, and per-block properties.
+- **src/utils.js**: Provides pure helpers for coordinate transforms, collision testing, and visible tile ranges.
+- **src/world.js**: Implements the `World` class for terrain creation, block queries, and adjacency checks.
+- **src/inventory.js**: Tracks item counts, hotbar selection, and crafting consumption logic.
+- **src/input.js**: Maps keyboard, pointer, and touch input to in-game actions.
+- **src/actions.js**: Encapsulates placement and destruction rules using reach and neighbor checks.
+- **src/crafting.js**: Manages the crafting modal lifecycle and recipe validation.
+- **src/texture_gen.js**: Generates procedural textures per block type on a canvas.
+- **src/fireworks.js**: Updates and renders celebratory firework particles.
+- **src/audio.js**: Produces jump, mining, and UI effects and exposes a shared `SoundManager`.
 
-### index.html
-- **Role**: Application entry point
-- **Contents**:
-  - HTML structure (Canvas, UI elements, start screen)
-  - External CSS/JS file loading
-  - Mobile touch control DOM elements
+## Loading order and build
+The game is shipped as ES modules with no bundling step. `index.html` imports `src/main.js`, which pulls in utilities, constants, world/player logic, UI, input, audio, and effects. Loading via `file://` works in most browsers; a simple static server is recommended for consistent module caching behavior.
 
-### style.css
-- **Role**: All visual style definitions
-- **Contents**:
-  - Game canvas styles (pixelated rendering)
-  - Start screen overlay
-  - Hotbar (item slot) UI
-  - Mobile touch controls (D-Pad, jump button)
-  - Message log display
+## Commenting guidelines
+All source comments must be written in English and optimized for AI readability (short, explicit reasoning and minimal ambiguity). Favor declarative statements over narrative notes so automated tools can interpret intent.
 
-### utils.js
-- **Role**: Pure function utilities (no side effects, easily testable)
-- **JSDoc Type Definitions**:
-  - `Rectangle`: Rectangle type `{x, y, w, h}`
-  - `Point`: Coordinate type `{x, y}`
-  - `TileCoord`: Tile coordinate type `{tx, ty}`
-- **Function List**:
-
-| Category | Function | Description |
-|----------|----------|-------------|
-| Math | `clamp(value, min, max)` | Clamp value within range |
-| Math | `lerp(a, b, t)` | Linear interpolation |
-| Math | `distance(x1, y1, x2, y2)` | Distance between 2 points |
-| Coord | `worldToTile(worldX, worldY, tileSize)` | World → Tile coordinates |
-| Coord | `tileToWorld(tileX, tileY, tileSize)` | Tile → World coordinates |
-| Coord | `coordToIndex(x, y, width, height)` | 2D → 1D array index |
-| Coord | `screenToWorld(screenX, screenY, cameraX, cameraY)` | Screen → World coordinates |
-| Collision | `rectsIntersect(rect1, rect2)` | Rectangle intersection test |
-| Collision | `pointInRect(px, py, rect)` | Point in rectangle test |
-| Collision | `isWithinReach(px, py, centerX, centerY, reach)` | Reach range test |
-| Block | `isBlockSolid(blockType, blockProps)` | Solid block check |
-| Block | `isBlockTransparent(blockType, blockProps)` | Transparent block check |
-| Block | `isBlockBreakable(blockType, blockProps)` | Breakable check |
-| Block | `getBlockDrop(blockType, blockProps)` | Get drop item |
-| Block | `getBlockMaterialType(blockType, blockProps)` | Get material type |
-| Terrain | `calculateTerrainHeight(x, baseHeight)` | Calculate terrain height |
-| Terrain | `generateTerrainHeights(width, baseHeight)` | Generate height array |
-| Camera | `smoothCamera(currentCam, targetCam, smoothing)` | Smooth follow |
-| Camera | `clampCamera(cameraPos, minPos, worldSize, viewportSize)` | Clamp camera position |
-| Render | `calculateVisibleTileRange(...)` | Calculate visible tile range |
-| Neighbor | `hasAdjacentBlock(tx, ty, getBlockFn, airBlockId)` | Adjacent block check |
-
-### audio.js
-- **Role**: Sound engine (using Web Audio API)
-- **Contents**:
-  - `SoundManager` class
-    - `init()`: Initialize AudioContext
-    - `playJump()`: Jump sound effect (square wave)
-    - `playDig(type)`: Dig sound effect (noise + filter)
-    - `playPop()`: UI selection sound effect
-  - Global instance `sounds`
-
-### main.js
-- **Role**: Core game logic
-- **Dependencies**: `utils.js`, `audio.js`
-- **Contents**:
-  - **Constants & Config**: Tile size, world size, physics constants
-  - **Block Definitions**: `BLOCKS` (types), `BLOCK_PROPS` (properties)
-  - **Inventory System**: Item management, UI updates
-  - **Texture Generation**: Procedural textures (Canvas 2D)
-  - **Game Classes**:
-    - `World`: World generation, block management
-    - `Player`: Player movement, collision detection, rendering
-  - **Main Loop**: `init()`, `update()`, `draw()`, `loop()`
-  - **Input Handling**: Keyboard, mouse, touch events
-
-## Dependencies
-
-```
-index.html
-    ├── style.css (styles)
-    ├── utils.js (loaded first - pure function definitions)
-    ├── audio.js (sounds instance definition)
-    └── main.js (depends on utils.js, audio.js)
-```
-
-## Architecture Design
-
-```
-┌─────────────────────────────────────────────────────┐
-│                    index.html                        │
-│                   (Entry Point)                      │
-└─────────────────────────────────────────────────────┘
-                         │
-         ┌───────────────┼───────────────┐
-         ▼               ▼               ▼
-┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-│  style.css  │  │  utils.js   │  │  audio.js   │
-│  (Styles)   │  │(Pure Funcs) │  │  (Sound)    │
-└─────────────┘  └──────┬──────┘  └──────┬──────┘
-                        │                │
-                        ▼                ▼
-               ┌─────────────────────────────┐
-               │          main.js            │
-               │       (Game Logic)          │
-               │  ┌─────────┐ ┌─────────┐   │
-               │  │  World  │ │ Player  │   │
-               │  └─────────┘ └─────────┘   │
-               └─────────────────────────────┘
-```
-
-## Tech Stack
-
-- **HTML5 Canvas**: Game rendering
-- **Web Audio API**: Sound generation
-- **Vanilla JavaScript**: No framework
-- **CSS3**: UI & responsive design
-- **JSDoc**: Type definition documentation
-
-## Game Features
-
-1. **World Generation**: Procedural terrain generation (sine wave based)
-2. **Block Operations**: Break & place (with reach limit)
-3. **Inventory**: Item management via hotbar
-4. **Auto-Climb**: Automatic elevation when placing block at feet
-5. **Mobile Support**: Touch controls
+## Playing locally
+Open `index.html` from a local static server or directly in the browser. Press the start button to generate the world, then explore with the hotbar, crafting UI, fireworks, and auto-climb movement.
