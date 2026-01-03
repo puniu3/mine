@@ -186,6 +186,13 @@ let cameraX = 0, cameraY = 0;
 let input;
 let actions;
 const tntTimers = [];
+let dayNightTimer = 0;
+
+const DAY_LENGTH_MS = 6 * 60 * 1000; // 6 minutes per full cycle
+const SKY_COLORS = {
+    day: { top: '#87CEEB', bottom: '#E0F7FA' },
+    night: { top: '#0b1d3a', bottom: '#132b4f' }
+};
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -197,6 +204,37 @@ function resize() {
     }
 }
 window.addEventListener('resize', resize);
+
+function lerpColor(a, b, t) {
+    const ar = parseInt(a.slice(1, 3), 16);
+    const ag = parseInt(a.slice(3, 5), 16);
+    const ab = parseInt(a.slice(5, 7), 16);
+    const br = parseInt(b.slice(1, 3), 16);
+    const bg = parseInt(b.slice(3, 5), 16);
+    const bb = parseInt(b.slice(5, 7), 16);
+    const r = Math.round(ar + (br - ar) * t).toString(16).padStart(2, '0');
+    const g = Math.round(ag + (bg - ag) * t).toString(16).padStart(2, '0');
+    const bVal = Math.round(ab + (bb - ab) * t).toString(16).padStart(2, '0');
+    return `#${r}${g}${bVal}`;
+}
+
+function getDaylightStrength() {
+    const progress = (dayNightTimer % DAY_LENGTH_MS) / DAY_LENGTH_MS;
+    const angle = progress * Math.PI * 2;
+    return Math.max(0, Math.cos(angle)); // 1 at noon, 0 at dusk/dawn, 0 at midnight
+}
+
+function getSkyColors() {
+    const daylight = getDaylightStrength();
+    const top = lerpColor(SKY_COLORS.night.top, SKY_COLORS.day.top, daylight);
+    const bottom = lerpColor(SKY_COLORS.night.bottom, SKY_COLORS.day.bottom, daylight);
+    const overlayAlpha = 0.55 * (1 - daylight);
+    return { top, bottom, overlayAlpha };
+}
+
+function updateDayNight(dt) {
+    dayNightTimer = (dayNightTimer + dt) % DAY_LENGTH_MS;
+}
 
 function init() {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
@@ -254,6 +292,7 @@ function init() {
 
 function update(dt) {
     if (!player) return;
+    updateDayNight(dt);
     player.update(input, dt);
 
     // Camera with smooth following
@@ -320,9 +359,10 @@ function explodeTNT(x, y) { // x, y are tile coordinates
 
 function draw() {
     if (!world) return;
+    const { top: skyTop, bottom: skyBottom, overlayAlpha } = getSkyColors();
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, "#87CEEB");
-    gradient.addColorStop(1, "#E0F7FA");
+    gradient.addColorStop(0, skyTop);
+    gradient.addColorStop(1, skyBottom);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -363,6 +403,11 @@ function draw() {
         ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
     ctx.restore();
+
+    if (overlayAlpha > 0) {
+        ctx.fillStyle = `rgba(6, 12, 26, ${overlayAlpha})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
 }
 
