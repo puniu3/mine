@@ -82,6 +82,8 @@ export class World {
             }
         }
 
+        this.generateCaves(heights);
+
         // Scatter Workbenches on the surface
         for (let x = 10; x < this.width - 10; x += 50 + Math.floor(Math.random() * 20)) {
             const h = heights[x];
@@ -136,6 +138,49 @@ export class World {
         if (biome === BIOMES.DESERT) return shallow ? BLOCKS.SAND : BLOCKS.STONE;
         if (biome === BIOMES.MOUNTAIN) return BLOCKS.STONE;
         return BLOCKS.DIRT;
+    }
+
+    generateCaves(heights) {
+        const caveWalkers = Math.max(3, Math.floor(this.width / 35));
+        for (let i = 0; i < caveWalkers; i++) {
+            const startX = 5 + Math.floor(Math.random() * (this.width - 10));
+            const surface = heights[startX];
+            const minY = surface + 8;
+            const maxY = this.height - 6;
+            if (minY >= maxY) continue;
+
+            let x = startX;
+            let y = minY + Math.floor(Math.random() * (maxY - minY));
+            const steps = 30 + Math.floor(Math.random() * 40);
+
+            for (let step = 0; step < steps; step++) {
+                this.carveCavePocket(x, y);
+
+                x += Math.floor(Math.random() * 3) - 1;
+                y += Math.floor(Math.random() * 3) - 1;
+
+                if (x < 3 || x >= this.width - 3) x = Math.max(3, Math.min(this.width - 4, x));
+                const surfaceAtX = heights[Math.max(0, Math.min(this.width - 1, x))];
+                const bottomLimit = this.height - 5;
+                const topLimit = surfaceAtX + 6;
+                y = Math.max(topLimit, Math.min(bottomLimit, y));
+            }
+        }
+    }
+
+    carveCavePocket(cx, cy) {
+        const radius = 2 + Math.floor(Math.random() * 3);
+        for (let x = -radius; x <= radius; x++) {
+            for (let y = -radius; y <= radius; y++) {
+                if (x * x + y * y <= radius * radius) {
+                    const worldX = cx + x;
+                    const worldY = cy + y;
+                    if (worldY < this.height - 1) {
+                        this.setBlock(worldX, worldY, BLOCKS.AIR);
+                    }
+                }
+            }
+        }
     }
 
     generateTree(x, y) {
