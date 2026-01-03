@@ -11,7 +11,7 @@ HOTBAR_ITEMS.forEach(id => inventory[id] = 0);
 inventory[BLOCKS.DIRT] = 10;
 
 // State for selected item
-let selectedHotbarIndex = 1;
+let selectedHotbarIndex = 0;
 export function getSelectedBlockId() {
     return HOTBAR_ITEMS[selectedHotbarIndex];
 }
