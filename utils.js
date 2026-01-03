@@ -38,7 +38,7 @@
  * @param {number} max - Maximum value
  * @returns {number} Clamped value
  */
-function clamp(value, min, max) {
+export function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
@@ -49,7 +49,7 @@ function clamp(value, min, max) {
  * @param {number} t - Interpolation factor (0.0 ~ 1.0)
  * @returns {number} Interpolated value
  */
-function lerp(a, b, t) {
+export function lerp(a, b, t) {
     return a + (b - a) * t;
 }
 
@@ -61,7 +61,7 @@ function lerp(a, b, t) {
  * @param {number} y2 - Point 2 Y coordinate
  * @returns {number} Distance between two points
  */
-function distance(x1, y1, x2, y2) {
+export function distance(x1, y1, x2, y2) {
     return Math.hypot(x2 - x1, y2 - y1);
 }
 
@@ -76,7 +76,7 @@ function distance(x1, y1, x2, y2) {
  * @param {number} tileSize - Tile size (pixels)
  * @returns {TileCoord} Tile coordinates
  */
-function worldToTile(worldX, worldY, tileSize) {
+export function worldToTile(worldX, worldY, tileSize) {
     return {
         tx: Math.floor(worldX / tileSize),
         ty: Math.floor(worldY / tileSize)
@@ -90,7 +90,7 @@ function worldToTile(worldX, worldY, tileSize) {
  * @param {number} tileSize - Tile size (pixels)
  * @returns {Point} World coordinates
  */
-function tileToWorld(tileX, tileY, tileSize) {
+export function tileToWorld(tileX, tileY, tileSize) {
     return {
         x: tileX * tileSize,
         y: tileY * tileSize
@@ -105,7 +105,7 @@ function tileToWorld(tileX, tileY, tileSize) {
  * @param {number} height - Map height
  * @returns {number} Array index (-1 if out of bounds)
  */
-function coordToIndex(x, y, width, height) {
+export function coordToIndex(x, y, width, height) {
     if (x < 0 || x >= width || y < 0 || y >= height) {
         return -1;
     }
@@ -120,7 +120,7 @@ function coordToIndex(x, y, width, height) {
  * @param {number} cameraY - Camera Y position
  * @returns {Point} World coordinates
  */
-function screenToWorld(screenX, screenY, cameraX, cameraY) {
+export function screenToWorld(screenX, screenY, cameraX, cameraY) {
     return {
         x: screenX + cameraX,
         y: screenY + cameraY
@@ -137,7 +137,7 @@ function screenToWorld(screenX, screenY, cameraX, cameraY) {
  * @param {Rectangle} rect2 - Rectangle 2
  * @returns {boolean} True if intersecting
  */
-function rectsIntersect(rect1, rect2) {
+export function rectsIntersect(rect1, rect2) {
     return (
         rect1.x < rect2.x + rect2.w &&
         rect1.x + rect1.w > rect2.x &&
@@ -153,7 +153,7 @@ function rectsIntersect(rect1, rect2) {
  * @param {Rectangle} rect - Rectangle
  * @returns {boolean} True if inside rectangle
  */
-function pointInRect(px, py, rect) {
+export function pointInRect(px, py, rect) {
     return (
         px >= rect.x &&
         px < rect.x + rect.w &&
@@ -171,7 +171,7 @@ function pointInRect(px, py, rect) {
  * @param {number} reach - Reach distance
  * @returns {boolean} True if within reach
  */
-function isWithinReach(px, py, centerX, centerY, reach) {
+export function isWithinReach(px, py, centerX, centerY, reach) {
     return distance(px, py, centerX, centerY) <= reach;
 }
 
@@ -185,7 +185,7 @@ function isWithinReach(px, py, centerX, centerY, reach) {
  * @param {Object.<number, {solid?: boolean}>} blockProps - Block properties dictionary
  * @returns {boolean} True if solid
  */
-function isBlockSolid(blockType, blockProps) {
+export function isBlockSolid(blockType, blockProps) {
     const props = blockProps[blockType];
     return props && props.solid === true;
 }
@@ -196,7 +196,7 @@ function isBlockSolid(blockType, blockProps) {
  * @param {Object.<number, {transparent?: boolean}>} blockProps - Block properties dictionary
  * @returns {boolean} True if transparent
  */
-function isBlockTransparent(blockType, blockProps) {
+export function isBlockTransparent(blockType, blockProps) {
     const props = blockProps[blockType];
     return props && props.transparent === true;
 }
@@ -207,7 +207,7 @@ function isBlockTransparent(blockType, blockProps) {
  * @param {Object.<number, {unbreakable?: boolean}>} blockProps - Block properties dictionary
  * @returns {boolean} True if breakable
  */
-function isBlockBreakable(blockType, blockProps) {
+export function isBlockBreakable(blockType, blockProps) {
     const props = blockProps[blockType];
     return props && !props.unbreakable;
 }
@@ -218,7 +218,7 @@ function isBlockBreakable(blockType, blockProps) {
  * @param {Object.<number, {drop?: number}>} blockProps - Block properties dictionary
  * @returns {number} Dropped block type ID
  */
-function getBlockDrop(blockType, blockProps) {
+export function getBlockDrop(blockType, blockProps) {
     const props = blockProps[blockType];
     return (props && props.drop !== undefined) ? props.drop : blockType;
 }
@@ -229,7 +229,7 @@ function getBlockDrop(blockType, blockProps) {
  * @param {Object.<number, {type?: string}>} blockProps - Block properties dictionary
  * @returns {string|undefined} Block material type string
  */
-function getBlockMaterialType(blockType, blockProps) {
+export function getBlockMaterialType(blockType, blockProps) {
     const props = blockProps[blockType];
     return props ? props.type : undefined;
 }
@@ -244,7 +244,7 @@ function getBlockMaterialType(blockType, blockProps) {
  * @param {number} baseHeight - Base height
  * @returns {number} Terrain height (Y coordinate)
  */
-function calculateTerrainHeight(x, baseHeight) {
+export function calculateTerrainHeight(x, baseHeight) {
     const h = Math.sin(x / 30) * 12 + Math.sin(x / 8) * 3;
     return Math.floor(baseHeight + h);
 }
@@ -255,7 +255,7 @@ function calculateTerrainHeight(x, baseHeight) {
  * @param {number} baseHeight - Base height
  * @returns {number[]} Height array for each X coordinate
  */
-function generateTerrainHeights(width, baseHeight) {
+export function generateTerrainHeights(width, baseHeight) {
     const heights = [];
     for (let x = 0; x < width; x++) {
         heights.push(calculateTerrainHeight(x, baseHeight));
@@ -274,7 +274,7 @@ function generateTerrainHeights(width, baseHeight) {
  * @param {number} smoothing - Smoothing factor (0.0 ~ 1.0)
  * @returns {number} New camera position
  */
-function smoothCamera(currentCam, targetCam, smoothing) {
+export function smoothCamera(currentCam, targetCam, smoothing) {
     return currentCam + (targetCam - currentCam) * smoothing;
 }
 
@@ -286,7 +286,7 @@ function smoothCamera(currentCam, targetCam, smoothing) {
  * @param {number} viewportSize - Viewport size (pixels)
  * @returns {number} Clamped camera position
  */
-function clampCamera(cameraPos, minPos, worldSize, viewportSize) {
+export function clampCamera(cameraPos, minPos, worldSize, viewportSize) {
     return clamp(cameraPos, minPos, worldSize - viewportSize);
 }
 
@@ -303,7 +303,7 @@ function clampCamera(cameraPos, minPos, worldSize, viewportSize) {
  * @param {number} tileSize - Tile size
  * @returns {{startX: number, endX: number, startY: number, endY: number}} Visible range
  */
-function calculateVisibleTileRange(cameraX, cameraY, canvasWidth, canvasHeight, tileSize) {
+export function calculateVisibleTileRange(cameraX, cameraY, canvasWidth, canvasHeight, tileSize) {
     const startX = Math.floor(cameraX / tileSize);
     const endX = startX + Math.ceil(canvasWidth / tileSize) + 1;
     const startY = Math.floor(cameraY / tileSize);
@@ -319,7 +319,7 @@ function calculateVisibleTileRange(cameraX, cameraY, canvasWidth, canvasHeight, 
  * Neighbor offset array
  * @type {Array<[number, number]>}
  */
-const NEIGHBOR_OFFSETS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+export const NEIGHBOR_OFFSETS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
 
 /**
  * Check if there is an adjacent non-air block at the specified position
@@ -329,7 +329,7 @@ const NEIGHBOR_OFFSETS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
  * @param {number} airBlockId - Air block ID
  * @returns {boolean} True if adjacent block exists
  */
-function hasAdjacentBlock(tx, ty, getBlockFn, airBlockId) {
+export function hasAdjacentBlock(tx, ty, getBlockFn, airBlockId) {
     for (const [dx, dy] of NEIGHBOR_OFFSETS) {
         if (getBlockFn(tx + dx, ty + dy) !== airBlockId) {
             return true;
