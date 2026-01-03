@@ -93,12 +93,40 @@ export function generateTextures() {
         addNoise(ctx, 0.06);
     });
 
+    createTexture(BLOCKS.SANDSTONE, (ctx, s) => {
+        ctx.fillStyle = '#c8b273';
+        ctx.fillRect(0, 0, s, s);
+        ctx.fillStyle = '#b89f63';
+        for (let i = 0; i < 4; i++) {
+            ctx.fillRect(0, (i * s) / 4, s, 2);
+        }
+        ctx.fillStyle = '#d9c48c';
+        for (let i = 0; i < 3; i++) {
+            ctx.fillRect((i * s) / 3, 0, 2, s);
+        }
+        addNoise(ctx, 0.08);
+    });
+
     createTexture(BLOCKS.WOOD, (ctx, s) => {
         ctx.fillStyle = '#6d4c41';
         ctx.fillRect(0, 0, s, s);
         ctx.fillStyle = '#4e342e';
         for (let i = 4; i < s; i += 8) ctx.fillRect(i, 0, 2, s);
         addNoise(ctx, 0.1);
+    });
+
+    createTexture(BLOCKS.PLANK, (ctx, s) => {
+        ctx.fillStyle = '#b48a5a';
+        ctx.fillRect(0, 0, s, s);
+        ctx.fillStyle = '#8d6e63';
+        for (let i = 0; i < s; i += 8) {
+            ctx.fillRect(0, i, s, 2);
+        }
+        ctx.fillStyle = '#6d4c41';
+        for (let i = 6; i < s; i += 8) {
+            ctx.fillRect(0, i, s, 1);
+        }
+        addNoise(ctx, 0.08);
     });
 
     createTexture(BLOCKS.LEAVES, (ctx, s) => {
@@ -131,6 +159,22 @@ export function generateTextures() {
 
     createTexture(BLOCKS.COAL, createOre('#757575', '#000'));
     createTexture(BLOCKS.GOLD, createOre('#757575', '#FFD700'));
+
+    createTexture(BLOCKS.STONE_BRICK, (ctx, s) => {
+        ctx.fillStyle = '#9e9e9e';
+        ctx.fillRect(0, 0, s, s);
+        ctx.fillStyle = '#8c8c8c';
+        for (let y = 0; y < s; y += 8) {
+            ctx.fillRect(0, y, s, 2);
+        }
+        for (let x = 0; x < s; x += 8) {
+            ctx.fillRect(x, 0, 2, s);
+        }
+        ctx.fillStyle = '#bdbdbd';
+        ctx.fillRect(0, 0, s, 2);
+        ctx.fillRect(0, 0, 2, s);
+        addNoise(ctx, 0.12);
+    });
 
     createTexture(BLOCKS.WORKBENCH, (ctx, s) => {
         // Wood base
