@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2D Minecraft Clone (Auto-Climb)</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: none; /* Prevent browser zooming/scrolling */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            image-rendering: pixelated; /* Essential for the retro look */
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Start Screen Overlay */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-size: 40px;
+            text-shadow: 4px 4px 0 #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        button {
+            background: #727272;
+            border: 4px solid #fff;
+            color: white;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: inset -4px -4px 0 rgba(0,0,0,0.5);
+        }
+        button:active {
+            box-shadow: inset 4px 4px 0 rgba(0,0,0,0.5);
+        }
+
+        /* HUD - Hotbar */
+        #hotbar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            border-radius: 4px;
+            pointer-events: auto;
+        }
+
+        .slot {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #555;
+            background-color: rgba(0,0,0,0.3);
+            cursor: pointer;
+            position: relative;
+            image-rendering: pixelated;
+        }
+
+        .slot.active {
+            border: 2px solid white;
+            transform: scale(1.1);
+            background-color: rgba(255,255,255,0.2);
+            z-index: 10;
+        }
+        
+        .slot canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .slot .count {
+            position: absolute;
+            bottom: 0;
+            right: 2px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 1px 1px 0 #000;
+            pointer-events: none;
+        }
+
+        /* Mobile Controls */
+        .touch-controls {
+            display: none; /* Shown via JS if touch detected */
+            position: absolute;
+            bottom: 80px;
+            width: 100%;
+            height: 150px;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .d-pad {
+            position: absolute;
+            left: 20px;
+            bottom: 10px;
+            width: 220px; /* Wider for 3 buttons */
+            height: 100px;
+            pointer-events: auto;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .action-btn {
+            position: absolute;
+            right: 20px;
+            bottom: 10px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .arrow-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 30px;
+            border-radius: 10px;
+        }
+
+        .arrow-btn.down {
+            height: 40px; 
+            font-size: 20px;
+            width: 50px;
+        }
+
+        .arrow-btn:active, .action-btn:active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        #debug-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 12px;
+            text-shadow: 1px 1px 0 #000;
+        }
+        
+        .instructions {
+            font-size: 14px;
+            color: #ddd;
+            margin-top: 10px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* Added message log */
+        #message-log {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            color: #fff;
+            font-size: 14px;
+            text-shadow: 1px 1px 0 #000;
+            pointer-events: none;
+            transition: opacity 1s;
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div id="debug-info">FPS: 60 | X: 0 Y: 0</div>
+        <div id="message-log"></div>
+        
+        <div id="hotbar">
+            <!-- Slots injected by JS -->
+        </div>
+
+        <div class="touch-controls" id="mobile-controls">
+            <div class="d-pad">
+                <div class="arrow-btn" id="btn-left">←</div>
+                <div class="arrow-btn down" id="btn-down">S</div>
+                <div class="arrow-btn" id="btn-right">→</div>
+            </div>
+            <div class="action-btn" id="btn-jump">JUMP</div>
+        </div>
+    </div>
+
+    <div id="start-screen">
+        <h1>BLOCK CRAFT 2D XL</h1>
+        <button id="start-btn">ゲーム開始</button>
+        <div class="instructions">
+            [PC]<br>
+            移動: A / D / 矢印キー<br>
+            ジャンプ: Space / W / 上キー<br>
+            足場配置: S / 下キー (足元の空中に配置)<br>
+            足元に設置: 自分の足をマウスでクリック (自動で登ります)<br>
+            破壊/設置: マウス左クリック<br>
+            アイテム選択: 1-6キー<br>
+            <br>
+            [スマホ]<br>
+            移動: ← →<br>
+            足場: Sボタン<br>
+            破壊/設置: タップ
+        </div>
+    </div>
+
+<script>
+/**
+ * 2D Minecraft Clone Script (Inventory + Auto-Climb Edition)
+ * * Architecture:
+ * - Constants: Block definitions, Physics settings.
+ * - Inventory: Manages item counts.
+ * - TextureGen: Procedural texture generation.
+ * - Game Engine: Loop, Physics, Collision, Input.
+ */
+
+// --- Constants & Config ---
+const TILE_SIZE = 32;
+const WORLD_WIDTH = 512;
+const WORLD_HEIGHT = 256;
+const GRAVITY = 0.5;
+const JUMP_FORCE = 10;
+const REACH = 5 * TILE_SIZE;
+
+// Block Types
+const BLOCKS = {
+    AIR: 0,
+    DIRT: 1,
+    GRASS: 2,
+    STONE: 3,
+    WOOD: 4,
+    LEAVES: 5,
+    BEDROCK: 6,
+    COAL: 7,
+    GOLD: 8
+};
+
+const BLOCK_PROPS = {
+    [BLOCKS.AIR]: { name: 'Air', solid: false, transparent: true },
+    [BLOCKS.DIRT]: { name: 'Dirt', solid: true, color: '#5d4037', type: 'soil' },
+    [BLOCKS.GRASS]: { name: 'Grass', solid: true, color: '#388e3c', type: 'soil', drop: BLOCKS.DIRT }, // Grass drops dirt
+    [BLOCKS.STONE]: { name: 'Stone', solid: true, color: '#757575', type: 'stone' },
+    [BLOCKS.WOOD]: { name: 'Wood', solid: true, color: '#5d4037', type: 'wood' },
+    [BLOCKS.LEAVES]: { name: 'Leaves', solid: true, transparent: false, color: '#2e7d32', type: 'plant', drop: BLOCKS.LEAVES }, // Simplified
+    [BLOCKS.BEDROCK]: { name: 'Bedrock', solid: true, unbreakable: true, color: '#000000', type: 'stone' },
+    [BLOCKS.COAL]: { name: 'Coal Ore', solid: true, color: '#212121', type: 'stone', drop: BLOCKS.COAL }, // Simplified
+    [BLOCKS.GOLD]: { name: 'Gold Ore', solid: true, color: '#ffb300', type: 'stone', drop: BLOCKS.GOLD } // Simplified
+};
+
+// --- Inventory System ---
+const inventory = {};
+const HOTBAR_ITEMS = [BLOCKS.DIRT, BLOCKS.GRASS, BLOCKS.STONE, BLOCKS.WOOD, BLOCKS.LEAVES, BLOCKS.GOLD];
+
+// Initialize Inventory
+HOTBAR_ITEMS.forEach(id => inventory[id] = 0);
+// Give a small starter kit
+inventory[BLOCKS.DIRT] = 10; 
+
+function updateInventoryUI() {
+    HOTBAR_ITEMS.forEach((block, i) => {
+        const countEl = document.getElementById(`slot-count-${i}`);
+        if(countEl) {
+            countEl.innerText = inventory[block];
+            // Dim slot if 0
+            const slotEl = document.getElementById(`slot-${i}`);
+            if(slotEl) {
+                slotEl.style.opacity = inventory[block] > 0 ? '1' : '0.5';
+            }
+        }
+    });
+}
+
+function addToInventory(blockType) {
+    if (blockType === BLOCKS.AIR) return;
+    
+    // Check drop override (e.g., Grass -> Dirt)
+    const drop = BLOCK_PROPS[blockType].drop || blockType;
+    
+    if (inventory[drop] !== undefined) {
+        inventory[drop]++;
+        updateInventoryUI();
+    }
+}
+
+function consumeFromInventory(blockType) {
+    if (inventory[blockType] > 0) {
+        inventory[blockType]--;
+        updateInventoryUI();
+        return true;
+    }
+    return false;
+}
+
+
+// --- Texture Generator ---
+const textures = {};
+
+function generateTextures() {
+    const createTexture = (blockType, drawFn) => {
+        const c = document.createElement('canvas');
+        c.width = TILE_SIZE;
+        c.height = TILE_SIZE;
+        const ctx = c.getContext('2d');
+        drawFn(ctx, TILE_SIZE);
+        textures[blockType] = c;
+    };
+
+    const addNoise = (ctx, amount = 0.1) => {
+        const id = ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE);
+        const d = id.data;
+        for(let i=0; i<d.length; i+=4) {
+            const noise = (Math.random() - 0.5) * amount * 255;
+            d[i] += noise;
+            d[i+1] += noise;
+            d[i+2] += noise;
+        }
+        ctx.putImageData(id, 0, 0);
+    };
+
+    // Textures same as before
+    createTexture(BLOCKS.DIRT, (ctx, s) => {
+        ctx.fillStyle = '#5d4037'; ctx.fillRect(0,0,s,s); addNoise(ctx, 0.15);
+    });
+    createTexture(BLOCKS.GRASS, (ctx, s) => {
+        ctx.fillStyle = '#5d4037'; ctx.fillRect(0,0,s,s); addNoise(ctx, 0.15);
+        ctx.fillStyle = '#4caf50'; ctx.fillRect(0,0,s, s/3); addNoise(ctx, 0.1);
+        for(let i=0; i<s; i+=4) if(Math.random()>0.5) ctx.fillRect(i, s/3, 4, 4);
+    });
+    createTexture(BLOCKS.STONE, (ctx, s) => {
+        ctx.fillStyle = '#757575'; ctx.fillRect(0,0,s,s); addNoise(ctx, 0.2);
+    });
+    createTexture(BLOCKS.WOOD, (ctx, s) => {
+        ctx.fillStyle = '#6d4c41'; ctx.fillRect(0,0,s,s);
+        ctx.fillStyle = '#4e342e'; for(let i=4; i<s; i+=8) ctx.fillRect(i, 0, 2, s);
+        addNoise(ctx, 0.1);
+    });
+    createTexture(BLOCKS.LEAVES, (ctx, s) => {
+        ctx.fillStyle = '#2e7d32'; ctx.fillRect(0,0,s,s); addNoise(ctx, 0.2);
+        ctx.fillStyle = '#1b5e20'; for(let i=0; i<10; i++) ctx.fillRect(Math.random()*s, Math.random()*s, 4, 4);
+    });
+    createTexture(BLOCKS.BEDROCK, (ctx, s) => {
+        ctx.fillStyle = '#212121'; ctx.fillRect(0,0,s,s); addNoise(ctx, 0.4);
+    });
+    const createOre = (baseColor, speckColor) => (ctx, s) => {
+        ctx.fillStyle = baseColor; ctx.fillRect(0,0,s,s); addNoise(ctx, 0.2);
+        ctx.fillStyle = speckColor; for(let i=0; i<6; i++) ctx.fillRect(Math.random()*(s-6), Math.random()*(s-6), 6, 6);
+    };
+    createTexture(BLOCKS.COAL, createOre('#757575', '#000'));
+    createTexture(BLOCKS.GOLD, createOre('#757575', '#FFD700'));
+}
+
+// --- Sound Engine ---
+class SoundManager {
+    constructor() {
+        this.ctx = null;
+        this.ready = false;
+    }
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.ready = true;
+        }
+    }
+    playJump() {
+        if(!this.ready) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.1);
+    }
+    playDig(type) {
+        if(!this.ready) return;
+        const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.1, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+        if (type === 'stone') { filter.type = 'highpass'; filter.frequency.value = 800; }
+        else if (type === 'wood') { filter.type = 'lowpass'; filter.frequency.value = 600; }
+        else { filter.type = 'lowpass'; filter.frequency.value = 300; }
+        noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+        noise.start();
+    }
+    playPop() {
+        if(!this.ready) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.05);
+    }
+}
+
+// --- Game Classes ---
+class World {
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
+        this.map = new Array(width * height).fill(BLOCKS.AIR);
+        this.generate();
+    }
+    getIndex(x, y) {
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height) return -1;
+        return y * this.width + x;
+    }
+    getBlock(x, y) {
+        const idx = this.getIndex(x, y);
+        if (idx === -1) return BLOCKS.BEDROCK;
+        return this.map[idx];
+    }
+    setBlock(x, y, type) {
+        const idx = this.getIndex(x, y);
+        if (idx !== -1) this.map[idx] = type;
+    }
+    checkAreaFree(px, py, w, h) {
+        // Check if a rectangular area is free of solid blocks
+        const startX = Math.floor(px / TILE_SIZE);
+        const endX = Math.floor((px + w) / TILE_SIZE);
+        const startY = Math.floor(py / TILE_SIZE);
+        const endY = Math.floor((py + h) / TILE_SIZE);
+
+        for (let y = startY; y <= endY; y++) {
+            for (let x = startX; x <= endX; x++) {
+                const block = this.getBlock(x, y);
+                if (BLOCK_PROPS[block] && BLOCK_PROPS[block].solid) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    generate() {
+        const heights = [];
+        for(let x=0; x<this.width; x++) {
+            let h = Math.sin(x / 30) * 12 + Math.sin(x / 8) * 3; 
+            heights.push(Math.floor(this.height / 2 + h));
+        }
+        for (let x = 0; x < this.width; x++) {
+            let h = heights[x];
+            for (let y = 0; y < this.height; y++) {
+                if (y === this.height - 1) this.setBlock(x, y, BLOCKS.BEDROCK);
+                else if (y > h) {
+                    if (y > h + 5) {
+                         let r = Math.random();
+                         if(r > 0.96) this.setBlock(x, y, BLOCKS.COAL);
+                         else if(r > 0.985 && y > h + 15) this.setBlock(x, y, BLOCKS.GOLD);
+                         else if (Math.random() > 0.95) this.setBlock(x,y, BLOCKS.DIRT);
+                         else this.setBlock(x, y, BLOCKS.STONE);
+                    } else this.setBlock(x, y, BLOCKS.DIRT);
+                } else if (y === h) {
+                    this.setBlock(x, y, BLOCKS.GRASS);
+                    if (x > 5 && x < this.width - 5 && Math.random() < 0.05) this.generateTree(x, y - 1);
+                }
+            }
+        }
+    }
+    generateTree(x, y) {
+        const height = 3 + Math.floor(Math.random() * 3);
+        for(let i=0; i<height; i++) this.setBlock(x, y - i, BLOCKS.WOOD);
+        for(let lx = x-2; lx <= x+2; lx++) {
+            for(let ly = y-height-2; ly <= y-height; ly++) {
+                if (Math.abs(lx-x) === 2 && Math.abs(ly-(y-height)) === 2) continue;
+                if (this.getBlock(lx, ly) === BLOCKS.AIR) this.setBlock(lx, ly, BLOCKS.LEAVES);
+            }
+        }
+    }
+}
+
+class Player {
+    constructor(world) {
+        this.world = world;
+        this.width = 0.6 * TILE_SIZE;
+        this.height = 1.8 * TILE_SIZE;
+        this.x = (world.width / 2) * TILE_SIZE;
+        this.y = 0;
+        this.vx = 0;
+        this.vy = 0;
+        this.grounded = false;
+        this.facingRight = true;
+        this.animTimer = 0;
+        
+        let sx = Math.floor(this.x / TILE_SIZE);
+        for(let y=0; y<world.height; y++) {
+            if (world.getBlock(sx, y) !== BLOCKS.AIR) {
+                this.y = (y - 2) * TILE_SIZE;
+                break;
+            }
+        }
+    }
+
+    update(input, dt) {
+        if (input.keys.left) { this.vx = -5; this.facingRight = false; }
+        else if (input.keys.right) { this.vx = 5; this.facingRight = true; }
+        else { this.vx *= 0.8; }
+        
+        if (input.keys.jump && this.grounded) {
+            this.vy = -JUMP_FORCE;
+            this.grounded = false;
+            sounds.playJump();
+        }
+
+        this.vy += GRAVITY;
+        this.x += this.vx;
+        this.handleCollisions(true);
+        this.y += this.vy;
+        this.handleCollisions(false);
+        
+        if(this.x < 0) this.x = 0;
+        if(this.x > this.world.width * TILE_SIZE - this.width) this.x = this.world.width * TILE_SIZE - this.width;
+        if(this.y > this.world.height * TILE_SIZE) { // Respawn
+            this.y = 0; this.vy = 0;
+            this.x = (this.world.width / 2) * TILE_SIZE;
+            let sx = Math.floor(this.x / TILE_SIZE);
+            for(let y=0; y<this.world.height; y++) {
+                if (this.world.getBlock(sx, y) !== BLOCKS.AIR) { this.y = (y - 2) * TILE_SIZE; break; }
+            }
+        }
+        if (Math.abs(this.vx) > 0.1) this.animTimer += dt;
+    }
+
+    handleCollisions(horizontal) {
+        const startX = Math.floor(this.x / TILE_SIZE);
+        const endX = Math.floor((this.x + this.width) / TILE_SIZE);
+        const startY = Math.floor(this.y / TILE_SIZE);
+        const endY = Math.floor((this.y + this.height) / TILE_SIZE);
+
+        for (let y = startY; y <= endY; y++) {
+            for (let x = startX; x <= endX; x++) {
+                const block = this.world.getBlock(x, y);
+                if (BLOCK_PROPS[block] && BLOCK_PROPS[block].solid) {
+                    if (horizontal) {
+                        if (this.vx > 0) this.x = x * TILE_SIZE - this.width - 0.01;
+                        else if (this.vx < 0) this.x = (x + 1) * TILE_SIZE + 0.01;
+                        this.vx = 0;
+                    } else {
+                        if (this.vy > 0) { this.y = y * TILE_SIZE - this.height - 0.01; this.grounded = true; this.vy = 0; }
+                        else if (this.vy < 0) { this.y = (y + 1) * TILE_SIZE + 0.01; this.vy = 0; }
+                    }
+                    return;
+                }
+            }
+        }
+        if (!horizontal) this.grounded = false;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(Math.floor(this.x), Math.floor(this.y));
+        const swing = Math.sin(this.animTimer * 0.01) * 5;
+        ctx.fillStyle = '#f8b090'; ctx.fillRect(4, 0, 12, 12); // Head
+        ctx.fillStyle = '#00bcd4'; ctx.fillRect(4, 12, 12, 18); // Body
+        ctx.fillStyle = '#3f51b5'; // Legs
+        ctx.fillRect(4, 30, 5, 18 + (Math.abs(this.vx) > 0.1 ? swing : 0));
+        ctx.fillRect(11, 30, 5, 18 - (Math.abs(this.vx) > 0.1 ? swing : 0));
+        ctx.fillStyle = '#f8b090'; // Arms
+        if(this.facingRight) ctx.fillRect(10, 12, 6, 18 + swing);
+        else ctx.fillRect(4, 12, -6, 18 + swing); 
+        ctx.restore();
+    }
+}
+
+// --- Main Loop ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const sounds = new SoundManager();
+let world, player;
+let lastTime = 0;
+let cameraX = 0, cameraY = 0;
+
+const input = {
+    keys: { left: false, right: false, jump: false, down: false },
+    mouse: { x: 0, y: 0, leftDown: false },
+    hotbarIdx: 1
+};
+let bridgeCooldown = 0; // Cooldown for S-key placement
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    ctx.imageSmoothingEnabled = false;
+    if(window.innerWidth <= 768) document.getElementById('mobile-controls').style.display = 'block';
+}
+window.addEventListener('resize', resize);
+
+function init() {
+    world = new World(WORLD_WIDTH, WORLD_HEIGHT);
+    player = new Player(world);
+    generateTextures();
+    initHotbarUI();
+    updateInventoryUI();
+    resize();
+    requestAnimationFrame(loop);
+}
+
+function initHotbarUI() {
+    const container = document.getElementById('hotbar');
+    container.innerHTML = '';
+    HOTBAR_ITEMS.forEach((block, i) => {
+        const div = document.createElement('div');
+        div.className = 'slot' + (i === 0 ? ' active' : '');
+        div.id = `slot-${i}`;
+        div.onclick = () => selectHotbar(i);
+        
+        const c = document.createElement('canvas');
+        c.width = 32; c.height = 32;
+        const cx = c.getContext('2d');
+        if (textures[block]) cx.drawImage(textures[block], 0, 0, 32, 32);
+        
+        const count = document.createElement('div');
+        count.className = 'count';
+        count.id = `slot-count-${i}`;
+        count.innerText = '0';
+
+        div.appendChild(c);
+        div.appendChild(count);
+        container.appendChild(div);
+    });
+}
+
+function selectHotbar(index) {
+    const slots = document.querySelectorAll('.slot');
+    slots.forEach(s => s.classList.remove('active'));
+    slots[index].classList.add('active');
+    input.hotbarIdx = HOTBAR_ITEMS[index];
+    sounds.playPop();
+}
+
+function update(dt) {
+    if(!player) return;
+    player.update(input, dt);
+
+    // Camera
+    const targetCamX = player.x + player.width/2 - canvas.width/2;
+    const targetCamY = player.y + player.height/2 - canvas.height/2;
+    cameraX += (targetCamX - cameraX) * 0.1;
+    cameraY += (targetCamY - cameraY) * 0.1;
+    cameraX = Math.max(0, Math.min(cameraX, world.width*TILE_SIZE - canvas.width));
+    cameraY = Math.max(-500, Math.min(cameraY, world.height*TILE_SIZE - canvas.height));
+
+    // Interaction
+    if (input.mouse.leftDown) {
+        handleInteraction(input.mouse.x, input.mouse.y);
+        input.mouse.leftDown = false; 
+    }
+
+    // Bridge Builder (S Key)
+    if (input.keys.down) {
+        if (bridgeCooldown <= 0) {
+            handleBridgeBuilding();
+            bridgeCooldown = 200; // ms between placements
+        }
+    }
+    if (bridgeCooldown > 0) bridgeCooldown -= dt;
+}
+
+function handleBridgeBuilding() {
+    // Attempt to place block directly under feet
+    const feetY = player.y + player.height;
+    const centerX = player.x + player.width / 2;
+    
+    // Target grid coordinate below feet
+    const bx = Math.floor(centerX / TILE_SIZE);
+    const by = Math.floor((feetY + 1) / TILE_SIZE); // +1 ensures we check the block *under* the current position
+
+    const targetBlock = world.getBlock(bx, by);
+
+    if (targetBlock === BLOCKS.AIR || (BLOCK_PROPS[targetBlock] && BLOCK_PROPS[targetBlock].transparent)) {
+        // Simple bridge building does NOT do auto-climb, it just patches holes
+        // Only place if no intersection with player to avoid stuck bugs for this specific action
+        const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
+        const playerRect = { x: player.x, y: player.y, w: player.width, h: player.height };
+        
+        const isIntersecting = (playerRect.x < blockRect.x + blockRect.w &&
+            playerRect.x + playerRect.w > blockRect.x &&
+            playerRect.y < blockRect.y + blockRect.h &&
+            playerRect.y + playerRect.h > blockRect.y);
+
+        if (!isIntersecting) {
+            // Place logic
+            if (consumeFromInventory(input.hotbarIdx)) {
+                world.setBlock(bx, by, input.hotbarIdx);
+                sounds.playDig('dirt');
+            }
+        }
+    }
+}
+
+function handleInteraction(screenX, screenY) {
+    const worldX = screenX + cameraX;
+    const worldY = screenY + cameraY;
+    const bx = Math.floor(worldX / TILE_SIZE);
+    const by = Math.floor(worldY / TILE_SIZE);
+    
+    if (Math.hypot(worldX - (player.x + player.width/2), worldY - (player.y + player.height/2)) > REACH) return;
+
+    const currentBlock = world.getBlock(bx, by);
+    const props = BLOCK_PROPS[currentBlock];
+
+    // Break
+    if (currentBlock !== BLOCKS.AIR && props && !props.unbreakable) {
+        addToInventory(currentBlock);
+        sounds.playDig(props.type);
+        world.setBlock(bx, by, BLOCKS.AIR);
+    } 
+    // Place
+    else if (currentBlock === BLOCKS.AIR || (props && props.transparent)) {
+        // Collision check
+        const playerRect = { x: player.x, y: player.y, w: player.width, h: player.height };
+        const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
+        
+        const isIntersecting = (playerRect.x < blockRect.x + blockRect.w &&
+              playerRect.x + playerRect.w > blockRect.x &&
+              playerRect.y < blockRect.y + blockRect.h &&
+              playerRect.y + playerRect.h > blockRect.y);
+        
+        let canPlace = false;
+        let shouldClimb = false;
+
+        if (!isIntersecting) {
+            canPlace = true;
+        } else {
+            // Check for Auto-Climb condition
+            // Condition: New block is roughly at feet level, and space ABOVE new block is free for player
+            const targetY = blockRect.y - player.height;
+            // Check space
+            if (world.checkAreaFree(player.x, targetY, player.width, player.height)) {
+                canPlace = true;
+                shouldClimb = true;
+            }
+        }
+
+        if (canPlace) {
+            // Check adjacency (unless climbing, where adjacency is implied by being inside it)
+            let hasNeighbor = false;
+            if (shouldClimb) {
+                hasNeighbor = true; 
+            } else {
+                [[0,1],[0,-1],[1,0],[-1,0]].forEach(offset => {
+                    if(world.getBlock(bx+offset[0], by+offset[1]) !== BLOCKS.AIR) hasNeighbor = true;
+                });
+            }
+
+            if (hasNeighbor) {
+                if (consumeFromInventory(input.hotbarIdx)) {
+                    world.setBlock(bx, by, input.hotbarIdx);
+                    sounds.playDig('dirt');
+                    if (shouldClimb) {
+                        player.y = blockRect.y - player.height - 0.1;
+                        player.vy = 0;
+                        player.grounded = true;
+                    }
+                } else {
+                    showMessage("ブロックが足りません！");
+                }
+            }
+        }
+    }
+}
+
+function showMessage(msg) {
+    const el = document.getElementById('message-log');
+    el.innerText = msg;
+    el.style.opacity = 1;
+    setTimeout(() => { el.style.opacity = 0; }, 2000);
+}
+
+function draw() {
+    if(!world) return;
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, "#87CEEB"); gradient.addColorStop(1, "#E0F7FA");
+    ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
+
+    const startX = Math.floor(cameraX / TILE_SIZE);
+    const endX = startX + Math.ceil(canvas.width / TILE_SIZE) + 1;
+    const startY = Math.floor(cameraY / TILE_SIZE);
+    const endY = startY + Math.ceil(canvas.height / TILE_SIZE) + 1;
+
+    for (let y = startY; y < endY; y++) {
+        for (let x = startX; x < endX; x++) {
+            const block = world.getBlock(x, y);
+            if (block !== BLOCKS.AIR && textures[block]) {
+                ctx.drawImage(textures[block], x * TILE_SIZE, y * TILE_SIZE);
+                // Shadow
+                const neighborAbove = world.getBlock(x, y-1);
+                if (neighborAbove !== BLOCKS.AIR && BLOCK_PROPS[neighborAbove] && !BLOCK_PROPS[neighborAbove].transparent) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+        }
+    }
+
+    player.draw(ctx);
+
+    // Highlight
+    const mx = input.mouse.x + cameraX;
+    const my = input.mouse.y + cameraY;
+    const bx = Math.floor(mx / TILE_SIZE);
+    const by = Math.floor(my / TILE_SIZE);
+    if (Math.hypot(mx - (player.x + player.width/2), my - (player.y + player.height/2)) <= REACH) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+    ctx.restore();
+    
+    document.getElementById('debug-info').innerText = `X: ${Math.floor(player.x/TILE_SIZE)} Y: ${Math.floor(player.y/TILE_SIZE)}`;
+}
+
+function loop(timestamp) {
+    const dt = timestamp - lastTime;
+    lastTime = timestamp;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+}
+
+// --- Listeners ---
+window.addEventListener('keydown', e => {
+    switch(e.code) {
+        case 'KeyA': case 'ArrowLeft': input.keys.left = true; break;
+        case 'KeyD': case 'ArrowRight': input.keys.right = true; break;
+        case 'KeyW': case 'ArrowUp': case 'Space': input.keys.jump = true; break;
+        case 'KeyS': case 'ArrowDown': input.keys.down = true; break; 
+        case 'Digit1': selectHotbar(0); break;
+        case 'Digit2': selectHotbar(1); break;
+        case 'Digit3': selectHotbar(2); break;
+        case 'Digit4': selectHotbar(3); break;
+        case 'Digit5': selectHotbar(4); break;
+        case 'Digit6': selectHotbar(5); break;
+    }
+});
+window.addEventListener('keyup', e => {
+    switch(e.code) {
+        case 'KeyA': case 'ArrowLeft': input.keys.left = false; break;
+        case 'KeyD': case 'ArrowRight': input.keys.right = false; break;
+        case 'KeyW': case 'ArrowUp': case 'Space': input.keys.jump = false; break;
+        case 'KeyS': case 'ArrowDown': input.keys.down = false; break; 
+    }
+});
+window.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    input.mouse.x = e.clientX - rect.left; input.mouse.y = e.clientY - rect.top;
+});
+window.addEventListener('mousedown', e => {
+    if(e.target !== canvas) return;
+    input.mouse.leftDown = true;
+});
+window.addEventListener('mouseup', () => { input.mouse.leftDown = false; });
+const setupTouch = (id, key) => {
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); input.keys[key] = true; });
+    el.addEventListener('touchend', (e) => { e.preventDefault(); input.keys[key] = false; });
+};
+setupTouch('btn-left', 'left');
+setupTouch('btn-right', 'right');
+setupTouch('btn-jump', 'jump');
+setupTouch('btn-down', 'down'); 
+canvas.addEventListener('touchstart', e => {
+    const t = e.touches[0]; const rect = canvas.getBoundingClientRect();
+    handleInteraction(t.clientX - rect.left, t.clientY - rect.top);
+}, {passive: false});
+document.getElementById('start-btn').addEventListener('click', () => {
+    document.getElementById('start-screen').style.display = 'none';
+    sounds.init(); init();
+});
+</script>
+</body>
+</html>
