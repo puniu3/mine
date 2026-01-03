@@ -17,7 +17,8 @@ import {
     isBlockSolid, isBlockTransparent, isBlockBreakable, getBlockMaterialType,
     generateTerrainHeights,
     worldToTile,
-    hasAdjacentBlock
+    hasAdjacentBlock,
+    calculateVisibleTileRange
 } from './utils.js';
 import { sounds } from './audio.js';
 import {
