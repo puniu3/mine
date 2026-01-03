@@ -34,7 +34,7 @@ import {
     initHotbarUI, selectHotbar, getSelectedBlockId
 } from './inventory.js';
 import { isCraftingOpen, updateCrafting } from './crafting.js';
-import { update as updateFireworks, draw as drawFireworks } from './fireworks.js';
+import { update as updateFireworks, draw as drawFireworks, createExplosionParticles } from './fireworks.js';
 import { createActions } from './actions.js';
 
 // --- Texture Generator ---
@@ -276,6 +276,7 @@ let bridgeCooldown = 0;
 
 let input;
 let actions;
+const tntTimers = [];
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -323,7 +324,13 @@ function init() {
             rectsIntersect,
             hasAdjacentBlock
         },
-        onMessage: showMessage
+        onMessage: showMessage,
+        onBlockPlaced: (x, y, type) => {
+            if (type === BLOCKS.TNT) {
+                tntTimers.push({ x, y, timer: 3000 });
+                showMessage("TNT fuse lit!");
+            }
+        }
     });
 
     // Initialize Input
@@ -381,6 +388,45 @@ function update(dt) {
 
     // --- Update Fireworks ---
     updateFireworks(dt, world, cameraX, cameraY, canvas);
+
+    // --- Update TNT ---
+    for (let i = tntTimers.length - 1; i >= 0; i--) {
+        const tnt = tntTimers[i];
+        tnt.timer -= dt;
+        if (tnt.timer <= 0) {
+            explodeTNT(tnt.x, tnt.y);
+            tntTimers.splice(i, 1);
+        }
+    }
+}
+
+function explodeTNT(x, y) { // x, y are tile coordinates
+    sounds.playExplosion();
+
+    // Explosion Radius
+    const radius = 3;
+    const startX = Math.max(0, x - radius);
+    const endX = Math.min(world.width - 1, x + radius);
+    const startY = Math.max(0, y - radius);
+    const endY = Math.min(world.height - 1, y + radius);
+
+    // Create particles at center
+    createExplosionParticles(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2);
+
+    for (let by = startY; by <= endY; by++) {
+        for (let bx = startX; bx <= endX; bx++) {
+            // Distance check for circle shape
+            const dx = bx - x;
+            const dy = by - y;
+            if (dx*dx + dy*dy <= radius*radius) {
+                const block = world.getBlock(bx, by);
+                if (block !== BLOCKS.AIR && block !== BLOCKS.BEDROCK) {
+                    addToInventory(block);
+                    world.setBlock(bx, by, BLOCKS.AIR);
+                }
+            }
+        }
+    }
 }
 
 function draw() {

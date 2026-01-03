@@ -70,6 +70,10 @@ function launchFirework(x, y) {
 function explode(x, y) {
     // Create explosion
     const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+    createExplosionParticles(x, y, color);
+}
+
+export function createExplosionParticles(x, y, color) {
     // Large amount of particles
     for (let i = 0; i < 100; i++) {
         const angle = Math.random() * Math.PI * 2;
@@ -81,7 +85,7 @@ function explode(x, y) {
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed,
             life: 1000 + Math.random() * 1000,
-            color: color
+            color: color || '#ff9800' // Default orange for TNT if not specified
         });
     }
 }

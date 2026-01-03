@@ -172,6 +172,40 @@ export function generateTextures() {
 
         addNoise(ctx, 0.1);
     });
+
+    createTexture(BLOCKS.TNT, (ctx, s) => {
+        // Red base
+        ctx.fillStyle = '#d32f2f';
+        ctx.fillRect(0, 0, s, s);
+
+        // White band
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, s / 3, s, s / 3);
+
+        // "TNT" Text (approximate with rectangles if text is blurry, or use text)
+        // Canvas text at 32x32 is often blurry, but let's try
+        ctx.fillStyle = '#000000';
+        // T
+        ctx.fillRect(4, s/3 + 2, 6, 2);
+        ctx.fillRect(6, s/3 + 2, 2, 6);
+        // N
+        ctx.fillRect(12, s/3 + 2, 2, 6);
+        ctx.fillRect(16, s/3 + 2, 2, 6);
+        ctx.fillRect(12, s/3 + 2, 4, 2); // Top bar? No N is diagonal.
+        // Let's just do vertical bars for N
+        ctx.fillRect(13, s/3 + 3, 2, 2); // Diagonal-ish bit
+
+        // T
+        ctx.fillRect(20, s/3 + 2, 6, 2);
+        ctx.fillRect(22, s/3 + 2, 2, 6);
+
+        // Top fuse
+        ctx.fillStyle = '#757575'; // Gray top
+        ctx.fillRect(0, 0, s, 4);
+        ctx.fillRect(0, s-4, s, 4); // Gray bottom
+
+        addNoise(ctx, 0.1);
+    });
     
     return textures;
 }
