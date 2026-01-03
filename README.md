@@ -2,6 +2,11 @@
 
 A 2D Minecraft-inspired sandbox that runs directly in the browser. Open `index.html` in a modern browser (or host it via any static server) to play.
 
+## Design policy
+- Gameplay and wording are tuned for children around 6 years old.
+- The UI uses Japanese with simple phrasing.
+- Comments and this README stay in English.
+
 ## Directory layout
 ```
 mine/

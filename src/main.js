@@ -233,11 +233,9 @@ function init() {
             rectsIntersect,
             hasAdjacentBlock
         },
-        onMessage: showMessage,
         onBlockPlaced: (x, y, type) => {
             if (type === BLOCKS.TNT) {
                 tntTimers.push({ x, y, timer: 3000 });
-                showMessage("TNT fuse lit!");
             }
         }
     });
@@ -252,15 +250,6 @@ function init() {
     updateInventoryUI();
     resize();
     requestAnimationFrame(loop);
-}
-
-function showMessage(msg) {
-    const el = document.getElementById('message-log');
-    if (el) {
-        el.innerText = msg;
-        el.style.opacity = 1;
-        setTimeout(() => { el.style.opacity = 0; }, 2000);
-    }
 }
 
 function update(dt) {
