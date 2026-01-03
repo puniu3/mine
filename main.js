@@ -6,6 +6,8 @@
  * - Inventory: Manages item counts.
  * - TextureGen: Procedural texture generation.
  * - Game Engine: Loop, Physics, Collision, Input.
+ *
+ * Dependencies: utils.js, audio.js
  */
 
 // --- Constants & Config ---
@@ -15,6 +17,7 @@ const WORLD_HEIGHT = 256;
 const GRAVITY = 0.5;
 const JUMP_FORCE = 10;
 const REACH = 5 * TILE_SIZE;
+const CAMERA_SMOOTHING = 0.1;
 
 // Block Types
 const BLOCKS = {
@@ -65,7 +68,7 @@ function updateInventoryUI() {
 
 function addToInventory(blockType) {
     if (blockType === BLOCKS.AIR) return;
-    const drop = BLOCK_PROPS[blockType].drop || blockType;
+    const drop = getBlockDrop(blockType, BLOCK_PROPS);
     if (inventory[drop] !== undefined) {
         inventory[drop]++;
         updateInventoryUI();
@@ -174,8 +177,7 @@ class World {
     }
 
     getIndex(x, y) {
-        if (x < 0 || x >= this.width || y < 0 || y >= this.height) return -1;
-        return y * this.width + x;
+        return coordToIndex(x, y, this.width, this.height);
     }
 
     getBlock(x, y) {
@@ -197,8 +199,7 @@ class World {
 
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
-                const block = this.getBlock(x, y);
-                if (BLOCK_PROPS[block] && BLOCK_PROPS[block].solid) {
+                if (isBlockSolid(this.getBlock(x, y), BLOCK_PROPS)) {
                     return false;
                 }
             }
@@ -207,19 +208,16 @@ class World {
     }
 
     generate() {
-        const heights = [];
+        const heights = generateTerrainHeights(this.width, this.height / 2);
+
         for (let x = 0; x < this.width; x++) {
-            let h = Math.sin(x / 30) * 12 + Math.sin(x / 8) * 3;
-            heights.push(Math.floor(this.height / 2 + h));
-        }
-        for (let x = 0; x < this.width; x++) {
-            let h = heights[x];
+            const h = heights[x];
             for (let y = 0; y < this.height; y++) {
                 if (y === this.height - 1) {
                     this.setBlock(x, y, BLOCKS.BEDROCK);
                 } else if (y > h) {
                     if (y > h + 5) {
-                        let r = Math.random();
+                        const r = Math.random();
                         if (r > 0.96) this.setBlock(x, y, BLOCKS.COAL);
                         else if (r > 0.985 && y > h + 15) this.setBlock(x, y, BLOCKS.GOLD);
                         else if (Math.random() > 0.95) this.setBlock(x, y, BLOCKS.DIRT);
@@ -262,13 +260,29 @@ class Player {
         this.facingRight = true;
         this.animTimer = 0;
 
-        let sx = Math.floor(this.x / TILE_SIZE);
-        for (let y = 0; y < world.height; y++) {
-            if (world.getBlock(sx, y) !== BLOCKS.AIR) {
+        this.findSpawnPoint();
+    }
+
+    findSpawnPoint() {
+        const sx = Math.floor(this.x / TILE_SIZE);
+        for (let y = 0; y < this.world.height; y++) {
+            if (this.world.getBlock(sx, y) !== BLOCKS.AIR) {
                 this.y = (y - 2) * TILE_SIZE;
                 break;
             }
         }
+    }
+
+    getCenterX() {
+        return this.x + this.width / 2;
+    }
+
+    getCenterY() {
+        return this.y + this.height / 2;
+    }
+
+    getRect() {
+        return { x: this.x, y: this.y, w: this.width, h: this.height };
     }
 
     update(input, dt) {
@@ -294,23 +308,22 @@ class Player {
         this.y += this.vy;
         this.handleCollisions(false);
 
-        if (this.x < 0) this.x = 0;
-        if (this.x > this.world.width * TILE_SIZE - this.width) {
-            this.x = this.world.width * TILE_SIZE - this.width;
-        }
+        // Clamp position
+        this.x = clamp(this.x, 0, this.world.width * TILE_SIZE - this.width);
+
+        // Respawn if fallen off
         if (this.y > this.world.height * TILE_SIZE) {
-            this.y = 0;
-            this.vy = 0;
-            this.x = (this.world.width / 2) * TILE_SIZE;
-            let sx = Math.floor(this.x / TILE_SIZE);
-            for (let y = 0; y < this.world.height; y++) {
-                if (this.world.getBlock(sx, y) !== BLOCKS.AIR) {
-                    this.y = (y - 2) * TILE_SIZE;
-                    break;
-                }
-            }
+            this.respawn();
         }
+
         if (Math.abs(this.vx) > 0.1) this.animTimer += dt;
+    }
+
+    respawn() {
+        this.y = 0;
+        this.vy = 0;
+        this.x = (this.world.width / 2) * TILE_SIZE;
+        this.findSpawnPoint();
     }
 
     handleCollisions(horizontal) {
@@ -321,8 +334,7 @@ class Player {
 
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
-                const block = this.world.getBlock(x, y);
-                if (BLOCK_PROPS[block] && BLOCK_PROPS[block].solid) {
+                if (isBlockSolid(this.world.getBlock(x, y), BLOCK_PROPS)) {
                     if (horizontal) {
                         if (this.vx > 0) this.x = x * TILE_SIZE - this.width - 0.01;
                         else if (this.vx < 0) this.x = (x + 1) * TILE_SIZE + 0.01;
@@ -434,13 +446,13 @@ function update(dt) {
     if (!player) return;
     player.update(input, dt);
 
-    // Camera
-    const targetCamX = player.x + player.width / 2 - canvas.width / 2;
-    const targetCamY = player.y + player.height / 2 - canvas.height / 2;
-    cameraX += (targetCamX - cameraX) * 0.1;
-    cameraY += (targetCamY - cameraY) * 0.1;
-    cameraX = Math.max(0, Math.min(cameraX, world.width * TILE_SIZE - canvas.width));
-    cameraY = Math.max(-500, Math.min(cameraY, world.height * TILE_SIZE - canvas.height));
+    // Camera with smooth following
+    const targetCamX = player.getCenterX() - canvas.width / 2;
+    const targetCamY = player.getCenterY() - canvas.height / 2;
+    cameraX = smoothCamera(cameraX, targetCamX, CAMERA_SMOOTHING);
+    cameraY = smoothCamera(cameraY, targetCamY, CAMERA_SMOOTHING);
+    cameraX = clampCamera(cameraX, 0, world.width * TILE_SIZE, canvas.width);
+    cameraY = clampCamera(cameraY, -500, world.height * TILE_SIZE, canvas.height);
 
     // Interaction
     if (input.mouse.leftDown) {
@@ -460,21 +472,15 @@ function update(dt) {
 
 function handleBridgeBuilding() {
     const feetY = player.y + player.height;
-    const centerX = player.x + player.width / 2;
-    const bx = Math.floor(centerX / TILE_SIZE);
-    const by = Math.floor((feetY + 1) / TILE_SIZE);
+    const centerX = player.getCenterX();
+    const { tx: bx, ty: by } = worldToTile(centerX, feetY + 1, TILE_SIZE);
     const targetBlock = world.getBlock(bx, by);
 
-    if (targetBlock === BLOCKS.AIR || (BLOCK_PROPS[targetBlock] && BLOCK_PROPS[targetBlock].transparent)) {
+    if (targetBlock === BLOCKS.AIR || isBlockTransparent(targetBlock, BLOCK_PROPS)) {
         const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
-        const playerRect = { x: player.x, y: player.y, w: player.width, h: player.height };
+        const playerRect = player.getRect();
 
-        const isIntersecting = (playerRect.x < blockRect.x + blockRect.w &&
-            playerRect.x + playerRect.w > blockRect.x &&
-            playerRect.y < blockRect.y + blockRect.h &&
-            playerRect.y + playerRect.h > blockRect.y);
-
-        if (!isIntersecting) {
+        if (!rectsIntersect(playerRect, blockRect)) {
             if (consumeFromInventory(input.hotbarIdx)) {
                 world.setBlock(bx, by, input.hotbarIdx);
                 sounds.playDig('dirt');
@@ -484,31 +490,30 @@ function handleBridgeBuilding() {
 }
 
 function handleInteraction(screenX, screenY) {
-    const worldX = screenX + cameraX;
-    const worldY = screenY + cameraY;
-    const bx = Math.floor(worldX / TILE_SIZE);
-    const by = Math.floor(worldY / TILE_SIZE);
+    const worldPos = screenToWorld(screenX, screenY, cameraX, cameraY);
+    const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
 
-    if (Math.hypot(worldX - (player.x + player.width / 2), worldY - (player.y + player.height / 2)) > REACH) return;
+    // Check reach
+    if (!isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
+        return;
+    }
 
     const currentBlock = world.getBlock(bx, by);
-    const props = BLOCK_PROPS[currentBlock];
 
     // Break
-    if (currentBlock !== BLOCKS.AIR && props && !props.unbreakable) {
+    if (currentBlock !== BLOCKS.AIR && isBlockBreakable(currentBlock, BLOCK_PROPS)) {
         addToInventory(currentBlock);
-        sounds.playDig(props.type);
+        sounds.playDig(getBlockMaterialType(currentBlock, BLOCK_PROPS));
         world.setBlock(bx, by, BLOCKS.AIR);
+        return;
     }
+
     // Place
-    else if (currentBlock === BLOCKS.AIR || (props && props.transparent)) {
-        const playerRect = { x: player.x, y: player.y, w: player.width, h: player.height };
+    if (currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) {
+        const playerRect = player.getRect();
         const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
 
-        const isIntersecting = (playerRect.x < blockRect.x + blockRect.w &&
-            playerRect.x + playerRect.w > blockRect.x &&
-            playerRect.y < blockRect.y + blockRect.h &&
-            playerRect.y + playerRect.h > blockRect.y);
+        const isIntersecting = rectsIntersect(playerRect, blockRect);
 
         let canPlace = false;
         let shouldClimb = false;
@@ -524,14 +529,7 @@ function handleInteraction(screenX, screenY) {
         }
 
         if (canPlace) {
-            let hasNeighbor = false;
-            if (shouldClimb) {
-                hasNeighbor = true;
-            } else {
-                [[0, 1], [0, -1], [1, 0], [-1, 0]].forEach(offset => {
-                    if (world.getBlock(bx + offset[0], by + offset[1]) !== BLOCKS.AIR) hasNeighbor = true;
-                });
-            }
+            const hasNeighbor = shouldClimb || hasAdjacentBlock(bx, by, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
 
             if (hasNeighbor) {
                 if (consumeFromInventory(input.hotbarIdx)) {
@@ -568,10 +566,9 @@ function draw() {
     ctx.save();
     ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
 
-    const startX = Math.floor(cameraX / TILE_SIZE);
-    const endX = startX + Math.ceil(canvas.width / TILE_SIZE) + 1;
-    const startY = Math.floor(cameraY / TILE_SIZE);
-    const endY = startY + Math.ceil(canvas.height / TILE_SIZE) + 1;
+    const { startX, endX, startY, endY } = calculateVisibleTileRange(
+        cameraX, cameraY, canvas.width, canvas.height, TILE_SIZE
+    );
 
     for (let y = startY; y < endY; y++) {
         for (let x = startX; x < endX; x++) {
@@ -580,7 +577,7 @@ function draw() {
                 ctx.drawImage(textures[block], x * TILE_SIZE, y * TILE_SIZE);
                 // Shadow
                 const neighborAbove = world.getBlock(x, y - 1);
-                if (neighborAbove !== BLOCKS.AIR && BLOCK_PROPS[neighborAbove] && !BLOCK_PROPS[neighborAbove].transparent) {
+                if (neighborAbove !== BLOCKS.AIR && !isBlockTransparent(neighborAbove, BLOCK_PROPS)) {
                     ctx.fillStyle = 'rgba(0,0,0,0.3)';
                     ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
@@ -591,11 +588,9 @@ function draw() {
     player.draw(ctx);
 
     // Highlight
-    const mx = input.mouse.x + cameraX;
-    const my = input.mouse.y + cameraY;
-    const bx = Math.floor(mx / TILE_SIZE);
-    const by = Math.floor(my / TILE_SIZE);
-    if (Math.hypot(mx - (player.x + player.width / 2), my - (player.y + player.height / 2)) <= REACH) {
+    const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY);
+    const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
+    if (isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.lineWidth = 2;
         ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
