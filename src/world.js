@@ -72,7 +72,10 @@ export class World {
                     }
                 } else if (y === h) {
                     this.setBlock(x, y, surfaceBlock);
-                    if (surfaceBlock === BLOCKS.GRASS && x > 5 && x < this.width - 5 && Math.random() < 0.05) {
+                    
+                    const isTreeGround = surfaceBlock === BLOCKS.GRASS || (biome === BIOMES.SNOWFIELD && surfaceBlock === BLOCKS.SNOW);
+                    
+                    if (isTreeGround && x > 5 && x < this.width - 5 && Math.random() < 0.05) {
                         this.generateTree(x, y - 1);
                     }
                 }
@@ -91,20 +94,25 @@ export class World {
 
     getBiomeConfigs() {
         const halfHeight = this.height / 2;
+        
         return {
             [BIOMES.PLAINS]: {
+                weight: 50, // 50%
                 baseHeight: halfHeight,
                 terrain: { largeAmplitude: 10, smallAmplitude: 3, largeFrequency: 32, smallFrequency: 9 }
             },
             [BIOMES.DESERT]: {
+                weight: 10, // 10%
                 baseHeight: halfHeight + 8,
                 terrain: { largeAmplitude: 6, smallAmplitude: 2, largeFrequency: 36, smallFrequency: 12 }
             },
             [BIOMES.SNOWFIELD]: {
+                weight: 20, // 20%
                 baseHeight: halfHeight - 4,
                 terrain: { largeAmplitude: 10, smallAmplitude: 4, largeFrequency: 28, smallFrequency: 10 }
             },
             [BIOMES.MOUNTAIN]: {
+                weight: 20, // 20%
                 baseHeight: halfHeight - 18,
                 terrain: { largeAmplitude: 20, smallAmplitude: 6, largeFrequency: 35, smallFrequency: 9 }
             }

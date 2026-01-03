@@ -286,7 +286,7 @@ export function generateTerrainHeights(width, baseHeight) {
 /**
  * Generate biome layout and matching heights.
  * @param {number} width - World width.
- * @param {Object.<string, {baseHeight: number, terrain?: Object}>} biomeConfigs - Biome settings keyed by biome name.
+ * @param {Object.<string, {baseHeight: number, terrain?: Object, weight?: number}>} biomeConfigs - Biome settings keyed by biome name.
  * @param {number} minSize - Minimum biome segment width.
  * @param {number} maxSize - Maximum biome segment width.
  * @returns {{heights: number[], biomeByColumn: string[]}} Heights and biome names per column.
@@ -297,9 +297,22 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
     const biomeKeys = Object.keys(biomeConfigs);
     let lastSegmentStart = 0;
 
+    // 【修正点】重み付きランダム選択の準備
+    let totalWeight = 0;
+    const selectionMap = biomeKeys.map(key => {
+        // weightが設定されていない場合はデフォルトで1とする
+        const weight = biomeConfigs[key].weight !== undefined ? biomeConfigs[key].weight : 1;
+        totalWeight += weight;
+        return { key, threshold: totalWeight };
+    });
+
     let x = 0;
     while (x < width) {
-        const biome = biomeKeys[Math.floor(Math.random() * biomeKeys.length)];
+        // 【修正点】単純なランダムではなく、重みに基づいてバイオームを選択
+        const r = Math.random() * totalWeight;
+        const selected = selectionMap.find(item => r < item.threshold);
+        const biome = selected ? selected.key : biomeKeys[0]; // fallback
+
         const length = Math.min(width - x, randomInt(minSize, maxSize));
 
         const config = biomeConfigs[biome];
