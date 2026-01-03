@@ -188,7 +188,8 @@ let actions;
 const tntTimers = [];
 let dayNightTimer = 0;
 
-const DAY_LENGTH_MS = 6 * 60 * 1000; // 6 minutes per full cycle
+const DAY_SEGMENTS = { dawn: 20, day: 260, dusk: 20, night: 60 }; // seconds
+const DAY_LENGTH_MS = Object.values(DAY_SEGMENTS).reduce((acc, seconds) => acc + seconds, 0) * 1000;
 const SKY_COLORS = {
     day: { top: '#87CEEB', bottom: '#E0F7FA' },
     night: { top: '#0b1d3a', bottom: '#132b4f' }
@@ -219,9 +220,22 @@ function lerpColor(a, b, t) {
 }
 
 function getDaylightStrength() {
-    const progress = (dayNightTimer % DAY_LENGTH_MS) / DAY_LENGTH_MS;
-    const angle = progress * Math.PI * 2;
-    return Math.max(0, Math.cos(angle)); // 1 at noon, 0 at dusk/dawn, 0 at midnight
+    const cycleSeconds = (dayNightTimer % DAY_LENGTH_MS) / 1000;
+    const dawnEnd = DAY_SEGMENTS.dawn;
+    const dayEnd = dawnEnd + DAY_SEGMENTS.day;
+    const duskEnd = dayEnd + DAY_SEGMENTS.dusk;
+    // nightEnd === total length
+
+    if (cycleSeconds <= dawnEnd) {
+        return clamp(cycleSeconds / DAY_SEGMENTS.dawn, 0, 1);
+    }
+    if (cycleSeconds <= dayEnd) {
+        return 1;
+    }
+    if (cycleSeconds <= duskEnd) {
+        return clamp(1 - (cycleSeconds - dayEnd) / DAY_SEGMENTS.dusk, 0, 1);
+    }
+    return 0;
 }
 
 function getSkyColors() {
