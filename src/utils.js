@@ -295,8 +295,10 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
     const heights = [];
     const biomeByColumn = [];
     const biomeKeys = Object.keys(biomeConfigs);
+    const transitionLength = 10;
 
     let x = 0;
+    let lastHeight = null;
     while (x < width) {
         const biome = biomeKeys[Math.floor(Math.random() * biomeKeys.length)];
         const length = Math.min(width - x, randomInt(minSize, maxSize));
@@ -304,8 +306,15 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
         const config = biomeConfigs[biome];
         for (let i = 0; i < length; i++) {
             const column = x + i;
-            heights[column] = calculateTerrainHeight(column, config.baseHeight, config.terrain);
+            const rawHeight = calculateTerrainHeight(column, config.baseHeight, config.terrain);
+            const blending = lastHeight !== null && i < transitionLength;
+            const height = blending
+                ? Math.round(lerp(lastHeight, rawHeight, (i + 1) / (transitionLength + 1)))
+                : rawHeight;
+
+            heights[column] = height;
             biomeByColumn[column] = biome;
+            lastHeight = height;
         }
         x += length;
     }
