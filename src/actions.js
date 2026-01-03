@@ -143,7 +143,7 @@ export function createActions({
                             player.grounded = true;
                         }
                     } else {
-                        onMessage("ブロックが足りません！");
+                        onMessage("Not enough blocks in inventory.");
                     }
                 }
             }
