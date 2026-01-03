@@ -320,7 +320,7 @@ function explodeTNT(x, y) { // x, y are tile coordinates
             const dy = by - y;
             if (dx*dx + dy*dy <= radius*radius) {
                 const block = world.getBlock(bx, by);
-                if (block !== BLOCKS.AIR && block !== BLOCKS.BEDROCK) {
+                if (block !== BLOCKS.AIR && isBlockBreakable(block, BLOCK_PROPS)) {
                     addToInventory(block);
                     world.setBlock(bx, by, BLOCKS.AIR);
                 }

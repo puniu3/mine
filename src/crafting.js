@@ -5,19 +5,16 @@ import { inventory, updateInventoryUI } from './inventory.js';
 const CRAFTING_RECIPES = [
     {
         id: BLOCKS.FIREWORK,
-        name: 'Firework',
         cost: { [BLOCKS.WOOD]: 2 },
         count: 1
     },
     {
         id: BLOCKS.JUMP_PAD,
-        name: 'Jump Pad',
         cost: { [BLOCKS.STONE]: 2, [BLOCKS.LEAVES]: 2 },
         count: 1
     },
     {
         id: BLOCKS.TNT,
-        name: 'TNT',
         cost: { [BLOCKS.COAL]: 4, [BLOCKS.WOOD]: 2 },
         count: 1
     }
@@ -58,26 +55,6 @@ export function checkWorktableOverlap(player, world) {
         }
     }
 
-    // Since checkWorktableOverlap is called every frame, we need textures for UI if we open it.
-    // However, update loop doesn't pass textures.
-    // We can rely on `textures` being available or passed.
-    // But `openCraftingUI` needs textures to draw icons.
-    // I will export a setter or pass it in update?
-    // Or I can assume textures are globally available? No, modules.
-    // I will change checkWorktableOverlap to return a boolean request to open/close?
-    // Or just pass textures to it?
-    // Or `openCraftingUI` takes textures.
-    // Let's modify `checkWorktableOverlap` to take `textures`.
-    // Wait, `checkWorktableOverlap` is called in `update`. `textures` are generated in `init`.
-
-    if (foundWorkbench) {
-        if (!isCraftingOpen) {
-            // We need to trigger open. But we need textures.
-            // I'll make checkWorktableOverlap accept textures as the 3rd argument.
-             // Wait, the plan says "checkWorktableOverlap" is in crafting.js.
-             // main.js calls it. main.js has textures.
-        }
-    }
     return foundWorkbench;
 }
 
@@ -101,31 +78,34 @@ export function openCraftingUI(textures) {
         div.className = 'craft-item';
         div.onclick = () => craftItem(recipe);
 
-        // Icon
-        const c = document.createElement('canvas');
-        c.width = 32; c.height = 32;
-        c.className = 'craft-icon';
-        const cx = c.getContext('2d');
-        if (textures && textures[recipe.id]) cx.drawImage(textures[recipe.id], 0, 0, 32, 32);
+        const outputIcon = createIconCanvas(recipe.id, 48, textures);
+        outputIcon.classList.add('craft-icon-output');
 
-        // Text
-        const details = document.createElement('div');
-        details.className = 'craft-details';
-        details.innerHTML = `<strong>${recipe.name}</strong>`;
+        const arrow = document.createElement('div');
+        arrow.className = 'craft-arrow';
+        arrow.innerText = '➜';
 
-        // Cost
-        const costDiv = document.createElement('div');
-        costDiv.className = 'craft-cost';
-        let costText = 'Cost: ';
+        const costContainer = document.createElement('div');
+        costContainer.className = 'craft-cost-icons';
         for (let [blockId, amount] of Object.entries(recipe.cost)) {
-            const blockName = BLOCK_PROPS[blockId].name;
-            costText += `${blockName} x${amount} `;
-        }
-        costDiv.innerText = costText;
-        details.appendChild(costDiv);
+            const costItem = document.createElement('div');
+            costItem.className = 'craft-cost-item';
 
-        div.appendChild(c);
-        div.appendChild(details);
+            const icon = createIconCanvas(blockId, 32, textures);
+            icon.classList.add('craft-icon');
+
+            const count = document.createElement('span');
+            count.className = 'craft-cost-count';
+            count.innerText = `×${amount}`;
+
+            costItem.appendChild(icon);
+            costItem.appendChild(count);
+            costContainer.appendChild(costItem);
+        }
+
+        div.appendChild(outputIcon);
+        div.appendChild(arrow);
+        div.appendChild(costContainer);
         list.appendChild(div);
     });
 
@@ -157,5 +137,13 @@ function craftItem(recipe) {
 
     updateInventoryUI();
     sounds.playPop(); // Craft sound
-    showMessage(`Crafted ${recipe.name}!`);
+    showMessage(`Crafted ${BLOCK_PROPS[recipe.id].name}!`);
+}
+
+function createIconCanvas(blockId, size, textures) {
+    const c = document.createElement('canvas');
+    c.width = size; c.height = size;
+    const ctx = c.getContext('2d');
+    if (textures && textures[blockId]) ctx.drawImage(textures[blockId], 0, 0, size, size);
+    return c;
 }
