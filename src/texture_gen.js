@@ -70,6 +70,29 @@ export function generateTextures() {
         addNoise(ctx, 0.2);
     });
 
+    createTexture(BLOCKS.SAND, (ctx, s) => {
+        ctx.fillStyle = '#d7c27a';
+        ctx.fillRect(0, 0, s, s);
+        ctx.fillStyle = '#c2aa63';
+        for (let i = 0; i < 12; i++) {
+            ctx.fillRect(Math.random() * s, Math.random() * s, 3, 3);
+        }
+        addNoise(ctx, 0.12);
+    });
+
+    createTexture(BLOCKS.SNOW, (ctx, s) => {
+        const gradient = ctx.createLinearGradient(0, 0, 0, s);
+        gradient.addColorStop(0, '#ffffff');
+        gradient.addColorStop(1, '#d7e4f2');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, s, s);
+        ctx.fillStyle = '#b0c4de';
+        for (let i = 0; i < 8; i++) {
+            ctx.fillRect(Math.random() * s, Math.random() * s, 2, 2);
+        }
+        addNoise(ctx, 0.06);
+    });
+
     createTexture(BLOCKS.WOOD, (ctx, s) => {
         ctx.fillStyle = '#6d4c41';
         ctx.fillRect(0, 0, s, s);
