@@ -1,0 +1,207 @@
+/**
+ * 2D Minecraft Clone - Styles
+ * スタイル定義
+ */
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Courier New', Courier, monospace;
+    touch-action: none; /* Prevent browser zooming/scrolling */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#gameCanvas {
+    display: block;
+    image-rendering: pixelated; /* Essential for the retro look */
+}
+
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Start Screen Overlay */
+#start-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 100;
+    pointer-events: auto;
+}
+
+h1 {
+    font-size: 40px;
+    text-shadow: 4px 4px 0 #333;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+button {
+    background: #727272;
+    border: 4px solid #fff;
+    color: white;
+    padding: 15px 40px;
+    font-size: 24px;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: inset -4px -4px 0 rgba(0,0,0,0.5);
+}
+button:active {
+    box-shadow: inset 4px 4px 0 rgba(0,0,0,0.5);
+}
+
+/* HUD - Hotbar */
+#hotbar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 5px;
+    border-radius: 4px;
+    pointer-events: auto;
+}
+
+.slot {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #555;
+    background-color: rgba(0,0,0,0.3);
+    cursor: pointer;
+    position: relative;
+    image-rendering: pixelated;
+}
+
+.slot.active {
+    border: 2px solid white;
+    transform: scale(1.1);
+    background-color: rgba(255,255,255,0.2);
+    z-index: 10;
+}
+
+.slot canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.slot .count {
+    position: absolute;
+    bottom: 0;
+    right: 2px;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: none;
+}
+
+/* Mobile Controls */
+.touch-controls {
+    display: none; /* Shown via JS if touch detected */
+    position: absolute;
+    bottom: 80px;
+    width: 100%;
+    height: 150px;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.d-pad {
+    position: absolute;
+    left: 20px;
+    bottom: 10px;
+    width: 220px; /* Wider for 3 buttons */
+    height: 100px;
+    pointer-events: auto;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.action-btn {
+    position: absolute;
+    right: 20px;
+    bottom: 10px;
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    pointer-events: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.arrow-btn {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 30px;
+    border-radius: 10px;
+}
+
+.arrow-btn.down {
+    height: 40px;
+    font-size: 20px;
+    width: 50px;
+}
+
+.arrow-btn:active, .action-btn:active {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+#debug-info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-size: 12px;
+    text-shadow: 1px 1px 0 #000;
+}
+
+.instructions {
+    font-size: 14px;
+    color: #ddd;
+    margin-top: 10px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* Added message log */
+#message-log {
+    position: absolute;
+    top: 50px;
+    left: 10px;
+    color: #fff;
+    font-size: 14px;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: none;
+    transition: opacity 1s;
+}
