@@ -134,6 +134,15 @@ class World {
                 }
             }
         }
+
+        // Scatter Workbenches on the surface
+        for (let x = 10; x < this.width - 10; x += 50 + Math.floor(Math.random() * 20)) {
+            const h = heights[x];
+            // Ensure space above is clear
+            if (this.getBlock(x, h - 1) === BLOCKS.AIR) {
+                this.setBlock(x, h - 1, BLOCKS.WORKBENCH);
+            }
+        }
     }
 
     generateTree(x, y) {
@@ -201,6 +210,16 @@ class Player {
             this.vy = -JUMP_FORCE;
             this.grounded = false;
             sounds.playJump();
+        }
+
+        // Jump Pad Check
+        // Check block directly under feet center
+        const feetX = Math.floor(this.getCenterX() / TILE_SIZE);
+        const feetY = Math.floor((this.y + this.height + 0.1) / TILE_SIZE);
+        if (this.world.getBlock(feetX, feetY) === BLOCKS.JUMP_PAD) {
+             this.vy = -JUMP_FORCE * 1.8;
+             this.grounded = false;
+             sounds.playJump(); // Maybe add a different sound later
         }
 
         this.vy += GRAVITY;
@@ -357,7 +376,9 @@ function update(dt) {
 
     // Interaction
     if (input.mouse.leftDown) {
-        handleInteraction(input.mouse.x, input.mouse.y);
+        if (!isCraftingOpen) {
+            handleInteraction(input.mouse.x, input.mouse.y);
+        }
         input.mouse.leftDown = false;
     }
 
@@ -369,7 +390,189 @@ function update(dt) {
         }
     }
     if (bridgeCooldown > 0) bridgeCooldown -= dt;
+
+    // --- New Logic: Worktable Check ---
+    checkWorktableOverlap();
+    // --- New Logic: Fireworks ---
+    updateFireworks(dt);
 }
+
+// --- Fireworks System ---
+const fireworkParticles = [];
+
+function updateFireworks(dt) {
+    // 1. Scan/Emit
+    // In a large world, scanning all blocks every frame is bad.
+    // Optimization: Only scan blocks near the player?
+    // Or just scan randomly?
+    // Let's use a timer.
+    if (!world.fireworkTimer) world.fireworkTimer = 0;
+    world.fireworkTimer += dt;
+    if (world.fireworkTimer > 5000) { // 5 seconds
+        world.fireworkTimer = 0;
+        // Find visible fireworks or all fireworks?
+        // Let's just scan the visible range + padding for now to keep performance ok.
+        const range = calculateVisibleTileRange(cameraX, cameraY, canvas.width, canvas.height, TILE_SIZE);
+        for (let y = range.startY - 10; y < range.endY + 10; y++) {
+            for (let x = range.startX - 10; x < range.endX + 10; x++) {
+                if (world.getBlock(x, y) === BLOCKS.FIREWORK) {
+                    spawnFireworkParticles(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2);
+                }
+            }
+        }
+    }
+
+    // 2. Update Particles
+    for (let i = fireworkParticles.length - 1; i >= 0; i--) {
+        const p = fireworkParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= dt;
+        p.vy += 0.05; // Gravity
+        if (p.life <= 0) {
+            fireworkParticles.splice(i, 1);
+        }
+    }
+}
+
+function spawnFireworkParticles(x, y) {
+    // Launch sound
+    // sounds.playPop();
+
+    // Create explosion
+    const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+    for (let i = 0; i < 20; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 3 + 2;
+        fireworkParticles.push({
+            x: x, y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 5, // Upward bias
+            life: 1000 + Math.random() * 500,
+            color: color
+        });
+    }
+}
+
+// --- Crafting System ---
+const CRAFTING_RECIPES = [
+    {
+        id: BLOCKS.FIREWORK,
+        name: 'Firework',
+        cost: { [BLOCKS.WOOD]: 2 },
+        count: 1
+    },
+    {
+        id: BLOCKS.JUMP_PAD,
+        name: 'Jump Pad',
+        cost: { [BLOCKS.STONE]: 2, [BLOCKS.LEAVES]: 2 },
+        count: 1
+    }
+];
+
+let isCraftingOpen = false;
+
+function checkWorktableOverlap() {
+    const px = player.x;
+    const py = player.y;
+    const pw = player.width;
+    const ph = player.height;
+
+    // Check overlap with workbench
+    // Workbench is solid: false, so we can overlap it.
+    // Check tiles player covers
+    const startX = Math.floor(px / TILE_SIZE);
+    const endX = Math.floor((px + pw) / TILE_SIZE);
+    const startY = Math.floor(py / TILE_SIZE);
+    const endY = Math.floor((py + ph) / TILE_SIZE);
+
+    let foundWorkbench = false;
+    for (let y = startY; y <= endY; y++) {
+        for (let x = startX; x <= endX; x++) {
+            if (world.getBlock(x, y) === BLOCKS.WORKBENCH) {
+                foundWorkbench = true;
+                break;
+            }
+        }
+    }
+
+    if (foundWorkbench) {
+        if (!isCraftingOpen) openCraftingUI();
+    } else {
+        if (isCraftingOpen) closeCraftingUI();
+    }
+}
+
+function openCraftingUI() {
+    isCraftingOpen = true;
+    const modal = document.getElementById('crafting-modal');
+    const list = document.getElementById('craft-list');
+    list.innerHTML = '';
+
+    CRAFTING_RECIPES.forEach(recipe => {
+        const div = document.createElement('div');
+        div.className = 'craft-item';
+        div.onclick = () => craftItem(recipe);
+
+        // Icon
+        const c = document.createElement('canvas');
+        c.width = 32; c.height = 32;
+        c.className = 'craft-icon';
+        const cx = c.getContext('2d');
+        if (textures[recipe.id]) cx.drawImage(textures[recipe.id], 0, 0, 32, 32);
+
+        // Text
+        const details = document.createElement('div');
+        details.className = 'craft-details';
+        details.innerHTML = `<strong>${recipe.name}</strong>`;
+
+        // Cost
+        const costDiv = document.createElement('div');
+        costDiv.className = 'craft-cost';
+        let costText = 'Cost: ';
+        for (let [blockId, amount] of Object.entries(recipe.cost)) {
+            const blockName = BLOCK_PROPS[blockId].name;
+            costText += `${blockName} x${amount} `;
+        }
+        costDiv.innerText = costText;
+        details.appendChild(costDiv);
+
+        div.appendChild(c);
+        div.appendChild(details);
+        list.appendChild(div);
+    });
+
+    modal.style.display = 'block';
+}
+
+function closeCraftingUI() {
+    isCraftingOpen = false;
+    document.getElementById('crafting-modal').style.display = 'none';
+}
+
+function craftItem(recipe) {
+    // Check cost
+    for (let [blockId, amount] of Object.entries(recipe.cost)) {
+        if ((inventory[blockId] || 0) < amount) {
+            showMessage("Not enough materials!");
+            return;
+        }
+    }
+
+    // Deduct
+    for (let [blockId, amount] of Object.entries(recipe.cost)) {
+        inventory[blockId] -= amount;
+    }
+
+    // Add
+    if (!inventory[recipe.id]) inventory[recipe.id] = 0;
+    inventory[recipe.id] += recipe.count;
+
+    updateInventoryUI();
+    sounds.playPop(); // Craft sound
+    showMessage(`Crafted ${recipe.name}!`);
+}
+
 
 function handleBridgeBuilding() {
     const feetY = player.y + player.height;
@@ -411,7 +614,7 @@ function handleInteraction(screenX, screenY) {
     }
 
     // Place
-    if (currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) {
+    if ((currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) && currentBlock !== BLOCKS.WORKBENCH) {
         const playerRect = player.getRect();
         const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
 
@@ -516,6 +719,12 @@ function draw() {
     }
 
     player.draw(ctx);
+
+    // Particles
+    fireworkParticles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 4, 4);
+    });
 
     // Highlight
     const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY);

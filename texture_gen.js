@@ -109,5 +109,58 @@ export function generateTextures() {
     createTexture(BLOCKS.COAL, createOre('#757575', '#000'));
     createTexture(BLOCKS.GOLD, createOre('#757575', '#FFD700'));
 
+    createTexture(BLOCKS.WORKBENCH, (ctx, s) => {
+        // Wood base
+        ctx.fillStyle = '#8d6e63';
+        ctx.fillRect(0, 0, s, s);
+        // Table top
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(0, 0, s, s / 3);
+        // Legs (visual)
+        ctx.fillStyle = '#3e2723';
+        ctx.fillRect(4, s/3, 4, s - s/3);
+        ctx.fillRect(s - 8, s/3, 4, s - s/3);
+
+        // Tools/Detail on top
+        ctx.fillStyle = '#bcaaa4'; // Hammer/Tool
+        ctx.fillRect(8, 4, 16, 4);
+
+        addNoise(ctx, 0.1);
+    });
+
+    createTexture(BLOCKS.FIREWORK, (ctx, s) => {
+        // Box
+        ctx.fillStyle = '#ef5350'; // Red
+        ctx.fillRect(4, 8, s - 8, s - 8);
+        // Stripes
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(4, 12, s - 8, 4);
+        ctx.fillRect(4, 20, s - 8, 4);
+        // Fuse
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(s/2 - 1, 0, 2, 8);
+
+        addNoise(ctx, 0.1);
+    });
+
+    createTexture(BLOCKS.JUMP_PAD, (ctx, s) => {
+        // Base
+        ctx.fillStyle = '#424242';
+        ctx.fillRect(2, s - 8, s - 4, 8);
+        // Spring/Pad
+        ctx.fillStyle = '#ab47bc'; // Purple
+        ctx.fillRect(4, s - 12, s - 8, 4);
+
+        // Arrows pointing up
+        ctx.fillStyle = '#e1bee7';
+        ctx.beginPath();
+        ctx.moveTo(s/2, 4);
+        ctx.lineTo(s/2 - 4, 10);
+        ctx.lineTo(s/2 + 4, 10);
+        ctx.fill();
+
+        addNoise(ctx, 0.1);
+    });
+
     return textures;
 }
