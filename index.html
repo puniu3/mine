@@ -23,16 +23,10 @@
             text-align: center;
             pointer-events: auto; /* Enable interaction */
         }
-        #crafting-modal h2 {
-            margin-top: 0;
-            color: #ffb74d;
-            font-size: 2em;
-        }
         .craft-item {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
+            gap: 16px;
             background: rgba(255, 255, 255, 0.1);
             margin: 10px 0;
             padding: 10px;
@@ -52,8 +46,13 @@
             height: 48px;
         }
         .craft-arrow {
-            font-size: 1.5em;
+            font-size: 2.25em;
             color: #ffeb3b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            align-self: stretch;
         }
         .craft-cost-icons {
             display: flex;
@@ -100,7 +99,6 @@
 
         <!-- Crafting Modal -->
         <div id="crafting-modal">
-            <h2 aria-label="Crafting">🛠️</h2>
             <div id="craft-list">
                 <!-- Items injected by JS -->
             </div>
