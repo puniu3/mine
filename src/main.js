@@ -293,7 +293,7 @@ function explodeTNT(x, y) { // x, y are tile coordinates
     sounds.playExplosion();
 
     // Explosion Radius
-    const radius = 3;
+    const radius = 8;
     const startX = Math.max(0, x - radius);
     const endX = Math.min(world.width - 1, x + radius);
     const startY = Math.max(0, y - radius);
