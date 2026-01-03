@@ -62,7 +62,7 @@ function launchFirework(x, y) {
         x: x,
         y: y,
         vy: -4, // Upward speed
-        targetY: y - (6 * TILE_SIZE), // 6 meters up
+        targetY: y - (10 * TILE_SIZE), // 10 meters up
         color: '#ffffff'
     });
 }
@@ -73,7 +73,7 @@ function explode(x, y) {
     // Large amount of particles
     for (let i = 0; i < 100; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 4 + 2;
+        const speed = (Math.random() * 4 + 2) * 0.5;
         fireworkParticles.push({
             type: 'particle',
             x: x,
