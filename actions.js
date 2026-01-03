@@ -29,6 +29,7 @@
  * @param {Function} context.utils.rectsIntersect - Check if two rects intersect.
  * @param {Function} context.utils.hasAdjacentBlock - Check if block has neighbors.
  * @param {Function} context.onMessage - Function to display messages to the user.
+ * @param {Function} [context.onBlockPlaced] - Callback when block is placed.
  * @returns {Object} Action methods { handlePointer, handleBridge }.
  */
 export function createActions({
@@ -39,7 +40,8 @@ export function createActions({
     sounds,
     constants,
     utils,
-    onMessage
+    onMessage,
+    onBlockPlaced
 }) {
     const { TILE_SIZE, BLOCKS, BLOCK_PROPS, REACH } = constants;
     const {
@@ -133,6 +135,7 @@ export function createActions({
                     if (inventory.consumeFromInventory(selectedBlock)) {
                         world.setBlock(bx, by, selectedBlock);
                         sounds.playDig('dirt');
+                        if (onBlockPlaced) onBlockPlaced(bx, by, selectedBlock); // Trigger hook
                         if (shouldClimb) {
                             // Move player on top of the newly placed block
                             player.y = (by * TILE_SIZE) - player.height - 0.1;

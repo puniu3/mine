@@ -23,7 +23,8 @@ export const BLOCKS = {
     GOLD: 8,
     WORKBENCH: 9,
     FIREWORK: 10,
-    JUMP_PAD: 11
+    JUMP_PAD: 11,
+    TNT: 12
 };
 
 export const BLOCK_PROPS = {
@@ -46,7 +47,8 @@ export const BLOCK_PROPS = {
     // I will make it `solid: false` (pass-through) so the player can walk past it and "overlap" it.
 
     [BLOCKS.FIREWORK]: { name: 'Firework', solid: true, color: '#ef5350', type: 'wood', drop: BLOCKS.FIREWORK },
-    [BLOCKS.JUMP_PAD]: { name: 'Jump Pad', solid: true, color: '#ab47bc', type: 'stone', drop: BLOCKS.JUMP_PAD }
+    [BLOCKS.JUMP_PAD]: { name: 'Jump Pad', solid: true, color: '#ab47bc', type: 'stone', drop: BLOCKS.JUMP_PAD },
+    [BLOCKS.TNT]: { name: 'TNT', solid: true, color: '#d32f2f', type: 'wood', drop: BLOCKS.TNT }
 };
 
-export const HOTBAR_ITEMS = [BLOCKS.DIRT, BLOCKS.GRASS, BLOCKS.STONE, BLOCKS.WOOD, BLOCKS.LEAVES, BLOCKS.GOLD, BLOCKS.FIREWORK, BLOCKS.JUMP_PAD];
+export const HOTBAR_ITEMS = [BLOCKS.DIRT, BLOCKS.GRASS, BLOCKS.STONE, BLOCKS.WOOD, BLOCKS.LEAVES, BLOCKS.GOLD, BLOCKS.FIREWORK, BLOCKS.JUMP_PAD, BLOCKS.TNT];
