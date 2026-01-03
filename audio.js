@@ -1,6 +1,6 @@
 /**
  * 2D Minecraft Clone - Audio Module
- * サウンドエンジン（Web Audio API）
+ * Sound Engine (Web Audio API)
  */
 
 class SoundManager {
@@ -75,5 +75,5 @@ class SoundManager {
     }
 }
 
-// グローバルなサウンドマネージャーインスタンス
+// Global sound manager instance
 const sounds = new SoundManager();

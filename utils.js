@@ -1,80 +1,80 @@
 /**
  * 2D Minecraft Clone - Utility Functions
- * 純粋関数ユーティリティモジュール
+ * Pure function utility module
  */
 
 // ============================================================================
-// 型定義 (JSDoc)
+// Type Definitions (JSDoc)
 // ============================================================================
 
 /**
  * @typedef {Object} Rectangle
- * @property {number} x - 左上X座標
- * @property {number} y - 左上Y座標
- * @property {number} w - 幅
- * @property {number} h - 高さ
+ * @property {number} x - Top-left X coordinate
+ * @property {number} y - Top-left Y coordinate
+ * @property {number} w - Width
+ * @property {number} h - Height
  */
 
 /**
  * @typedef {Object} Point
- * @property {number} x - X座標
- * @property {number} y - Y座標
+ * @property {number} x - X coordinate
+ * @property {number} y - Y coordinate
  */
 
 /**
  * @typedef {Object} TileCoord
- * @property {number} tx - タイルX座標
- * @property {number} ty - タイルY座標
+ * @property {number} tx - Tile X coordinate
+ * @property {number} ty - Tile Y coordinate
  */
 
 // ============================================================================
-// 数学ユーティリティ
+// Math Utilities
 // ============================================================================
 
 /**
- * 値を指定範囲内に制限する
- * @param {number} value - 入力値
- * @param {number} min - 最小値
- * @param {number} max - 最大値
- * @returns {number} 制限された値
+ * Clamp a value within a specified range
+ * @param {number} value - Input value
+ * @param {number} min - Minimum value
+ * @param {number} max - Maximum value
+ * @returns {number} Clamped value
  */
 function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
 /**
- * 線形補間を行う
- * @param {number} a - 開始値
- * @param {number} b - 終了値
- * @param {number} t - 補間係数 (0.0 ~ 1.0)
- * @returns {number} 補間された値
+ * Perform linear interpolation
+ * @param {number} a - Start value
+ * @param {number} b - End value
+ * @param {number} t - Interpolation factor (0.0 ~ 1.0)
+ * @returns {number} Interpolated value
  */
 function lerp(a, b, t) {
     return a + (b - a) * t;
 }
 
 /**
- * 2点間のユークリッド距離を計算する
- * @param {number} x1 - 点1のX座標
- * @param {number} y1 - 点1のY座標
- * @param {number} x2 - 点2のX座標
- * @param {number} y2 - 点2のY座標
- * @returns {number} 2点間の距離
+ * Calculate Euclidean distance between two points
+ * @param {number} x1 - Point 1 X coordinate
+ * @param {number} y1 - Point 1 Y coordinate
+ * @param {number} x2 - Point 2 X coordinate
+ * @param {number} y2 - Point 2 Y coordinate
+ * @returns {number} Distance between two points
  */
 function distance(x1, y1, x2, y2) {
     return Math.hypot(x2 - x1, y2 - y1);
 }
 
 // ============================================================================
-// 座標変換
+// Coordinate Conversion
 // ============================================================================
 
 /**
- * ワールド座標からタイル座標へ変換する
- * @param {number} worldX - ワールドX座標（ピクセル）
- * @param {number} worldY - ワールドY座標（ピクセル）
- * @param {number} tileSize - タイルサイズ（ピクセル）
- * @returns {TileCoord} タイル座標
+ * Convert world coordinates to tile coordinates
+ * @param {number} worldX - World X coordinate (pixels)
+ * @param {number} worldY - World Y coordinate (pixels)
+ * @param {number} tileSize - Tile size (pixels)
+ * @returns {TileCoord} Tile coordinates
  */
 function worldToTile(worldX, worldY, tileSize) {
     return {
@@ -84,11 +84,11 @@ function worldToTile(worldX, worldY, tileSize) {
 }
 
 /**
- * タイル座標からワールド座標へ変換する（タイル左上）
- * @param {number} tileX - タイルX座標
- * @param {number} tileY - タイルY座標
- * @param {number} tileSize - タイルサイズ（ピクセル）
- * @returns {Point} ワールド座標
+ * Convert tile coordinates to world coordinates (top-left of tile)
+ * @param {number} tileX - Tile X coordinate
+ * @param {number} tileY - Tile Y coordinate
+ * @param {number} tileSize - Tile size (pixels)
+ * @returns {Point} World coordinates
  */
 function tileToWorld(tileX, tileY, tileSize) {
     return {
@@ -98,12 +98,12 @@ function tileToWorld(tileX, tileY, tileSize) {
 }
 
 /**
- * 2D座標から1D配列インデックスへ変換する
- * @param {number} x - X座標
- * @param {number} y - Y座標
- * @param {number} width - マップ幅
- * @param {number} height - マップ高さ
- * @returns {number} 配列インデックス（範囲外の場合は-1）
+ * Convert 2D coordinates to 1D array index
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ * @param {number} width - Map width
+ * @param {number} height - Map height
+ * @returns {number} Array index (-1 if out of bounds)
  */
 function coordToIndex(x, y, width, height) {
     if (x < 0 || x >= width || y < 0 || y >= height) {
@@ -113,12 +113,12 @@ function coordToIndex(x, y, width, height) {
 }
 
 /**
- * スクリーン座標をワールド座標に変換する
- * @param {number} screenX - スクリーンX座標
- * @param {number} screenY - スクリーンY座標
- * @param {number} cameraX - カメラX位置
- * @param {number} cameraY - カメラY位置
- * @returns {Point} ワールド座標
+ * Convert screen coordinates to world coordinates
+ * @param {number} screenX - Screen X coordinate
+ * @param {number} screenY - Screen Y coordinate
+ * @param {number} cameraX - Camera X position
+ * @param {number} cameraY - Camera Y position
+ * @returns {Point} World coordinates
  */
 function screenToWorld(screenX, screenY, cameraX, cameraY) {
     return {
@@ -128,14 +128,14 @@ function screenToWorld(screenX, screenY, cameraX, cameraY) {
 }
 
 // ============================================================================
-// 衝突判定
+// Collision Detection
 // ============================================================================
 
 /**
- * 2つの矩形が交差しているかを判定する
- * @param {Rectangle} rect1 - 矩形1
- * @param {Rectangle} rect2 - 矩形2
- * @returns {boolean} 交差している場合true
+ * Check if two rectangles intersect
+ * @param {Rectangle} rect1 - Rectangle 1
+ * @param {Rectangle} rect2 - Rectangle 2
+ * @returns {boolean} True if intersecting
  */
 function rectsIntersect(rect1, rect2) {
     return (
@@ -147,11 +147,11 @@ function rectsIntersect(rect1, rect2) {
 }
 
 /**
- * 点が矩形内にあるかを判定する
- * @param {number} px - 点のX座標
- * @param {number} py - 点のY座標
- * @param {Rectangle} rect - 矩形
- * @returns {boolean} 矩形内の場合true
+ * Check if a point is inside a rectangle
+ * @param {number} px - Point X coordinate
+ * @param {number} py - Point Y coordinate
+ * @param {Rectangle} rect - Rectangle
+ * @returns {boolean} True if inside rectangle
  */
 function pointInRect(px, py, rect) {
     return (
@@ -163,27 +163,27 @@ function pointInRect(px, py, rect) {
 }
 
 /**
- * 点がリーチ範囲内にあるかを判定する
- * @param {number} px - 点のX座標
- * @param {number} py - 点のY座標
- * @param {number} centerX - 中心X座標
- * @param {number} centerY - 中心Y座標
- * @param {number} reach - リーチ距離
- * @returns {boolean} リーチ範囲内の場合true
+ * Check if a point is within reach distance
+ * @param {number} px - Point X coordinate
+ * @param {number} py - Point Y coordinate
+ * @param {number} centerX - Center X coordinate
+ * @param {number} centerY - Center Y coordinate
+ * @param {number} reach - Reach distance
+ * @returns {boolean} True if within reach
  */
 function isWithinReach(px, py, centerX, centerY, reach) {
     return distance(px, py, centerX, centerY) <= reach;
 }
 
 // ============================================================================
-// ブロック関連
+// Block Utilities
 // ============================================================================
 
 /**
- * ブロックが固体かどうかを判定する
- * @param {number} blockType - ブロックタイプID
- * @param {Object.<number, {solid?: boolean}>} blockProps - ブロックプロパティ辞書
- * @returns {boolean} 固体の場合true
+ * Check if a block is solid
+ * @param {number} blockType - Block type ID
+ * @param {Object.<number, {solid?: boolean}>} blockProps - Block properties dictionary
+ * @returns {boolean} True if solid
  */
 function isBlockSolid(blockType, blockProps) {
     const props = blockProps[blockType];
@@ -191,10 +191,10 @@ function isBlockSolid(blockType, blockProps) {
 }
 
 /**
- * ブロックが透明かどうかを判定する
- * @param {number} blockType - ブロックタイプID
- * @param {Object.<number, {transparent?: boolean}>} blockProps - ブロックプロパティ辞書
- * @returns {boolean} 透明の場合true
+ * Check if a block is transparent
+ * @param {number} blockType - Block type ID
+ * @param {Object.<number, {transparent?: boolean}>} blockProps - Block properties dictionary
+ * @returns {boolean} True if transparent
  */
 function isBlockTransparent(blockType, blockProps) {
     const props = blockProps[blockType];
@@ -202,10 +202,10 @@ function isBlockTransparent(blockType, blockProps) {
 }
 
 /**
- * ブロックが破壊可能かどうかを判定する
- * @param {number} blockType - ブロックタイプID
- * @param {Object.<number, {unbreakable?: boolean}>} blockProps - ブロックプロパティ辞書
- * @returns {boolean} 破壊可能な場合true
+ * Check if a block is breakable
+ * @param {number} blockType - Block type ID
+ * @param {Object.<number, {unbreakable?: boolean}>} blockProps - Block properties dictionary
+ * @returns {boolean} True if breakable
  */
 function isBlockBreakable(blockType, blockProps) {
     const props = blockProps[blockType];
@@ -213,10 +213,10 @@ function isBlockBreakable(blockType, blockProps) {
 }
 
 /**
- * ブロック破壊時のドロップアイテムを取得する
- * @param {number} blockType - ブロックタイプID
- * @param {Object.<number, {drop?: number}>} blockProps - ブロックプロパティ辞書
- * @returns {number} ドロップするブロックタイプID
+ * Get the drop item when a block is broken
+ * @param {number} blockType - Block type ID
+ * @param {Object.<number, {drop?: number}>} blockProps - Block properties dictionary
+ * @returns {number} Dropped block type ID
  */
 function getBlockDrop(blockType, blockProps) {
     const props = blockProps[blockType];
@@ -224,10 +224,10 @@ function getBlockDrop(blockType, blockProps) {
 }
 
 /**
- * ブロックのタイプ（素材）を取得する
- * @param {number} blockType - ブロックタイプID
- * @param {Object.<number, {type?: string}>} blockProps - ブロックプロパティ辞書
- * @returns {string|undefined} ブロックタイプ文字列
+ * Get the material type of a block
+ * @param {number} blockType - Block type ID
+ * @param {Object.<number, {type?: string}>} blockProps - Block properties dictionary
+ * @returns {string|undefined} Block material type string
  */
 function getBlockMaterialType(blockType, blockProps) {
     const props = blockProps[blockType];
@@ -235,14 +235,14 @@ function getBlockMaterialType(blockType, blockProps) {
 }
 
 // ============================================================================
-// 地形生成
+// Terrain Generation
 // ============================================================================
 
 /**
- * 指定X座標での地形高さを計算する
- * @param {number} x - X座標
- * @param {number} baseHeight - 基準高さ
- * @returns {number} 地形の高さ（Y座標）
+ * Calculate terrain height at a given X coordinate
+ * @param {number} x - X coordinate
+ * @param {number} baseHeight - Base height
+ * @returns {number} Terrain height (Y coordinate)
  */
 function calculateTerrainHeight(x, baseHeight) {
     const h = Math.sin(x / 30) * 12 + Math.sin(x / 8) * 3;
@@ -250,10 +250,10 @@ function calculateTerrainHeight(x, baseHeight) {
 }
 
 /**
- * 地形全体の高さ配列を生成する
- * @param {number} width - ワールド幅
- * @param {number} baseHeight - 基準高さ
- * @returns {number[]} 各X座標での高さ配列
+ * Generate terrain height array for entire world
+ * @param {number} width - World width
+ * @param {number} baseHeight - Base height
+ * @returns {number[]} Height array for each X coordinate
  */
 function generateTerrainHeights(width, baseHeight) {
     const heights = [];
@@ -264,44 +264,44 @@ function generateTerrainHeights(width, baseHeight) {
 }
 
 // ============================================================================
-// カメラ
+// Camera
 // ============================================================================
 
 /**
- * カメラ位置を計算する（スムーズ追従）
- * @param {number} currentCam - 現在のカメラ位置
- * @param {number} targetCam - 目標のカメラ位置
- * @param {number} smoothing - スムージング係数 (0.0 ~ 1.0)
- * @returns {number} 新しいカメラ位置
+ * Calculate camera position with smooth following
+ * @param {number} currentCam - Current camera position
+ * @param {number} targetCam - Target camera position
+ * @param {number} smoothing - Smoothing factor (0.0 ~ 1.0)
+ * @returns {number} New camera position
  */
 function smoothCamera(currentCam, targetCam, smoothing) {
     return currentCam + (targetCam - currentCam) * smoothing;
 }
 
 /**
- * カメラ位置を範囲内に制限する
- * @param {number} cameraPos - カメラ位置
- * @param {number} minPos - 最小位置
- * @param {number} worldSize - ワールドサイズ（ピクセル）
- * @param {number} viewportSize - ビューポートサイズ（ピクセル）
- * @returns {number} 制限されたカメラ位置
+ * Clamp camera position within bounds
+ * @param {number} cameraPos - Camera position
+ * @param {number} minPos - Minimum position
+ * @param {number} worldSize - World size (pixels)
+ * @param {number} viewportSize - Viewport size (pixels)
+ * @returns {number} Clamped camera position
  */
 function clampCamera(cameraPos, minPos, worldSize, viewportSize) {
     return clamp(cameraPos, minPos, worldSize - viewportSize);
 }
 
 // ============================================================================
-// 描画範囲計算
+// Render Range Calculation
 // ============================================================================
 
 /**
- * 描画すべきタイル範囲を計算する
- * @param {number} cameraX - カメラX位置
- * @param {number} cameraY - カメラY位置
- * @param {number} canvasWidth - キャンバス幅
- * @param {number} canvasHeight - キャンバス高さ
- * @param {number} tileSize - タイルサイズ
- * @returns {{startX: number, endX: number, startY: number, endY: number}} 描画範囲
+ * Calculate visible tile range for rendering
+ * @param {number} cameraX - Camera X position
+ * @param {number} cameraY - Camera Y position
+ * @param {number} canvasWidth - Canvas width
+ * @param {number} canvasHeight - Canvas height
+ * @param {number} tileSize - Tile size
+ * @returns {{startX: number, endX: number, startY: number, endY: number}} Visible range
  */
 function calculateVisibleTileRange(cameraX, cameraY, canvasWidth, canvasHeight, tileSize) {
     const startX = Math.floor(cameraX / tileSize);
@@ -312,22 +312,22 @@ function calculateVisibleTileRange(cameraX, cameraY, canvasWidth, canvasHeight, 
 }
 
 // ============================================================================
-// 隣接チェック
+// Neighbor Check
 // ============================================================================
 
 /**
- * 隣接オフセット配列
+ * Neighbor offset array
  * @type {Array<[number, number]>}
  */
 const NEIGHBOR_OFFSETS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
 
 /**
- * 指定位置に隣接する非空気ブロックがあるかを判定する
- * @param {number} tx - タイルX座標
- * @param {number} ty - タイルY座標
- * @param {function(number, number): number} getBlockFn - ブロック取得関数
- * @param {number} airBlockId - 空気ブロックのID
- * @returns {boolean} 隣接ブロックがある場合true
+ * Check if there is an adjacent non-air block at the specified position
+ * @param {number} tx - Tile X coordinate
+ * @param {number} ty - Tile Y coordinate
+ * @param {function(number, number): number} getBlockFn - Block getter function
+ * @param {number} airBlockId - Air block ID
+ * @returns {boolean} True if adjacent block exists
  */
 function hasAdjacentBlock(tx, ty, getBlockFn, airBlockId) {
     for (const [dx, dy] of NEIGHBOR_OFFSETS) {
