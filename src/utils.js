@@ -54,6 +54,16 @@ export function lerp(a, b, t) {
 }
 
 /**
+ * Generate a random integer within an inclusive range.
+ * @param {number} min - Minimum value.
+ * @param {number} max - Maximum value.
+ * @returns {number} Random integer in range.
+ */
+export function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
  * Calculate Euclidean distance between two points
  * @param {number} x1 - Point 1 X coordinate
  * @param {number} y1 - Point 1 Y coordinate
@@ -242,10 +252,20 @@ export function getBlockMaterialType(blockType, blockProps) {
  * Calculate terrain height at a given X coordinate
  * @param {number} x - X coordinate
  * @param {number} baseHeight - Base height
+ * @param {Object} [shape] - Wave shape configuration
+ * @param {number} [shape.largeAmplitude=12] - Large wave amplitude
+ * @param {number} [shape.smallAmplitude=3] - Small wave amplitude
+ * @param {number} [shape.largeFrequency=30] - Large wave frequency divisor
+ * @param {number} [shape.smallFrequency=8] - Small wave frequency divisor
  * @returns {number} Terrain height (Y coordinate)
  */
-export function calculateTerrainHeight(x, baseHeight) {
-    const h = Math.sin(x / 30) * 12 + Math.sin(x / 8) * 3;
+export function calculateTerrainHeight(x, baseHeight, shape = {}) {
+    const largeAmplitude = shape.largeAmplitude ?? 12;
+    const smallAmplitude = shape.smallAmplitude ?? 3;
+    const largeFrequency = shape.largeFrequency ?? 30;
+    const smallFrequency = shape.smallFrequency ?? 8;
+
+    const h = Math.sin(x / largeFrequency) * largeAmplitude + Math.sin(x / smallFrequency) * smallAmplitude;
     return Math.floor(baseHeight + h);
 }
 
@@ -261,6 +281,36 @@ export function generateTerrainHeights(width, baseHeight) {
         heights.push(calculateTerrainHeight(x, baseHeight));
     }
     return heights;
+}
+
+/**
+ * Generate biome layout and matching heights.
+ * @param {number} width - World width.
+ * @param {Object.<string, {baseHeight: number, terrain?: Object}>} biomeConfigs - Biome settings keyed by biome name.
+ * @param {number} minSize - Minimum biome segment width.
+ * @param {number} maxSize - Maximum biome segment width.
+ * @returns {{heights: number[], biomeByColumn: string[]}} Heights and biome names per column.
+ */
+export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
+    const heights = [];
+    const biomeByColumn = [];
+    const biomeKeys = Object.keys(biomeConfigs);
+
+    let x = 0;
+    while (x < width) {
+        const biome = biomeKeys[Math.floor(Math.random() * biomeKeys.length)];
+        const length = Math.min(width - x, randomInt(minSize, maxSize));
+
+        const config = biomeConfigs[biome];
+        for (let i = 0; i < length; i++) {
+            const column = x + i;
+            heights[column] = calculateTerrainHeight(column, config.baseHeight, config.terrain);
+            biomeByColumn[column] = biome;
+        }
+        x += length;
+    }
+
+    return { heights, biomeByColumn };
 }
 
 // ============================================================================

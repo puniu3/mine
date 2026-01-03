@@ -1,5 +1,12 @@
-import { coordToIndex, isBlockSolid, generateTerrainHeights } from './utils.js';
+import { coordToIndex, isBlockSolid, generateBiomeHeights } from './utils.js';
 import { TILE_SIZE, BLOCKS, BLOCK_PROPS } from './constants.js';
+
+const BIOMES = {
+    PLAINS: 'plains',
+    DESERT: 'desert',
+    SNOWFIELD: 'snowfield',
+    MOUNTAIN: 'mountain'
+};
 
 export class World {
     constructor(width, height) {
@@ -42,10 +49,14 @@ export class World {
     }
 
     generate() {
-        const heights = generateTerrainHeights(this.width, this.height / 2);
+        const biomeConfigs = this.getBiomeConfigs();
+        const { heights, biomeByColumn } = generateBiomeHeights(this.width, biomeConfigs, 96, 192);
 
         for (let x = 0; x < this.width; x++) {
             const h = heights[x];
+            const biome = biomeByColumn[x];
+            const surfaceBlock = this.getSurfaceBlock(biome, h);
+
             for (let y = 0; y < this.height; y++) {
                 if (y === this.height - 1) {
                     this.setBlock(x, y, BLOCKS.BEDROCK);
@@ -57,11 +68,11 @@ export class World {
                         else if (Math.random() > 0.95) this.setBlock(x, y, BLOCKS.DIRT);
                         else this.setBlock(x, y, BLOCKS.STONE);
                     } else {
-                        this.setBlock(x, y, BLOCKS.DIRT);
+                        this.setBlock(x, y, this.getSubSurfaceBlock(biome, y, h));
                     }
                 } else if (y === h) {
-                    this.setBlock(x, y, BLOCKS.GRASS);
-                    if (x > 5 && x < this.width - 5 && Math.random() < 0.05) {
+                    this.setBlock(x, y, surfaceBlock);
+                    if (surfaceBlock === BLOCKS.GRASS && x > 5 && x < this.width - 5 && Math.random() < 0.05) {
                         this.generateTree(x, y - 1);
                     }
                 }
@@ -76,6 +87,47 @@ export class World {
                 this.setBlock(x, h - 1, BLOCKS.WORKBENCH);
             }
         }
+    }
+
+    getBiomeConfigs() {
+        const halfHeight = this.height / 2;
+        return {
+            [BIOMES.PLAINS]: {
+                baseHeight: halfHeight,
+                terrain: { largeAmplitude: 10, smallAmplitude: 3, largeFrequency: 32, smallFrequency: 9 }
+            },
+            [BIOMES.DESERT]: {
+                baseHeight: halfHeight + 8,
+                terrain: { largeAmplitude: 6, smallAmplitude: 2, largeFrequency: 36, smallFrequency: 12 }
+            },
+            [BIOMES.SNOWFIELD]: {
+                baseHeight: halfHeight - 4,
+                terrain: { largeAmplitude: 10, smallAmplitude: 4, largeFrequency: 28, smallFrequency: 10 }
+            },
+            [BIOMES.MOUNTAIN]: {
+                baseHeight: halfHeight - 18,
+                terrain: { largeAmplitude: 20, smallAmplitude: 6, largeFrequency: 35, smallFrequency: 9 }
+            }
+        };
+    }
+
+    getSurfaceBlock(biome, surfaceY) {
+        const snowLine = this.height / 2 - 14;
+        if (biome === BIOMES.DESERT) return BLOCKS.SAND;
+        if (biome === BIOMES.SNOWFIELD) return BLOCKS.SNOW;
+        if (biome === BIOMES.MOUNTAIN) {
+            if (surfaceY < snowLine) return BLOCKS.SNOW;
+            if (surfaceY > this.height / 2 - 6) return BLOCKS.GRASS;
+            return BLOCKS.STONE;
+        }
+        return BLOCKS.GRASS;
+    }
+
+    getSubSurfaceBlock(biome, y, surfaceY) {
+        const shallow = y <= surfaceY + 4;
+        if (biome === BIOMES.DESERT) return shallow ? BLOCKS.SAND : BLOCKS.STONE;
+        if (biome === BIOMES.MOUNTAIN) return BLOCKS.STONE;
+        return BLOCKS.DIRT;
     }
 
     generateTree(x, y) {
