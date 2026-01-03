@@ -295,6 +295,7 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
     const heights = [];
     const biomeByColumn = [];
     const biomeKeys = Object.keys(biomeConfigs);
+    let lastSegmentStart = 0;
 
     let x = 0;
     while (x < width) {
@@ -302,12 +303,42 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
         const length = Math.min(width - x, randomInt(minSize, maxSize));
 
         const config = biomeConfigs[biome];
+        const segmentHeights = [];
         for (let i = 0; i < length; i++) {
             const column = x + i;
-            heights[column] = calculateTerrainHeight(column, config.baseHeight, config.terrain);
+            segmentHeights[i] = calculateTerrainHeight(column, config.baseHeight, config.terrain);
+        }
+
+        if (x > 0) {
+            const previousHeight = heights[x - 1];
+            const firstHeight = segmentHeights[0];
+
+            if (firstHeight !== previousHeight) {
+                if (firstHeight > previousHeight) {
+                    const slopeLength = Math.min(8, length);
+                    for (let i = 0; i < slopeLength; i++) {
+                        const t = (i + 1) / slopeLength;
+                        segmentHeights[i] = Math.round(lerp(previousHeight, segmentHeights[i], t));
+                    }
+                } else {
+                    const slopeLength = Math.min(8, x - lastSegmentStart);
+                    const prevSlice = heights.slice(x - slopeLength, x);
+                    for (let i = 0; i < slopeLength; i++) {
+                        const t = (i + 1) / slopeLength;
+                        const idx = x - slopeLength + i;
+                        heights[idx] = Math.round(lerp(prevSlice[i], firstHeight, t));
+                    }
+                }
+            }
+        }
+
+        for (let i = 0; i < length; i++) {
+            const column = x + i;
+            heights[column] = segmentHeights[i];
             biomeByColumn[column] = biome;
         }
         x += length;
+        lastSegmentStart = x - length;
     }
 
     return { heights, biomeByColumn };
