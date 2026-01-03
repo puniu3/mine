@@ -88,6 +88,44 @@ export class SoundManager {
         osc.start();
         osc.stop(this.ctx.currentTime + 0.05);
     }
+    
+    playExplosion() {
+        if (!this.ready) return;
+
+        // Create a buffer for white noise (0.5 seconds duration)
+        const bufferSize = this.ctx.sampleRate * 0.5;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        // Fill buffer with random noise
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        // Connect nodes: Noise -> Filter -> Gain -> Destination
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        // Configure Lowpass Filter to simulate the explosion "boom"
+        // Start high for the initial crack, sweep down for the rumble
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.4);
+
+        // Configure Gain (Volume) envelope
+        // Start loud, then decay
+        gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+        noise.start();
+    }
 }
 
 // Global sound manager instance
