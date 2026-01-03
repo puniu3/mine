@@ -144,23 +144,34 @@ export function generateTextures() {
     });
 
     createTexture(BLOCKS.JUMP_PAD, (ctx, s) => {
-        // Base
-        ctx.fillStyle = '#424242';
-        ctx.fillRect(2, s - 8, s - 4, 8);
-        // Spring/Pad
-        ctx.fillStyle = '#ab47bc'; // Purple
-        ctx.fillRect(4, s - 12, s - 8, 4);
+        const margin = 4;
+        const coilWidth = s - (margin * 2);
 
-        // Arrows pointing up
-        ctx.fillStyle = '#e1bee7';
-        ctx.beginPath();
-        ctx.moveTo(s/2, 4);
-        ctx.lineTo(s/2 - 4, 10);
-        ctx.lineTo(s/2 + 4, 10);
-        ctx.fill();
+        // Base (Dark support at the bottom)
+        ctx.fillStyle = '#212121';
+        ctx.fillRect(margin, s - 4, coilWidth, 4);
+
+        // Spring Coil (Simulating the accordion/spiral metal look)
+        // Background for the coil (shadow)
+        ctx.fillStyle = '#616161';
+        ctx.fillRect(margin + 2, 10, coilWidth - 4, s - 14);
+
+        // The coils themselves (lighter bands)
+        ctx.fillStyle = '#bdbdbd';
+        for (let y = 10; y < s - 6; y += 4) {
+            ctx.fillRect(margin + 2, y, coilWidth - 4, 2);
+        }
+
+        // Top Cap (The red part you step on)
+        ctx.fillStyle = '#d32f2f'; // Red
+        ctx.fillRect(margin - 1, 4, coilWidth + 2, 6);
+
+        // Highlight on the top cap for 3D effect
+        ctx.fillStyle = '#ef9a9a'; // Light red/pink highlight
+        ctx.fillRect(margin + 2, 5, coilWidth - 4, 2);
 
         addNoise(ctx, 0.1);
     });
-
+    
     return textures;
 }
