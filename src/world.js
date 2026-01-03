@@ -52,8 +52,8 @@ export class World {
                 } else if (y > h) {
                     if (y > h + 5) {
                         const r = Math.random();
-                        if (r > 0.96) this.setBlock(x, y, BLOCKS.COAL);
-                        else if (r > 0.985 && y > h + 15) this.setBlock(x, y, BLOCKS.GOLD);
+                        if (r > 0.985 && y > h + 15) this.setBlock(x, y, BLOCKS.GOLD);
+                        else if (r > 0.96) this.setBlock(x, y, BLOCKS.COAL);
                         else if (Math.random() > 0.95) this.setBlock(x, y, BLOCKS.DIRT);
                         else this.setBlock(x, y, BLOCKS.STONE);
                     } else {
