@@ -14,6 +14,12 @@ const CRAFTING_RECIPES = [
         name: 'Jump Pad',
         cost: { [BLOCKS.STONE]: 2, [BLOCKS.LEAVES]: 2 },
         count: 1
+    },
+    {
+        id: BLOCKS.TNT,
+        name: 'TNT',
+        cost: { [BLOCKS.COAL]: 4, [BLOCKS.WOOD]: 2 },
+        count: 1
     }
 ];
 
