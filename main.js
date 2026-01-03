@@ -7,7 +7,7 @@
  * - TextureGen: Procedural texture generation.
  * - Game Engine: Loop, Physics, Collision, Input.
  *
- * Dependencies: utils.js, audio.js
+ * Dependencies: utils.js, audio.js, constants.js, texture_gen.js
  */
 
 import {
@@ -20,44 +20,14 @@ import {
     hasAdjacentBlock
 } from './utils.js';
 import { sounds } from './audio.js';
-
-// --- Constants & Config ---
-const TILE_SIZE = 32;
-const WORLD_WIDTH = 512;
-const WORLD_HEIGHT = 256;
-const GRAVITY = 0.5;
-const JUMP_FORCE = 10;
-const REACH = 5 * TILE_SIZE;
-const CAMERA_SMOOTHING = 0.1;
-
-// Block Types
-const BLOCKS = {
-    AIR: 0,
-    DIRT: 1,
-    GRASS: 2,
-    STONE: 3,
-    WOOD: 4,
-    LEAVES: 5,
-    BEDROCK: 6,
-    COAL: 7,
-    GOLD: 8
-};
-
-const BLOCK_PROPS = {
-    [BLOCKS.AIR]: { name: 'Air', solid: false, transparent: true },
-    [BLOCKS.DIRT]: { name: 'Dirt', solid: true, color: '#5d4037', type: 'soil' },
-    [BLOCKS.GRASS]: { name: 'Grass', solid: true, color: '#388e3c', type: 'soil', drop: BLOCKS.DIRT },
-    [BLOCKS.STONE]: { name: 'Stone', solid: true, color: '#757575', type: 'stone' },
-    [BLOCKS.WOOD]: { name: 'Wood', solid: true, color: '#5d4037', type: 'wood' },
-    [BLOCKS.LEAVES]: { name: 'Leaves', solid: true, transparent: false, color: '#2e7d32', type: 'plant', drop: BLOCKS.LEAVES },
-    [BLOCKS.BEDROCK]: { name: 'Bedrock', solid: true, unbreakable: true, color: '#000000', type: 'stone' },
-    [BLOCKS.COAL]: { name: 'Coal Ore', solid: true, color: '#212121', type: 'stone', drop: BLOCKS.COAL },
-    [BLOCKS.GOLD]: { name: 'Gold Ore', solid: true, color: '#ffb300', type: 'stone', drop: BLOCKS.GOLD }
-};
+import {
+    TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, GRAVITY, JUMP_FORCE, REACH, CAMERA_SMOOTHING,
+    BLOCKS, BLOCK_PROPS, HOTBAR_ITEMS
+} from './constants.js';
+import { generateTextures } from './texture_gen.js';
 
 // --- Inventory System ---
 const inventory = {};
-const HOTBAR_ITEMS = [BLOCKS.DIRT, BLOCKS.GRASS, BLOCKS.STONE, BLOCKS.WOOD, BLOCKS.LEAVES, BLOCKS.GOLD];
 
 // Initialize Inventory
 HOTBAR_ITEMS.forEach(id => inventory[id] = 0);
@@ -96,87 +66,7 @@ function consumeFromInventory(blockType) {
 }
 
 // --- Texture Generator ---
-const textures = {};
-
-function generateTextures() {
-    const createTexture = (blockType, drawFn) => {
-        const c = document.createElement('canvas');
-        c.width = TILE_SIZE;
-        c.height = TILE_SIZE;
-        const ctx = c.getContext('2d');
-        drawFn(ctx, TILE_SIZE);
-        textures[blockType] = c;
-    };
-
-    const addNoise = (ctx, amount = 0.1) => {
-        const id = ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE);
-        const d = id.data;
-        for (let i = 0; i < d.length; i += 4) {
-            const noise = (Math.random() - 0.5) * amount * 255;
-            d[i] += noise;
-            d[i + 1] += noise;
-            d[i + 2] += noise;
-        }
-        ctx.putImageData(id, 0, 0);
-    };
-
-    createTexture(BLOCKS.DIRT, (ctx, s) => {
-        ctx.fillStyle = '#5d4037';
-        ctx.fillRect(0, 0, s, s);
-        addNoise(ctx, 0.15);
-    });
-
-    createTexture(BLOCKS.GRASS, (ctx, s) => {
-        ctx.fillStyle = '#5d4037';
-        ctx.fillRect(0, 0, s, s);
-        addNoise(ctx, 0.15);
-        ctx.fillStyle = '#4caf50';
-        ctx.fillRect(0, 0, s, s / 3);
-        addNoise(ctx, 0.1);
-        for (let i = 0; i < s; i += 4) {
-            if (Math.random() > 0.5) ctx.fillRect(i, s / 3, 4, 4);
-        }
-    });
-
-    createTexture(BLOCKS.STONE, (ctx, s) => {
-        ctx.fillStyle = '#757575';
-        ctx.fillRect(0, 0, s, s);
-        addNoise(ctx, 0.2);
-    });
-
-    createTexture(BLOCKS.WOOD, (ctx, s) => {
-        ctx.fillStyle = '#6d4c41';
-        ctx.fillRect(0, 0, s, s);
-        ctx.fillStyle = '#4e342e';
-        for (let i = 4; i < s; i += 8) ctx.fillRect(i, 0, 2, s);
-        addNoise(ctx, 0.1);
-    });
-
-    createTexture(BLOCKS.LEAVES, (ctx, s) => {
-        ctx.fillStyle = '#2e7d32';
-        ctx.fillRect(0, 0, s, s);
-        addNoise(ctx, 0.2);
-        ctx.fillStyle = '#1b5e20';
-        for (let i = 0; i < 10; i++) ctx.fillRect(Math.random() * s, Math.random() * s, 4, 4);
-    });
-
-    createTexture(BLOCKS.BEDROCK, (ctx, s) => {
-        ctx.fillStyle = '#212121';
-        ctx.fillRect(0, 0, s, s);
-        addNoise(ctx, 0.4);
-    });
-
-    const createOre = (baseColor, speckColor) => (ctx, s) => {
-        ctx.fillStyle = baseColor;
-        ctx.fillRect(0, 0, s, s);
-        addNoise(ctx, 0.2);
-        ctx.fillStyle = speckColor;
-        for (let i = 0; i < 6; i++) ctx.fillRect(Math.random() * (s - 6), Math.random() * (s - 6), 6, 6);
-    };
-
-    createTexture(BLOCKS.COAL, createOre('#757575', '#000'));
-    createTexture(BLOCKS.GOLD, createOre('#757575', '#FFD700'));
-}
+let textures = {};
 
 // --- Game Classes ---
 class World {
@@ -412,7 +302,7 @@ window.addEventListener('resize', resize);
 function init() {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
     player = new Player(world);
-    generateTextures();
+    textures = generateTextures(); // Initialize textures here
     initHotbarUI();
     updateInventoryUI();
     resize();

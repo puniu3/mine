@@ -1,0 +1,113 @@
+/**
+ * 2D Minecraft Clone - Texture Generator
+ */
+
+import { BLOCKS, TILE_SIZE } from './constants.js';
+
+/**
+ * Generates procedural textures for the game blocks.
+ *
+ * This function creates an HTMLCanvasElement for each block type defined in `BLOCKS`.
+ * It uses the HTML5 Canvas API to draw patterns and add noise for a textured look.
+ *
+ * @returns {Object.<number, HTMLCanvasElement>} A dictionary mapping block IDs to their corresponding texture canvases.
+ */
+export function generateTextures() {
+    const textures = {};
+
+    /**
+     * Helper function to create a texture canvas.
+     * @param {number} blockType - The ID of the block type.
+     * @param {function(CanvasRenderingContext2D, number): void} drawFn - A callback function to draw the texture. Receives the context and tile size.
+     */
+    const createTexture = (blockType, drawFn) => {
+        const c = document.createElement('canvas');
+        c.width = TILE_SIZE;
+        c.height = TILE_SIZE;
+        const ctx = c.getContext('2d');
+        drawFn(ctx, TILE_SIZE);
+        textures[blockType] = c;
+    };
+
+    /**
+     * Adds noise to the canvas context to simulate texture.
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context.
+     * @param {number} [amount=0.1] - The intensity of the noise (0.0 to 1.0).
+     */
+    const addNoise = (ctx, amount = 0.1) => {
+        const id = ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE);
+        const d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+            const noise = (Math.random() - 0.5) * amount * 255;
+            d[i] += noise;
+            d[i + 1] += noise;
+            d[i + 2] += noise;
+        }
+        ctx.putImageData(id, 0, 0);
+    };
+
+    createTexture(BLOCKS.DIRT, (ctx, s) => {
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(0, 0, s, s);
+        addNoise(ctx, 0.15);
+    });
+
+    createTexture(BLOCKS.GRASS, (ctx, s) => {
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(0, 0, s, s);
+        addNoise(ctx, 0.15);
+        ctx.fillStyle = '#4caf50';
+        ctx.fillRect(0, 0, s, s / 3);
+        addNoise(ctx, 0.1);
+        for (let i = 0; i < s; i += 4) {
+            if (Math.random() > 0.5) ctx.fillRect(i, s / 3, 4, 4);
+        }
+    });
+
+    createTexture(BLOCKS.STONE, (ctx, s) => {
+        ctx.fillStyle = '#757575';
+        ctx.fillRect(0, 0, s, s);
+        addNoise(ctx, 0.2);
+    });
+
+    createTexture(BLOCKS.WOOD, (ctx, s) => {
+        ctx.fillStyle = '#6d4c41';
+        ctx.fillRect(0, 0, s, s);
+        ctx.fillStyle = '#4e342e';
+        for (let i = 4; i < s; i += 8) ctx.fillRect(i, 0, 2, s);
+        addNoise(ctx, 0.1);
+    });
+
+    createTexture(BLOCKS.LEAVES, (ctx, s) => {
+        ctx.fillStyle = '#2e7d32';
+        ctx.fillRect(0, 0, s, s);
+        addNoise(ctx, 0.2);
+        ctx.fillStyle = '#1b5e20';
+        for (let i = 0; i < 10; i++) ctx.fillRect(Math.random() * s, Math.random() * s, 4, 4);
+    });
+
+    createTexture(BLOCKS.BEDROCK, (ctx, s) => {
+        ctx.fillStyle = '#212121';
+        ctx.fillRect(0, 0, s, s);
+        addNoise(ctx, 0.4);
+    });
+
+    /**
+     * Creates a texture generator function for ores.
+     * @param {string} baseColor - The base color of the stone.
+     * @param {string} speckColor - The color of the ore specks.
+     * @returns {function(CanvasRenderingContext2D, number): void} The drawing function.
+     */
+    const createOre = (baseColor, speckColor) => (ctx, s) => {
+        ctx.fillStyle = baseColor;
+        ctx.fillRect(0, 0, s, s);
+        addNoise(ctx, 0.2);
+        ctx.fillStyle = speckColor;
+        for (let i = 0; i < 6; i++) ctx.fillRect(Math.random() * (s - 6), Math.random() * (s - 6), 6, 6);
+    };
+
+    createTexture(BLOCKS.COAL, createOre('#757575', '#000'));
+    createTexture(BLOCKS.GOLD, createOre('#757575', '#FFD700'));
+
+    return textures;
+}
