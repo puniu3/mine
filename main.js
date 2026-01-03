@@ -11,59 +11,29 @@
  */
 
 import {
-    clamp, lerp, distance, worldToTile, tileToWorld, coordToIndex, screenToWorld,
-    rectsIntersect, pointInRect, isWithinReach,
-    isBlockSolid, isBlockTransparent, isBlockBreakable, getBlockDrop, getBlockMaterialType,
+    clamp, smoothCamera, clampCamera,
+    coordToIndex, screenToWorld,
+    rectsIntersect, isWithinReach,
+    isBlockSolid, isBlockTransparent, isBlockBreakable, getBlockMaterialType,
     generateTerrainHeights,
-    smoothCamera, clampCamera,
-    calculateVisibleTileRange,
+    worldToTile,
     hasAdjacentBlock
 } from './utils.js';
 import { sounds } from './audio.js';
 import {
     TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, GRAVITY, JUMP_FORCE, REACH, CAMERA_SMOOTHING,
-    BLOCKS, BLOCK_PROPS, HOTBAR_ITEMS
+    BLOCKS, BLOCK_PROPS
 } from './constants.js';
 import { generateTextures } from './texture_gen.js';
 
-// --- Inventory System ---
-const inventory = {};
-
-// Initialize Inventory
-HOTBAR_ITEMS.forEach(id => inventory[id] = 0);
-// Give a small starter kit
-inventory[BLOCKS.DIRT] = 10;
-
-function updateInventoryUI() {
-    HOTBAR_ITEMS.forEach((block, i) => {
-        const countEl = document.getElementById(`slot-count-${i}`);
-        if (countEl) {
-            countEl.innerText = inventory[block];
-            const slotEl = document.getElementById(`slot-${i}`);
-            if (slotEl) {
-                slotEl.style.opacity = inventory[block] > 0 ? '1' : '0.5';
-            }
-        }
-    });
-}
-
-function addToInventory(blockType) {
-    if (blockType === BLOCKS.AIR) return;
-    const drop = getBlockDrop(blockType, BLOCK_PROPS);
-    if (inventory[drop] !== undefined) {
-        inventory[drop]++;
-        updateInventoryUI();
-    }
-}
-
-function consumeFromInventory(blockType) {
-    if (inventory[blockType] > 0) {
-        inventory[blockType]--;
-        updateInventoryUI();
-        return true;
-    }
-    return false;
-}
+// New modules
+import { createInput } from './input.js';
+import {
+    updateInventoryUI, addToInventory, consumeFromInventory,
+    initHotbarUI, selectHotbar, getSelectedBlockId
+} from './inventory.js';
+import { isCraftingOpen, updateCrafting } from './crafting.js';
+import { update as updateFireworks, draw as drawFireworks } from './fireworks.js';
 
 // --- Texture Generator ---
 let textures = {};
@@ -300,20 +270,17 @@ const ctx = canvas.getContext('2d');
 let world, player;
 let lastTime = 0;
 let cameraX = 0, cameraY = 0;
-
-const input = {
-    keys: { left: false, right: false, jump: false, down: false },
-    mouse: { x: 0, y: 0, leftDown: false },
-    hotbarIdx: 1
-};
 let bridgeCooldown = 0;
+
+let input;
 
 function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     ctx.imageSmoothingEnabled = false;
     if (window.innerWidth <= 768) {
-        document.getElementById('mobile-controls').style.display = 'block';
+        const el = document.getElementById('mobile-controls');
+        if (el) el.style.display = 'block';
     }
 }
 window.addEventListener('resize', resize);
@@ -322,257 +289,18 @@ function init() {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
     player = new Player(world);
     textures = generateTextures(); // Initialize textures here
-    initHotbarUI();
+
+    // Initialize Input
+    input = createInput(canvas, {
+        onHotbarSelect: selectHotbar,
+        onTouch: (x, y) => handleInteraction(x, y)
+    });
+
+    initHotbarUI(textures);
     updateInventoryUI();
     resize();
     requestAnimationFrame(loop);
 }
-
-function initHotbarUI() {
-    const container = document.getElementById('hotbar');
-    container.innerHTML = '';
-    HOTBAR_ITEMS.forEach((block, i) => {
-        const div = document.createElement('div');
-        div.className = 'slot' + (i === 0 ? ' active' : '');
-        div.id = `slot-${i}`;
-        div.onclick = () => selectHotbar(i);
-
-        const c = document.createElement('canvas');
-        c.width = 32;
-        c.height = 32;
-        const cx = c.getContext('2d');
-        if (textures[block]) cx.drawImage(textures[block], 0, 0, 32, 32);
-
-        const count = document.createElement('div');
-        count.className = 'count';
-        count.id = `slot-count-${i}`;
-        count.innerText = '0';
-
-        div.appendChild(c);
-        div.appendChild(count);
-        container.appendChild(div);
-    });
-}
-
-function selectHotbar(index) {
-    const slots = document.querySelectorAll('.slot');
-    slots.forEach(s => s.classList.remove('active'));
-    slots[index].classList.add('active');
-    input.hotbarIdx = HOTBAR_ITEMS[index];
-    sounds.playPop();
-}
-
-function update(dt) {
-    if (!player) return;
-    player.update(input, dt);
-
-    // Camera with smooth following
-    const targetCamX = player.getCenterX() - canvas.width / 2;
-    const targetCamY = player.getCenterY() - canvas.height / 2;
-    cameraX = smoothCamera(cameraX, targetCamX, CAMERA_SMOOTHING);
-    cameraY = smoothCamera(cameraY, targetCamY, CAMERA_SMOOTHING);
-    cameraX = clampCamera(cameraX, 0, world.width * TILE_SIZE, canvas.width);
-    cameraY = clampCamera(cameraY, -500, world.height * TILE_SIZE, canvas.height);
-
-    // Interaction
-    if (input.mouse.leftDown) {
-        if (!isCraftingOpen) {
-            handleInteraction(input.mouse.x, input.mouse.y);
-        }
-        input.mouse.leftDown = false;
-    }
-
-    // Bridge Builder (S Key)
-    if (input.keys.down) {
-        if (bridgeCooldown <= 0) {
-            handleBridgeBuilding();
-            bridgeCooldown = 200;
-        }
-    }
-    if (bridgeCooldown > 0) bridgeCooldown -= dt;
-
-    // --- New Logic: Worktable Check ---
-    checkWorktableOverlap();
-    // --- New Logic: Fireworks ---
-    updateFireworks(dt);
-}
-
-// --- Fireworks System ---
-const fireworkParticles = [];
-
-function updateFireworks(dt) {
-    // 1. Scan/Emit
-    // In a large world, scanning all blocks every frame is bad.
-    // Optimization: Only scan blocks near the player?
-    // Or just scan randomly?
-    // Let's use a timer.
-    if (!world.fireworkTimer) world.fireworkTimer = 0;
-    world.fireworkTimer += dt;
-    if (world.fireworkTimer > 5000) { // 5 seconds
-        world.fireworkTimer = 0;
-        // Find visible fireworks or all fireworks?
-        // Let's just scan the visible range + padding for now to keep performance ok.
-        const range = calculateVisibleTileRange(cameraX, cameraY, canvas.width, canvas.height, TILE_SIZE);
-        for (let y = range.startY - 10; y < range.endY + 10; y++) {
-            for (let x = range.startX - 10; x < range.endX + 10; x++) {
-                if (world.getBlock(x, y) === BLOCKS.FIREWORK) {
-                    spawnFireworkParticles(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2);
-                }
-            }
-        }
-    }
-
-    // 2. Update Particles
-    for (let i = fireworkParticles.length - 1; i >= 0; i--) {
-        const p = fireworkParticles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= dt;
-        p.vy += 0.05; // Gravity
-        if (p.life <= 0) {
-            fireworkParticles.splice(i, 1);
-        }
-    }
-}
-
-function spawnFireworkParticles(x, y) {
-    // Launch sound
-    // sounds.playPop();
-
-    // Create explosion
-    const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
-    for (let i = 0; i < 20; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 3 + 2;
-        fireworkParticles.push({
-            x: x, y: y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed - 5, // Upward bias
-            life: 1000 + Math.random() * 500,
-            color: color
-        });
-    }
-}
-
-// --- Crafting System ---
-const CRAFTING_RECIPES = [
-    {
-        id: BLOCKS.FIREWORK,
-        name: 'Firework',
-        cost: { [BLOCKS.WOOD]: 2 },
-        count: 1
-    },
-    {
-        id: BLOCKS.JUMP_PAD,
-        name: 'Jump Pad',
-        cost: { [BLOCKS.STONE]: 2, [BLOCKS.LEAVES]: 2 },
-        count: 1
-    }
-];
-
-let isCraftingOpen = false;
-
-function checkWorktableOverlap() {
-    const px = player.x;
-    const py = player.y;
-    const pw = player.width;
-    const ph = player.height;
-
-    // Check overlap with workbench
-    // Workbench is solid: false, so we can overlap it.
-    // Check tiles player covers
-    const startX = Math.floor(px / TILE_SIZE);
-    const endX = Math.floor((px + pw) / TILE_SIZE);
-    const startY = Math.floor(py / TILE_SIZE);
-    const endY = Math.floor((py + ph) / TILE_SIZE);
-
-    let foundWorkbench = false;
-    for (let y = startY; y <= endY; y++) {
-        for (let x = startX; x <= endX; x++) {
-            if (world.getBlock(x, y) === BLOCKS.WORKBENCH) {
-                foundWorkbench = true;
-                break;
-            }
-        }
-    }
-
-    if (foundWorkbench) {
-        if (!isCraftingOpen) openCraftingUI();
-    } else {
-        if (isCraftingOpen) closeCraftingUI();
-    }
-}
-
-function openCraftingUI() {
-    isCraftingOpen = true;
-    const modal = document.getElementById('crafting-modal');
-    const list = document.getElementById('craft-list');
-    list.innerHTML = '';
-
-    CRAFTING_RECIPES.forEach(recipe => {
-        const div = document.createElement('div');
-        div.className = 'craft-item';
-        div.onclick = () => craftItem(recipe);
-
-        // Icon
-        const c = document.createElement('canvas');
-        c.width = 32; c.height = 32;
-        c.className = 'craft-icon';
-        const cx = c.getContext('2d');
-        if (textures[recipe.id]) cx.drawImage(textures[recipe.id], 0, 0, 32, 32);
-
-        // Text
-        const details = document.createElement('div');
-        details.className = 'craft-details';
-        details.innerHTML = `<strong>${recipe.name}</strong>`;
-
-        // Cost
-        const costDiv = document.createElement('div');
-        costDiv.className = 'craft-cost';
-        let costText = 'Cost: ';
-        for (let [blockId, amount] of Object.entries(recipe.cost)) {
-            const blockName = BLOCK_PROPS[blockId].name;
-            costText += `${blockName} x${amount} `;
-        }
-        costDiv.innerText = costText;
-        details.appendChild(costDiv);
-
-        div.appendChild(c);
-        div.appendChild(details);
-        list.appendChild(div);
-    });
-
-    modal.style.display = 'block';
-}
-
-function closeCraftingUI() {
-    isCraftingOpen = false;
-    document.getElementById('crafting-modal').style.display = 'none';
-}
-
-function craftItem(recipe) {
-    // Check cost
-    for (let [blockId, amount] of Object.entries(recipe.cost)) {
-        if ((inventory[blockId] || 0) < amount) {
-            showMessage("Not enough materials!");
-            return;
-        }
-    }
-
-    // Deduct
-    for (let [blockId, amount] of Object.entries(recipe.cost)) {
-        inventory[blockId] -= amount;
-    }
-
-    // Add
-    if (!inventory[recipe.id]) inventory[recipe.id] = 0;
-    inventory[recipe.id] += recipe.count;
-
-    updateInventoryUI();
-    sounds.playPop(); // Craft sound
-    showMessage(`Crafted ${recipe.name}!`);
-}
-
 
 function handleBridgeBuilding() {
     const feetY = player.y + player.height;
@@ -585,8 +313,9 @@ function handleBridgeBuilding() {
         const playerRect = player.getRect();
 
         if (!rectsIntersect(playerRect, blockRect)) {
-            if (consumeFromInventory(input.hotbarIdx)) {
-                world.setBlock(bx, by, input.hotbarIdx);
+            const selectedBlock = getSelectedBlockId();
+            if (consumeFromInventory(selectedBlock)) {
+                world.setBlock(bx, by, selectedBlock);
                 sounds.playDig('dirt');
             }
         }
@@ -664,8 +393,9 @@ function handleInteraction(screenX, screenY) {
             const hasNeighbor = shouldClimb || hasAdjacentBlock(bx, by, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
 
             if (hasNeighbor) {
-                if (consumeFromInventory(input.hotbarIdx)) {
-                    world.setBlock(bx, by, input.hotbarIdx);
+                const selectedBlock = getSelectedBlockId();
+                if (consumeFromInventory(selectedBlock)) {
+                    world.setBlock(bx, by, selectedBlock);
                     sounds.playDig('dirt');
                     if (shouldClimb) {
                         // Move player on top of the newly placed block
@@ -683,9 +413,47 @@ function handleInteraction(screenX, screenY) {
 
 function showMessage(msg) {
     const el = document.getElementById('message-log');
-    el.innerText = msg;
-    el.style.opacity = 1;
-    setTimeout(() => { el.style.opacity = 0; }, 2000);
+    if (el) {
+        el.innerText = msg;
+        el.style.opacity = 1;
+        setTimeout(() => { el.style.opacity = 0; }, 2000);
+    }
+}
+
+function update(dt) {
+    if (!player) return;
+    player.update(input, dt);
+
+    // Camera with smooth following
+    const targetCamX = player.getCenterX() - canvas.width / 2;
+    const targetCamY = player.getCenterY() - canvas.height / 2;
+    cameraX = smoothCamera(cameraX, targetCamX, CAMERA_SMOOTHING);
+    cameraY = smoothCamera(cameraY, targetCamY, CAMERA_SMOOTHING);
+    cameraX = clampCamera(cameraX, 0, world.width * TILE_SIZE, canvas.width);
+    cameraY = clampCamera(cameraY, -500, world.height * TILE_SIZE, canvas.height);
+
+    // Interaction
+    if (input.mouse.leftDown) {
+        if (!isCraftingOpen) {
+            handleInteraction(input.mouse.x, input.mouse.y);
+        }
+        input.mouse.leftDown = false;
+    }
+
+    // Bridge Builder (S Key)
+    if (input.keys.down) {
+        if (bridgeCooldown <= 0) {
+            handleBridgeBuilding();
+            bridgeCooldown = 200;
+        }
+    }
+    if (bridgeCooldown > 0) bridgeCooldown -= dt;
+
+    // --- Check Crafting ---
+    updateCrafting(player, world, textures);
+
+    // --- Update Fireworks ---
+    updateFireworks(dt, world, cameraX, cameraY, canvas);
 }
 
 function draw() {
@@ -699,6 +467,7 @@ function draw() {
     ctx.save();
     ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
 
+    // Calculate visible range (used by fireworks update too, but we recalculate here for drawing)
     const { startX, endX, startY, endY } = calculateVisibleTileRange(
         cameraX, cameraY, canvas.width, canvas.height, TILE_SIZE
     );
@@ -721,10 +490,7 @@ function draw() {
     player.draw(ctx);
 
     // Particles
-    fireworkParticles.forEach(p => {
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, 4, 4);
-    });
+    drawFireworks(ctx);
 
     // Highlight
     const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY);
@@ -736,7 +502,8 @@ function draw() {
     }
     ctx.restore();
 
-    document.getElementById('debug-info').innerText = `X: ${Math.floor(player.x / TILE_SIZE)} Y: ${Math.floor(player.y / TILE_SIZE)}`;
+    const debugEl = document.getElementById('debug-info');
+    if (debugEl) debugEl.innerText = `X: ${Math.floor(player.x / TILE_SIZE)} Y: ${Math.floor(player.y / TILE_SIZE)}`;
 }
 
 function loop(timestamp) {
@@ -747,69 +514,7 @@ function loop(timestamp) {
     requestAnimationFrame(loop);
 }
 
-// --- Event Listeners ---
-window.addEventListener('keydown', e => {
-    switch (e.code) {
-        case 'KeyA': case 'ArrowLeft': input.keys.left = true; break;
-        case 'KeyD': case 'ArrowRight': input.keys.right = true; break;
-        case 'KeyW': case 'ArrowUp': case 'Space': input.keys.jump = true; break;
-        case 'KeyS': case 'ArrowDown': input.keys.down = true; break;
-        case 'Digit1': selectHotbar(0); break;
-        case 'Digit2': selectHotbar(1); break;
-        case 'Digit3': selectHotbar(2); break;
-        case 'Digit4': selectHotbar(3); break;
-        case 'Digit5': selectHotbar(4); break;
-        case 'Digit6': selectHotbar(5); break;
-    }
-});
-
-window.addEventListener('keyup', e => {
-    switch (e.code) {
-        case 'KeyA': case 'ArrowLeft': input.keys.left = false; break;
-        case 'KeyD': case 'ArrowRight': input.keys.right = false; break;
-        case 'KeyW': case 'ArrowUp': case 'Space': input.keys.jump = false; break;
-        case 'KeyS': case 'ArrowDown': input.keys.down = false; break;
-    }
-});
-
-window.addEventListener('mousemove', e => {
-    const rect = canvas.getBoundingClientRect();
-    input.mouse.x = e.clientX - rect.left;
-    input.mouse.y = e.clientY - rect.top;
-});
-
-window.addEventListener('mousedown', e => {
-    if (e.target !== canvas) return;
-    input.mouse.leftDown = true;
-});
-
-window.addEventListener('mouseup', () => {
-    input.mouse.leftDown = false;
-});
-
-const setupTouch = (id, key) => {
-    const el = document.getElementById(id);
-    el.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        input.keys[key] = true;
-    });
-    el.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        input.keys[key] = false;
-    });
-};
-
-setupTouch('btn-left', 'left');
-setupTouch('btn-right', 'right');
-setupTouch('btn-jump', 'jump');
-setupTouch('btn-down', 'down');
-
-canvas.addEventListener('touchstart', e => {
-    const t = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    handleInteraction(t.clientX - rect.left, t.clientY - rect.top);
-}, { passive: false });
-
+// Start Screen Button
 document.getElementById('start-btn').addEventListener('click', () => {
     document.getElementById('start-screen').style.display = 'none';
     sounds.init();
