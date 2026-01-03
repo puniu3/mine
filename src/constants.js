@@ -22,11 +22,11 @@ export const BLOCKS = {
     COAL: 7,
     GOLD: 8,
     WORKBENCH: 9,
-    FIREWORK: 10,
-    JUMP_PAD: 11,
-    TNT: 12,
-    SAND: 13,
-    SNOW: 14
+    SAND: 10,
+    SNOW: 11,
+    FIREWORK: 12,
+    JUMP_PAD: 13,
+    TNT: 14
 };
 
 export const BLOCK_PROPS = {
@@ -41,11 +41,11 @@ export const BLOCK_PROPS = {
     [BLOCKS.GOLD]: { name: 'Gold Ore', solid: true, color: '#ffb300', type: 'stone', drop: BLOCKS.GOLD },
     [BLOCKS.WORKBENCH]: { name: 'Workbench', solid: false, unbreakable: true, transparent: true, color: '#8d6e63', type: 'wood' }, // Pass-through so the player can overlap the tile to trigger UI hooks without blocking movement.
 
+    [BLOCKS.SAND]: { name: 'Sand', solid: true, color: '#d7c27a', type: 'sand', drop: BLOCKS.SAND },
+    [BLOCKS.SNOW]: { name: 'Snow', solid: true, color: '#e0f7fa', type: 'snow', drop: BLOCKS.SNOW },
     [BLOCKS.FIREWORK]: { name: 'Firework', solid: true, color: '#ef5350', type: 'wood', drop: BLOCKS.FIREWORK },
     [BLOCKS.JUMP_PAD]: { name: 'Jump Pad', solid: true, color: '#ab47bc', type: 'stone', drop: BLOCKS.JUMP_PAD },
-    [BLOCKS.TNT]: { name: 'TNT', solid: true, color: '#d32f2f', type: 'wood', drop: BLOCKS.TNT },
-    [BLOCKS.SAND]: { name: 'Sand', solid: true, color: '#d7c27a', type: 'sand', drop: BLOCKS.SAND },
-    [BLOCKS.SNOW]: { name: 'Snow', solid: true, color: '#e0f7fa', type: 'snow', drop: BLOCKS.SNOW }
+    [BLOCKS.TNT]: { name: 'TNT', solid: true, color: '#d32f2f', type: 'wood', drop: BLOCKS.TNT }
 };
 
 export const HOTBAR_ITEMS = [
@@ -55,9 +55,9 @@ export const HOTBAR_ITEMS = [
     BLOCKS.LEAVES,
     BLOCKS.COAL,
     BLOCKS.GOLD,
+    BLOCKS.SAND,
+    BLOCKS.SNOW,
     BLOCKS.FIREWORK,
     BLOCKS.JUMP_PAD,
-    BLOCKS.TNT,
-    BLOCKS.SAND,
-    BLOCKS.SNOW
+    BLOCKS.TNT
 ];
