@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2D Minecraft Clone (Auto-Climb)</title>
+    <title>ブロッククラフト 2D</title>
     <link rel="stylesheet" href="styles/style.css">
     <style>
         /* Crafting Modal Styles */
@@ -83,8 +83,6 @@
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui-layer">
-        <div id="message-log"></div>
-
         <div id="hotbar">
             <!-- Slots injected by JS -->
         </div>
@@ -94,11 +92,12 @@
                 <div class="arrow-btn" id="btn-left">←</div>
                 <div class="arrow-btn" id="btn-right">→</div>
             </div>
-            <div class="action-btn" id="btn-jump">JUMP</div>
+            <div class="action-btn" id="btn-jump">ジャンプ</div>
         </div>
 
         <!-- Crafting Modal -->
         <div id="crafting-modal">
+            <div id="crafting-status" class="crafting-status"></div>
             <div id="craft-list">
                 <!-- Items injected by JS -->
             </div>
@@ -106,19 +105,18 @@
     </div>
 
     <div id="start-screen">
-        <h1>BLOCK CRAFT 2D XL</h1>
-        <button id="start-btn">START GAME</button>
+        <h1>ブロッククラフト 2D</h1>
+        <button id="start-btn">ゲームをはじめる</button>
         <div class="instructions">
-            [PC]<br>
-            Move: A / D / Arrow Keys<br>
-            Jump: Space / W / Up Arrow<br>
-            Place under feet: click near your feet (auto-climb enabled)<br>
-            Break/Place: Left Mouse Button<br>
-            Select item: Keys 1-6<br>
+            [パソコン]<br>
+            うごく: A / D / ← →<br>
+            とぶ: スペース / W / ↑<br>
+            こわす・おく: ひだりクリック<br>
+            アイテムをえらぶ: 1〜6のキー<br>
             <br>
-            [Mobile]<br>
-            Move: ← →<br>
-            Break/Place: Tap
+            [スマホ]<br>
+            うごく: ← →<br>
+            こわす・おく: タップ
         </div>
     </div>
 

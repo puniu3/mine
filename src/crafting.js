@@ -22,15 +22,6 @@ const CRAFTING_RECIPES = [
 
 export let isCraftingOpen = false;
 
-function showMessage(msg) {
-    const el = document.getElementById('message-log');
-    if (el) {
-        el.innerText = msg;
-        el.style.opacity = 1;
-        setTimeout(() => { el.style.opacity = 0; }, 2000);
-    }
-}
-
 export function checkWorktableOverlap(player, world) {
     const px = player.x;
     const py = player.y;
@@ -71,6 +62,8 @@ export function openCraftingUI(textures) {
     isCraftingOpen = true;
     const modal = document.getElementById('crafting-modal');
     const list = document.getElementById('craft-list');
+    const status = document.getElementById('crafting-status');
+    if (status) status.innerText = '';
     list.innerHTML = '';
 
     CRAFTING_RECIPES.forEach(recipe => {
@@ -121,7 +114,8 @@ function craftItem(recipe) {
     // Check cost
     for (let [blockId, amount] of Object.entries(recipe.cost)) {
         if ((inventory[blockId] || 0) < amount) {
-            showMessage("Not enough materials!");
+            const status = document.getElementById('crafting-status');
+            if (status) status.innerText = 'ざいりょうがたりないよ';
             return;
         }
     }
@@ -137,7 +131,8 @@ function craftItem(recipe) {
 
     updateInventoryUI();
     sounds.playPop(); // Craft sound
-    showMessage(`Crafted ${BLOCK_PROPS[recipe.id].name}!`);
+    const status = document.getElementById('crafting-status');
+    if (status) status.innerText = 'できたよ！';
 }
 
 function createIconCanvas(blockId, size, textures) {

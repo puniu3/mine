@@ -178,15 +178,9 @@ button:active {
     text-align: center;
     line-height: 1.5;
 }
-
-/* Added message log */
-#message-log {
-    position: absolute;
-    top: 50px;
-    left: 10px;
-    color: #fff;
+.crafting-status {
+    min-height: 20px;
+    color: #ffeb3b;
     font-size: 14px;
-    text-shadow: 1px 1px 0 #000;
-    pointer-events: none;
-    transition: opacity 1s;
+    margin-bottom: 8px;
 }
