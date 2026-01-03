@@ -35,6 +35,7 @@ import {
 } from './inventory.js';
 import { isCraftingOpen, updateCrafting } from './crafting.js';
 import { update as updateFireworks, draw as drawFireworks } from './fireworks.js';
+import { createActions } from './actions.js';
 
 // --- Texture Generator ---
 let textures = {};
@@ -274,6 +275,7 @@ let cameraX = 0, cameraY = 0;
 let bridgeCooldown = 0;
 
 let input;
+let actions;
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -291,125 +293,49 @@ function init() {
     player = new Player(world);
     textures = generateTextures(); // Initialize textures here
 
+    // Initialize Actions
+    actions = createActions({
+        world,
+        player,
+        inventory: {
+            addToInventory,
+            consumeFromInventory,
+            getSelectedBlockId
+        },
+        camera: {
+            get x() { return cameraX; },
+            get y() { return cameraY; }
+        },
+        sounds,
+        constants: {
+            TILE_SIZE,
+            BLOCKS,
+            BLOCK_PROPS,
+            REACH
+        },
+        utils: {
+            screenToWorld,
+            worldToTile,
+            isWithinReach,
+            isBlockBreakable,
+            isBlockTransparent,
+            getBlockMaterialType,
+            rectsIntersect,
+            hasAdjacentBlock
+        },
+        onMessage: showMessage
+    });
+
     // Initialize Input
     input = createInput(canvas, {
         onHotbarSelect: selectHotbar,
-        onTouch: (x, y) => handleInteraction(x, y)
+        onTouch: (x, y) => actions.handlePointer(x, y)
     });
 
     initHotbarUI(textures);
     updateInventoryUI();
     resize();
     requestAnimationFrame(loop);
-}
-
-function handleBridgeBuilding() {
-    const feetY = player.y + player.height;
-    const centerX = player.getCenterX();
-    const { tx: bx, ty: by } = worldToTile(centerX, feetY + 1, TILE_SIZE);
-    const targetBlock = world.getBlock(bx, by);
-
-    if (targetBlock === BLOCKS.AIR || isBlockTransparent(targetBlock, BLOCK_PROPS)) {
-        const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
-        const playerRect = player.getRect();
-
-        if (!rectsIntersect(playerRect, blockRect)) {
-            const selectedBlock = getSelectedBlockId();
-            if (consumeFromInventory(selectedBlock)) {
-                world.setBlock(bx, by, selectedBlock);
-                sounds.playDig('dirt');
-            }
-        }
-    }
-}
-
-function handleInteraction(screenX, screenY) {
-    const worldPos = screenToWorld(screenX, screenY, cameraX, cameraY);
-    // Use 'let' for by because we might modify it (target shifting)
-    let { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
-
-    // Check reach
-    if (!isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
-        return;
-    }
-
-    const currentBlock = world.getBlock(bx, by);
-
-    // Break
-    if (currentBlock !== BLOCKS.AIR && isBlockBreakable(currentBlock, BLOCK_PROPS)) {
-        addToInventory(currentBlock);
-        sounds.playDig(getBlockMaterialType(currentBlock, BLOCK_PROPS));
-        world.setBlock(bx, by, BLOCKS.AIR);
-        return;
-    }
-
-    // Place
-    if ((currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) && currentBlock !== BLOCKS.WORKBENCH) {
-        const playerRect = player.getRect();
-        const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
-
-        const isIntersecting = rectsIntersect(playerRect, blockRect);
-
-        let canPlace = false;
-        let shouldClimb = false;
-
-        if (!isIntersecting) {
-            canPlace = true;
-        } else {
-            // Logic modification: Specific body part handling
-            const playerHeadTileY = Math.floor(player.y / TILE_SIZE);
-            // Use -0.01 to ensure we get the tile the feet are actually inside/on
-            const playerFeetTileY = Math.floor((player.y + player.height - 0.01) / TILE_SIZE);
-
-            if (by === playerHeadTileY) {
-                // Case: User tapped the upper body (Head)
-                // Action: Shift placement target to feet and trigger climb
-                by = playerFeetTileY; 
-                
-                // Calculate where the player needs to move (on top of the new block)
-                const targetPlayerY = (by * TILE_SIZE) - player.height;
-
-                // Check if the area above the new block position is free
-                if (world.checkAreaFree(player.x, targetPlayerY, player.width, player.height)) {
-                    canPlace = true;
-                    shouldClimb = true;
-                }
-            } else if (by === playerFeetTileY) {
-                // Case: User tapped the lower body (Feet)
-                // Action: Prevent placement
-                canPlace = false;
-            } else {
-                // Case: Intersecting but distinct from head/feet logic (fallback)
-                // Try standard auto-climb check just in case
-                const targetY = blockRect.y - player.height;
-                if (world.checkAreaFree(player.x, targetY, player.width, player.height)) {
-                    canPlace = true;
-                    shouldClimb = true;
-                }
-            }
-        }
-
-        if (canPlace) {
-            // Check neighbors (allow placement if climbing OR has neighbor)
-            const hasNeighbor = shouldClimb || hasAdjacentBlock(bx, by, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
-
-            if (hasNeighbor) {
-                const selectedBlock = getSelectedBlockId();
-                if (consumeFromInventory(selectedBlock)) {
-                    world.setBlock(bx, by, selectedBlock);
-                    sounds.playDig('dirt');
-                    if (shouldClimb) {
-                        // Move player on top of the newly placed block
-                        player.y = (by * TILE_SIZE) - player.height - 0.1;
-                        player.vy = 0;
-                        player.grounded = true;
-                    }
-                } else {
-                    showMessage("ブロックが足りません！");
-                }
-            }
-        }
-    }
 }
 
 function showMessage(msg) {
@@ -436,7 +362,7 @@ function update(dt) {
     // Interaction
     if (input.mouse.leftDown) {
         if (!isCraftingOpen) {
-            handleInteraction(input.mouse.x, input.mouse.y);
+            actions.handlePointer(input.mouse.x, input.mouse.y);
         }
         input.mouse.leftDown = false;
     }
@@ -444,7 +370,7 @@ function update(dt) {
     // Bridge Builder (S Key)
     if (input.keys.down) {
         if (bridgeCooldown <= 0) {
-            handleBridgeBuilding();
+            actions.handleBridge();
             bridgeCooldown = 200;
         }
     }
