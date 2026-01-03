@@ -392,7 +392,8 @@ function handleBridgeBuilding() {
 
 function handleInteraction(screenX, screenY) {
     const worldPos = screenToWorld(screenX, screenY, cameraX, cameraY);
-    const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
+    // Use 'let' for by because we might modify it (target shifting)
+    let { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
 
     // Check reach
     if (!isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
@@ -422,14 +423,41 @@ function handleInteraction(screenX, screenY) {
         if (!isIntersecting) {
             canPlace = true;
         } else {
-            const targetY = blockRect.y - player.height;
-            if (world.checkAreaFree(player.x, targetY, player.width, player.height)) {
-                canPlace = true;
-                shouldClimb = true;
+            // Logic modification: Specific body part handling
+            const playerHeadTileY = Math.floor(player.y / TILE_SIZE);
+            // Use -0.01 to ensure we get the tile the feet are actually inside/on
+            const playerFeetTileY = Math.floor((player.y + player.height - 0.01) / TILE_SIZE);
+
+            if (by === playerHeadTileY) {
+                // Case: User tapped the upper body (Head)
+                // Action: Shift placement target to feet and trigger climb
+                by = playerFeetTileY; 
+                
+                // Calculate where the player needs to move (on top of the new block)
+                const targetPlayerY = (by * TILE_SIZE) - player.height;
+
+                // Check if the area above the new block position is free
+                if (world.checkAreaFree(player.x, targetPlayerY, player.width, player.height)) {
+                    canPlace = true;
+                    shouldClimb = true;
+                }
+            } else if (by === playerFeetTileY) {
+                // Case: User tapped the lower body (Feet)
+                // Action: Prevent placement
+                canPlace = false;
+            } else {
+                // Case: Intersecting but distinct from head/feet logic (fallback)
+                // Try standard auto-climb check just in case
+                const targetY = blockRect.y - player.height;
+                if (world.checkAreaFree(player.x, targetY, player.width, player.height)) {
+                    canPlace = true;
+                    shouldClimb = true;
+                }
             }
         }
 
         if (canPlace) {
+            // Check neighbors (allow placement if climbing OR has neighbor)
             const hasNeighbor = shouldClimb || hasAdjacentBlock(bx, by, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
 
             if (hasNeighbor) {
@@ -437,7 +465,8 @@ function handleInteraction(screenX, screenY) {
                     world.setBlock(bx, by, input.hotbarIdx);
                     sounds.playDig('dirt');
                     if (shouldClimb) {
-                        player.y = blockRect.y - player.height - 0.1;
+                        // Move player on top of the newly placed block
+                        player.y = (by * TILE_SIZE) - player.height - 0.1;
                         player.vy = 0;
                         player.grounded = true;
                     }
