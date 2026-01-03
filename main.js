@@ -10,6 +10,17 @@
  * Dependencies: utils.js, audio.js
  */
 
+import {
+    clamp, lerp, distance, worldToTile, tileToWorld, coordToIndex, screenToWorld,
+    rectsIntersect, pointInRect, isWithinReach,
+    isBlockSolid, isBlockTransparent, isBlockBreakable, getBlockDrop, getBlockMaterialType,
+    generateTerrainHeights,
+    smoothCamera, clampCamera,
+    calculateVisibleTileRange,
+    hasAdjacentBlock
+} from './utils.js';
+import { sounds } from './audio.js';
+
 // --- Constants & Config ---
 const TILE_SIZE = 32;
 const WORLD_WIDTH = 512;

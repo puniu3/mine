@@ -3,7 +3,7 @@
  * Sound Engine (Web Audio API)
  */
 
-class SoundManager {
+export class SoundManager {
     constructor() {
         this.ctx = null;
         this.ready = false;
@@ -76,4 +76,4 @@ class SoundManager {
 }
 
 // Global sound manager instance
-const sounds = new SoundManager();
+export const sounds = new SoundManager();
