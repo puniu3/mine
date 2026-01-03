@@ -190,7 +190,7 @@ class Player {
         if (this.world.getBlock(feetX, feetY) === BLOCKS.JUMP_PAD) {
              this.vy = -JUMP_FORCE * 1.8;
              this.grounded = false;
-             sounds.playJump(); // Maybe add a different sound later
+             sounds.playBigJump();
         }
 
         this.vy += GRAVITY;
