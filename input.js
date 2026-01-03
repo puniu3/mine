@@ -1,6 +1,6 @@
 export function createInput(canvas, { onHotbarSelect, onTouch }) {
     const input = {
-        keys: { left: false, right: false, jump: false, down: false },
+        keys: { left: false, right: false, jump: false },
         mouse: { x: 0, y: 0, leftDown: false }
     };
 
@@ -9,7 +9,6 @@ export function createInput(canvas, { onHotbarSelect, onTouch }) {
             case 'KeyA': case 'ArrowLeft': input.keys.left = true; break;
             case 'KeyD': case 'ArrowRight': input.keys.right = true; break;
             case 'KeyW': case 'ArrowUp': case 'Space': input.keys.jump = true; break;
-            case 'KeyS': case 'ArrowDown': input.keys.down = true; break;
             case 'Digit1': if (onHotbarSelect) onHotbarSelect(0); break;
             case 'Digit2': if (onHotbarSelect) onHotbarSelect(1); break;
             case 'Digit3': if (onHotbarSelect) onHotbarSelect(2); break;
@@ -24,7 +23,6 @@ export function createInput(canvas, { onHotbarSelect, onTouch }) {
             case 'KeyA': case 'ArrowLeft': input.keys.left = false; break;
             case 'KeyD': case 'ArrowRight': input.keys.right = false; break;
             case 'KeyW': case 'ArrowUp': case 'Space': input.keys.jump = false; break;
-            case 'KeyS': case 'ArrowDown': input.keys.down = false; break;
         }
     });
 
@@ -59,8 +57,6 @@ export function createInput(canvas, { onHotbarSelect, onTouch }) {
     setupTouch('btn-left', 'left');
     setupTouch('btn-right', 'right');
     setupTouch('btn-jump', 'jump');
-    setupTouch('btn-down', 'down');
-
     canvas.addEventListener('touchstart', e => {
         const t = e.touches[0];
         const rect = canvas.getBoundingClientRect();

@@ -30,7 +30,7 @@ mine/
   - Start screen overlay
   - Hotbar (item slot) UI
   - Mobile touch controls (D-Pad, jump button)
-  - Debug info & message log display
+  - Message log display
 
 ### utils.js
 - **Role**: Pure function utilities (no side effects, easily testable)
