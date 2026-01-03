@@ -1,6 +1,6 @@
 /**
  * Game Actions Module
- * Encapsulates block interaction and bridge building logic.
+ * Encapsulates block interaction logic.
  *
  * @param {Object} context - The game context and dependencies.
  * @param {Object} context.world - The game world instance.
@@ -30,7 +30,7 @@
  * @param {Function} context.utils.hasAdjacentBlock - Check if block has neighbors.
  * @param {Function} context.onMessage - Function to display messages to the user.
  * @param {Function} [context.onBlockPlaced] - Callback when block is placed.
- * @returns {Object} Action methods { handlePointer, handleBridge }.
+ * @returns {Object} Action methods { handlePointer }.
  */
 export function createActions({
     world,
@@ -150,31 +150,7 @@ export function createActions({
         }
     }
 
-    /**
-     * Handles bridge building mechanics.
-     */
-    function handleBridge() {
-        const feetY = player.y + player.height;
-        const centerX = player.getCenterX();
-        const { tx: bx, ty: by } = worldToTile(centerX, feetY + 1, TILE_SIZE);
-        const targetBlock = world.getBlock(bx, by);
-
-        if (targetBlock === BLOCKS.AIR || isBlockTransparent(targetBlock, BLOCK_PROPS)) {
-            const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
-            const playerRect = player.getRect();
-
-            if (!rectsIntersect(playerRect, blockRect)) {
-                const selectedBlock = inventory.getSelectedBlockId();
-                if (inventory.consumeFromInventory(selectedBlock)) {
-                    world.setBlock(bx, by, selectedBlock);
-                    sounds.playDig('dirt');
-                }
-            }
-        }
-    }
-
     return {
-        handlePointer,
-        handleBridge
+        handlePointer
     };
 }

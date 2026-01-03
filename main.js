@@ -183,8 +183,6 @@ const ctx = canvas.getContext('2d');
 let world, player;
 let lastTime = 0;
 let cameraX = 0, cameraY = 0;
-let bridgeCooldown = 0;
-
 let input;
 let actions;
 const tntTimers = [];
@@ -285,15 +283,6 @@ function update(dt) {
         input.mouse.leftDown = false;
     }
 
-    // Bridge Builder (S Key)
-    if (input.keys.down) {
-        if (bridgeCooldown <= 0) {
-            actions.handleBridge();
-            bridgeCooldown = 200;
-        }
-    }
-    if (bridgeCooldown > 0) bridgeCooldown -= dt;
-
     // --- Check Crafting ---
     updateCrafting(player, world, textures);
 
@@ -386,8 +375,6 @@ function draw() {
     }
     ctx.restore();
 
-    const debugEl = document.getElementById('debug-info');
-    if (debugEl) debugEl.innerText = `X: ${Math.floor(player.x / TILE_SIZE)} Y: ${Math.floor(player.y / TILE_SIZE)}`;
 }
 
 function loop(timestamp) {

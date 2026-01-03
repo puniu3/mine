@@ -128,7 +128,7 @@ button:active {
     position: absolute;
     left: 20px;
     bottom: 10px;
-    width: 220px; /* Wider for 3 buttons */
+    width: 160px;
     height: 100px;
     pointer-events: auto;
     display: flex;
@@ -167,23 +167,8 @@ button:active {
     border-radius: 10px;
 }
 
-.arrow-btn.down {
-    height: 40px;
-    font-size: 20px;
-    width: 50px;
-}
-
 .arrow-btn:active, .action-btn:active {
     background: rgba(255, 255, 255, 0.4);
-}
-
-#debug-info {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    color: white;
-    font-size: 12px;
-    text-shadow: 1px 1px 0 #000;
 }
 
 .instructions {
