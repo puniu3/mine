@@ -83,8 +83,6 @@
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui-layer">
-        <div id="message-log"></div>
-
         <div id="hotbar">
             <!-- Slots injected by JS -->
         </div>
@@ -94,7 +92,7 @@
                 <div class="arrow-btn" id="btn-left">←</div>
                 <div class="arrow-btn" id="btn-right">→</div>
             </div>
-            <div class="action-btn" id="btn-jump">JUMP</div>
+            <div class="action-btn" id="btn-jump">↑</div>
         </div>
 
         <!-- Crafting Modal -->
@@ -106,19 +104,82 @@
     </div>
 
     <div id="start-screen">
-        <h1>BLOCK CRAFT 2D XL</h1>
-        <button id="start-btn">START GAME</button>
-        <div class="instructions">
-            [PC]<br>
-            Move: A / D / Arrow Keys<br>
-            Jump: Space / W / Up Arrow<br>
-            Place under feet: click near your feet (auto-climb enabled)<br>
-            Break/Place: Left Mouse Button<br>
-            Select item: Keys 1-6<br>
-            <br>
-            [Mobile]<br>
-            Move: ← →<br>
-            Break/Place: Tap
+        <div class="start-frame">
+            <div class="logo-mark" aria-hidden="true">
+                <div class="logo-tile"></div>
+                <div class="logo-tile logo-accent"></div>
+            </div>
+            <div class="keyboard-visual" aria-hidden="true">
+                <div class="keyboard-row">
+                    <span class="key muted">⎋</span>
+                    <span class="key muted">F1</span>
+                    <span class="key muted">F2</span>
+                    <span class="key muted">F3</span>
+                    <span class="key muted">F4</span>
+                    <span class="key muted">F5</span>
+                    <span class="key muted">F6</span>
+                    <span class="key muted">F7</span>
+                    <span class="key muted">F8</span>
+                    <span class="key muted">F9</span>
+                </div>
+                <div class="keyboard-row">
+                    <span class="key muted">`</span>
+                    <span class="key hotbar">1</span>
+                    <span class="key hotbar">2</span>
+                    <span class="key hotbar">3</span>
+                    <span class="key hotbar">4</span>
+                    <span class="key hotbar">5</span>
+                    <span class="key hotbar">6</span>
+                    <span class="key muted">7</span>
+                    <span class="key muted">8</span>
+                    <span class="key muted">9</span>
+                    <span class="key muted">0</span>
+                </div>
+                <div class="keyboard-row">
+                    <span class="key muted wide">⇥</span>
+                    <span class="key muted">Q</span>
+                    <span class="key jump">W</span>
+                    <span class="key action">E</span>
+                    <span class="key muted">R</span>
+                    <span class="key muted">T</span>
+                    <span class="key muted">Y</span>
+                    <span class="key muted">U</span>
+                    <span class="key muted">I</span>
+                    <span class="key muted">O</span>
+                    <span class="key muted">P</span>
+                </div>
+                <div class="keyboard-row">
+                    <span class="key muted wide">⇧</span>
+                    <span class="key movement">A</span>
+                    <span class="key movement">S</span>
+                    <span class="key movement">D</span>
+                    <span class="key muted">F</span>
+                    <span class="key muted">G</span>
+                    <span class="key muted">H</span>
+                    <span class="key muted">J</span>
+                    <span class="key muted">K</span>
+                    <span class="key muted">L</span>
+                </div>
+                <div class="keyboard-row">
+                    <span class="key muted wide">⌃</span>
+                    <span class="key muted">Z</span>
+                    <span class="key muted">X</span>
+                    <span class="key muted">C</span>
+                    <span class="key muted">V</span>
+                    <span class="key muted">B</span>
+                    <span class="key muted">N</span>
+                    <span class="key muted">M</span>
+                    <span class="key muted wide">↵</span>
+                </div>
+                <div class="keyboard-row compact">
+                    <span class="key movement">←</span>
+                    <span class="key jump">↑</span>
+                    <span class="key movement">→</span>
+                    <span class="key jump">⎵</span>
+                </div>
+                <div class="keyboard-footnote" aria-hidden="true"></div>
+            </div>
+            <button id="start-btn" aria-label="Start">▶</button>
         </div>
     </div>
 

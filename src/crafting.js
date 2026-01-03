@@ -22,15 +22,6 @@ const CRAFTING_RECIPES = [
 
 export let isCraftingOpen = false;
 
-function showMessage(msg) {
-    const el = document.getElementById('message-log');
-    if (el) {
-        el.innerText = msg;
-        el.style.opacity = 1;
-        setTimeout(() => { el.style.opacity = 0; }, 2000);
-    }
-}
-
 export function checkWorktableOverlap(player, world) {
     const px = player.x;
     const py = player.y;
@@ -121,7 +112,6 @@ function craftItem(recipe) {
     // Check cost
     for (let [blockId, amount] of Object.entries(recipe.cost)) {
         if ((inventory[blockId] || 0) < amount) {
-            showMessage("Not enough materials!");
             return;
         }
     }
@@ -137,7 +127,6 @@ function craftItem(recipe) {
 
     updateInventoryUI();
     sounds.playPop(); // Craft sound
-    showMessage(`Crafted ${BLOCK_PROPS[recipe.id].name}!`);
 }
 
 function createIconCanvas(blockId, size, textures) {

@@ -28,7 +28,6 @@
  * @param {Function} context.utils.getBlockMaterialType - Get material type of block.
  * @param {Function} context.utils.rectsIntersect - Check if two rects intersect.
  * @param {Function} context.utils.hasAdjacentBlock - Check if block has neighbors.
- * @param {Function} context.onMessage - Function to display messages to the user.
  * @param {Function} [context.onBlockPlaced] - Callback when block is placed.
  * @returns {Object} Action methods { handlePointer }.
  */
@@ -40,7 +39,6 @@ export function createActions({
     sounds,
     constants,
     utils,
-    onMessage,
     onBlockPlaced
 }) {
     const { TILE_SIZE, BLOCKS, BLOCK_PROPS, REACH } = constants;
@@ -142,8 +140,6 @@ export function createActions({
                             player.vy = 0;
                             player.grounded = true;
                         }
-                    } else {
-                        onMessage("Not enough blocks in inventory.");
                     }
                 }
             }
