@@ -281,6 +281,11 @@ function update(dt) {
     // --- Update TNT ---
     for (let i = tntTimers.length - 1; i >= 0; i--) {
         const tnt = tntTimers[i];
+        // Remove timers for TNT blocks that no longer exist
+        if (world.getBlock(tnt.x, tnt.y) !== BLOCKS.TNT) {
+            tntTimers.splice(i, 1);
+            continue;
+        }
         tnt.timer -= dt;
         if (tnt.timer <= 0) {
             explodeTNT(tnt.x, tnt.y);
@@ -310,7 +315,9 @@ function explodeTNT(x, y) { // x, y are tile coordinates
             if (dx*dx + dy*dy <= radius*radius) {
                 const block = world.getBlock(bx, by);
                 if (block !== BLOCKS.AIR && isBlockBreakable(block, BLOCK_PROPS)) {
-                    addToInventory(block);
+                    if (block !== BLOCKS.TNT) {
+                        addToInventory(block);
+                    }
                     world.setBlock(bx, by, BLOCKS.AIR);
                 }
             }
