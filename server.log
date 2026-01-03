@@ -23,3 +23,10 @@ OSError: [Errno 98] Address already in use
 127.0.0.1 - - [03/Jan/2026 09:53:00] "GET /utils.js HTTP/1.1" 200 -
 127.0.0.1 - - [03/Jan/2026 09:53:00] "GET /texture_gen.js HTTP/1.1" 200 -
 127.0.0.1 - - [03/Jan/2026 09:53:00] "GET /audio.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 10:38:40] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 10:38:40] "GET /style.css HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 10:38:40] "GET /main.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 10:38:40] "GET /utils.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 10:38:40] "GET /audio.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 10:38:40] "GET /texture_gen.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 10:38:40] "GET /constants.js HTTP/1.1" 200 -

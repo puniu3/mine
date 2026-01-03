@@ -376,7 +376,9 @@ function update(dt) {
 
     // Interaction
     if (input.mouse.leftDown) {
-        handleInteraction(input.mouse.x, input.mouse.y);
+        if (!isCraftingOpen) {
+            handleInteraction(input.mouse.x, input.mouse.y);
+        }
         input.mouse.leftDown = false;
     }
 
@@ -612,7 +614,7 @@ function handleInteraction(screenX, screenY) {
     }
 
     // Place
-    if (currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) {
+    if ((currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) && currentBlock !== BLOCKS.WORKBENCH) {
         const playerRect = player.getRect();
         const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
 
