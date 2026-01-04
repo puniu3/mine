@@ -32,7 +32,9 @@ mine/
     ├── audio.js        # Web Audio API sound effects (jump, mining, UI, coin, explosion)
     ├── fireworks.js    # Firework particle effects for celebrations
     ├── jackpot.js      # Jackpot block: coin burst particles on player overlap
-    └── sky.js          # Dynamic sky gradient based on altitude (surface/underground/stratosphere)
+    ├── sky.js          # Dynamic sky gradient based on altitude (surface/underground/stratosphere)
+    ├── save.js         # Save/load system using localStorage with autosave functionality
+    └── tnt.js          # TNT explosion logic, timers, knockback, and block destruction
 ```
 
 ## Module Dependency Graph
@@ -51,7 +53,9 @@ main.js
 ├── player.js (imports: utils, audio, constants)
 ├── sky.js (imports: utils)
 ├── jackpot.js (imports: constants)
-└── fireworks.js
+├── fireworks.js
+├── save.js
+└── tnt.js (imports: constants, utils)
 ```
 
 ## Key Constants (constants.js)
@@ -109,6 +113,27 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 ### Audio (audio.js)
 - SoundManager singleton: playJump, playMine, playPlace, playCoin, playExplosion, playBigJump
 - Web Audio API oscillator-based synthesis
+
+### Save/Load (save.js)
+- Persists game state to localStorage with base64-encoded world map
+- `loadGameState()`: Standalone function to load saved state (no dependencies)
+- `createSaveManager()`: Factory function creating save manager with dependencies
+  - `saveGameState()`: Saves world, player, inventory, and timers (TNT/saplings)
+  - `applySavedState()`: Restores saved state to game objects
+  - `startAutosave()`: Begins autosave interval (5s)
+- Includes Uint8Array ↔ base64 conversion utilities for compact map storage
+
+### TNT System (tnt.js)
+- `createTNTManager()`: Factory function creating TNT manager
+  - `update(dt)`: Decrements fuse timers, triggers explosions when timer expires
+  - `onBlockPlaced(x, y)`: Starts 3s fuse timer when TNT placed
+  - `getTimers()`: Returns timer array (for save/load)
+  - `loadTimers()`: Restores timers from saved state
+- `explodeTNT()`: Handles explosion logic
+  - Destroys blocks in radius (circular pattern)
+  - Applies knockback to player (inverse-square falloff)
+  - Adds destroyed blocks to inventory
+  - Creates explosion particles and sound
 
 ## Game Loop (main.js)
 
