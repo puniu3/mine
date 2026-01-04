@@ -92,16 +92,27 @@ export class World {
         }
 
         // Generate clouds in the sky
-        this.generateClouds();
+        this.generateClouds(heights);
     }
 
-    generateClouds() {
-        const cloudY = Math.floor(this.height * 0.15); // Cloud layer around 15% from top
-        const cloudCount = Math.floor(this.width / 40); // Roughly 1 cloud per 40 blocks (denser clouds)
+    generateClouds(heights) {
+        const minHeightAboveGround = 20; // Clouds must be at least 20 blocks above ground
+        const cloudCount = Math.floor(this.width / 25); // Roughly 1 cloud per 25 blocks (even denser)
 
         for (let i = 0; i < cloudCount; i++) {
             const startX = Math.floor(Math.random() * (this.width - 30));
-            const y = cloudY + Math.floor(Math.random() * 20) - 10; // Vary height slightly
+
+            // Get the ground height at this position
+            const groundHeight = heights[Math.min(startX, this.width - 1)];
+
+            // Calculate valid cloud range: from top of world to 20 blocks above ground
+            const maxCloudY = groundHeight - minHeightAboveGround; // Highest Y value (lowest in sky)
+            const minCloudY = 5; // Don't spawn too close to top edge
+
+            if (maxCloudY <= minCloudY) continue; // Skip if not enough space
+
+            // Random Y position anywhere in the valid sky range
+            const y = minCloudY + Math.floor(Math.random() * (maxCloudY - minCloudY));
             const shape = Math.floor(Math.random() * 5); // 5 different cloud shapes
 
             this.generateCloudShape(startX, y, shape);
