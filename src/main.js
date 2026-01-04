@@ -38,6 +38,7 @@ import { World } from './world.js';
 import { Player } from './player.js';
 import { getSkyGradientColors } from './sky.js';
 import { drawJackpotParticles, handleJackpotOverlap, updateJackpots } from './jackpot.js';
+import { handleAcceleratorOverlap, updateAccelerators } from './accelerator.js';
 
 // --- Texture Generator ---
 let textures = {};
@@ -168,6 +169,10 @@ function update(dt) {
     // --- Jackpot Blocks ---
     handleJackpotOverlap(player, world, sounds);
     updateJackpots(dt);
+
+    // --- Accelerator Blocks ---
+    handleAcceleratorOverlap(player, world);
+    updateAccelerators(dt);
 
     // --- Update Fireworks ---
     updateFireworks(dt, world, cameraX, cameraY, canvas);

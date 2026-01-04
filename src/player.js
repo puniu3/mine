@@ -49,27 +49,6 @@ export class Player {
         return { x: this.x, y: this.y, w: this.width, h: this.height };
     }
 
-    checkAcceleratorOverlap() {
-        const startX = Math.floor(this.x / TILE_SIZE);
-        const endX = Math.floor((this.x + this.width) / TILE_SIZE);
-        const startY = Math.floor(this.y / TILE_SIZE);
-        const endY = Math.floor((this.y + this.height) / TILE_SIZE);
-
-        for (let y = startY; y <= endY; y++) {
-            for (let x = startX; x <= endX; x++) {
-                const block = this.world.getBlock(x, y);
-                if (block === BLOCKS.ACCELERATOR_LEFT) {
-                    this.boardVx += -15;
-                    this.facingRight = false;
-                    return;
-                } else if (block === BLOCKS.ACCELERATOR_RIGHT) {
-                    this.boardVx += 15;
-                    this.facingRight = true;
-                    return;
-                }
-            }
-        }
-    }
 
     update(input, dt) {
         // Time Scale: normalize physics to 60 FPS target
@@ -105,9 +84,7 @@ export class Player {
              sounds.playBigJump();
         }
 
-        // Accelerator Check
-        // Check tiles player overlaps with
-        this.checkAcceleratorOverlap();
+        // Accelerator Check now handled in main.js via handleAcceleratorOverlap()
 
         // Board velocity decay (linear decay to 0 over 1 second)
         if (this.boardVx !== 0) {
