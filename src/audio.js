@@ -243,6 +243,34 @@ export class SoundManager {
 
         noise.start();
     }
+
+    playCoin() {
+        if (!this.ready) return;
+
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc1.type = 'square';
+        osc2.type = 'square';
+        osc1.frequency.setValueAtTime(880, this.ctx.currentTime);
+        osc2.frequency.setValueAtTime(1320, this.ctx.currentTime);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+        osc1.frequency.exponentialRampToValueAtTime(1760, this.ctx.currentTime + 0.2);
+        osc2.frequency.exponentialRampToValueAtTime(1980, this.ctx.currentTime + 0.2);
+
+        osc1.start();
+        osc2.start();
+        osc1.stop(this.ctx.currentTime + 0.25);
+        osc2.stop(this.ctx.currentTime + 0.25);
+    }
 }
 
 // Global sound manager instance
