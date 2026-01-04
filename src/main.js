@@ -327,16 +327,30 @@ function draw() {
         cameraX, cameraY, canvas.width, canvas.height, TILE_SIZE
     );
 
+    // Blocks that should not be darkened when under other blocks
+    const NO_SHADOW_BLOCKS = new Set([
+        BLOCKS.CLOUD,
+        BLOCKS.FIREWORK,
+        BLOCKS.JUMP_PAD,
+        BLOCKS.TNT,
+        BLOCKS.SAPLING,
+        BLOCKS.JACKPOT,
+        BLOCKS.ACCELERATOR_LEFT,
+        BLOCKS.ACCELERATOR_RIGHT
+    ]);
+
     for (let y = startY; y < endY; y++) {
         for (let x = startX; x < endX; x++) {
             const block = world.getBlock(x, y);
             if (block !== BLOCKS.AIR && textures[block]) {
                 ctx.drawImage(textures[block], x * TILE_SIZE, y * TILE_SIZE);
-                // Shadow
-                const neighborAbove = world.getBlock(x, y - 1);
-                if (neighborAbove !== BLOCKS.AIR && !isBlockTransparent(neighborAbove, BLOCK_PROPS)) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                // Shadow (skip for certain blocks)
+                if (!NO_SHADOW_BLOCKS.has(block)) {
+                    const neighborAbove = world.getBlock(x, y - 1);
+                    if (neighborAbove !== BLOCKS.AIR && !isBlockTransparent(neighborAbove, BLOCK_PROPS)) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
                 }
             }
         }

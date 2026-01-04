@@ -97,7 +97,7 @@ export class Player {
         }
 
         // Apply gravity with time scaling
-        this.vy = Math.min(this.vy + GRAVITY * timeScale, TERMINAL_VELOCITY);
+        this.vy = Math.max(this.vy, Math.min(this.vy + GRAVITY * timeScale, TERMINAL_VELOCITY));
 
         // Use combined velocity for movement with time scaling
         const totalVx = this.vx + this.boardVx;
