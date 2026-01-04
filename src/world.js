@@ -91,7 +91,7 @@ export class World {
             }
         }
 
-        this.generateClouds();
+        this.generateClouds(heights);
     }
 
     getBiomeConfigs() {
@@ -194,11 +194,12 @@ export class World {
         }
     }
 
-    generateClouds() {
+    generateClouds(heights) {
         const cloudClusters = Math.max(10, Math.floor(this.width / 160));
         for (let i = 0; i < cloudClusters; i++) {
             const centerX = randomInt(4, this.width - 5);
-            const centerY = randomInt(6, Math.max(12, Math.floor(this.height / 6)));
+            const surfaceY = heights[centerX];
+            const centerY = Math.max(6, surfaceY - randomInt(18, 34));
             const puffCount = randomInt(2, 4);
 
             for (let p = 0; p < puffCount; p++) {
@@ -212,7 +213,7 @@ export class World {
     }
 
     paintCloud(cx, cy, radiusX, radiusY) {
-        const maxY = Math.floor(this.height / 3);
+        const maxY = Math.floor(this.height * 0.65);
         for (let x = -radiusX; x <= radiusX; x++) {
             for (let y = -radiusY; y <= radiusY; y++) {
                 const nx = cx + x;
