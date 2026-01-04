@@ -4,6 +4,9 @@ import { calculateVisibleTileRange } from './utils.js';
 const fireworkParticles = [];
 
 export function update(dt, world, cameraX, cameraY, canvas) {
+    // Time Scale: normalize physics to 60 FPS target
+    const timeScale = dt / (1000 / 60);
+
     // 1. Scan/Emit
     if (!world.fireworkTimer) world.fireworkTimer = 0;
     world.fireworkTimer += dt;
@@ -24,18 +27,19 @@ export function update(dt, world, cameraX, cameraY, canvas) {
         const p = fireworkParticles[i];
 
         if (p.type === 'rocket') {
-            p.y += p.vy;
+            // Apply time scaling to rocket movement
+            p.y += p.vy * timeScale;
             // Check if reached target height (targetY is less than startY because up is negative)
             if (p.y <= p.targetY) {
                 explode(p.x, p.y);
                 fireworkParticles.splice(i, 1);
             }
         } else {
-            // Normal particle
-            p.x += p.vx;
-            p.y += p.vy;
+            // Normal particle with time scaling
+            p.x += p.vx * timeScale;
+            p.y += p.vy * timeScale;
             p.life -= dt;
-            p.vy += 0.05; // Gravity
+            p.vy += 0.05 * timeScale; // Apply gravity with time scaling
             if (p.life <= 0) {
                 fireworkParticles.splice(i, 1);
             }
