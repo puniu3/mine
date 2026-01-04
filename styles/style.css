@@ -223,3 +223,10 @@ button:active {
     font-size: 14px;
     margin-bottom: 8px;
 }
+
+/* Mobile: Shift crafting UI up to avoid mobile controls */
+@media (max-width: 768px) {
+    #crafting-modal {
+        top: 35%;
+    }
+}
