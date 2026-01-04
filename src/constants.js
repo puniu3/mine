@@ -6,6 +6,7 @@ export const TILE_SIZE = 32;
 export const WORLD_WIDTH = 512 * 8;
 export const WORLD_HEIGHT = 256;
 export const GRAVITY = 0.5;
+export const TERMINAL_VELOCITY = 20.0;
 export const JUMP_FORCE = 10;
 export const REACH = 5 * TILE_SIZE;
 export const CAMERA_SMOOTHING = 0.1;

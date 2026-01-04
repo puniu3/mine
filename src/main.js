@@ -22,7 +22,7 @@ import {
 import { sounds } from './audio.js';
 import {
     TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, GRAVITY, JUMP_FORCE, REACH, CAMERA_SMOOTHING,
-    BLOCKS, BLOCK_PROPS
+    BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY
 } from './constants.js';
 import { generateTextures } from './texture_gen.js';
 
@@ -156,7 +156,7 @@ class Player {
              sounds.playBigJump();
         }
 
-        this.vy += GRAVITY;
+        this.vy = Math.min(this.vy + GRAVITY, TERMINAL_VELOCITY);
         this.x += this.vx;
         this.handleCollisions(true);
         this.y += this.vy;
