@@ -10,7 +10,7 @@ export const TERMINAL_VELOCITY = 20.0;
 export const JUMP_FORCE = 10;
 export const REACH = 5 * TILE_SIZE;
 export const CAMERA_SMOOTHING = 0.1;
-export const TNT_KNOCKBACK_STRENGTH = 30.0;
+export const TNT_KNOCKBACK_STRENGTH = 15.0;
 
 // Block Types
 // Note: Craftable blocks (FIREWORK, JUMP_PAD, TNT, SAPLING, JACKPOT) are at the end
