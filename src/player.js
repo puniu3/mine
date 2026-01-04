@@ -59,11 +59,11 @@ export class Player {
             for (let x = startX; x <= endX; x++) {
                 const block = this.world.getBlock(x, y);
                 if (block === BLOCKS.ACCELERATOR_LEFT) {
-                    this.boardVx = -15;
+                    this.boardVx += -15;
                     this.facingRight = false;
                     return;
                 } else if (block === BLOCKS.ACCELERATOR_RIGHT) {
-                    this.boardVx = 15;
+                    this.boardVx += 15;
                     this.facingRight = true;
                     return;
                 }
