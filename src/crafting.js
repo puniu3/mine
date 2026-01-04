@@ -27,6 +27,16 @@ const CRAFTING_RECIPES = [
         id: BLOCKS.JACKPOT,
         cost: { [BLOCKS.GOLD]: 3 },
         count: 1
+    },
+    {
+        id: BLOCKS.ACCELERATOR_LEFT,
+        cost: { [BLOCKS.GOLD]: 1, [BLOCKS.SAND]: 3 },
+        count: 1
+    },
+    {
+        id: BLOCKS.ACCELERATOR_RIGHT,
+        cost: { [BLOCKS.GOLD]: 1, [BLOCKS.SAND]: 3 },
+        count: 1
     }
 ];
 

@@ -48,6 +48,28 @@ export class Player {
         return { x: this.x, y: this.y, w: this.width, h: this.height };
     }
 
+    checkAcceleratorOverlap() {
+        const startX = Math.floor(this.x / TILE_SIZE);
+        const endX = Math.floor((this.x + this.width) / TILE_SIZE);
+        const startY = Math.floor(this.y / TILE_SIZE);
+        const endY = Math.floor((this.y + this.height) / TILE_SIZE);
+
+        for (let y = startY; y <= endY; y++) {
+            for (let x = startX; x <= endX; x++) {
+                const block = this.world.getBlock(x, y);
+                if (block === BLOCKS.ACCELERATOR_LEFT) {
+                    this.vx = -15;
+                    this.facingRight = false;
+                    return;
+                } else if (block === BLOCKS.ACCELERATOR_RIGHT) {
+                    this.vx = 15;
+                    this.facingRight = true;
+                    return;
+                }
+            }
+        }
+    }
+
     update(input, dt) {
         if (input.keys.left) {
             this.vx = -5;
@@ -74,6 +96,10 @@ export class Player {
              this.grounded = false;
              sounds.playBigJump();
         }
+
+        // Accelerator Check
+        // Check tiles player overlaps with
+        this.checkAcceleratorOverlap();
 
         this.vy = Math.min(this.vy + GRAVITY, TERMINAL_VELOCITY);
         this.x += this.vx;

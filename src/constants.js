@@ -32,7 +32,9 @@ export const BLOCKS = {
     JUMP_PAD: 14,
     TNT: 15,
     SAPLING: 16,
-    JACKPOT: 17
+    JACKPOT: 17,
+    ACCELERATOR_LEFT: 18,
+    ACCELERATOR_RIGHT: 19
 };
 
 export const BLOCK_PROPS = {
@@ -54,7 +56,9 @@ export const BLOCK_PROPS = {
     [BLOCKS.JUMP_PAD]: { name: 'Jump Pad', solid: true, color: '#ab47bc', type: 'stone', drop: BLOCKS.JUMP_PAD },
     [BLOCKS.TNT]: { name: 'TNT', solid: true, color: '#d32f2f', type: 'wood', drop: BLOCKS.TNT },
     [BLOCKS.SAPLING]: { name: 'Sapling', solid: false, transparent: true, color: '#6fa85b', type: 'plant', drop: BLOCKS.SAPLING },
-    [BLOCKS.JACKPOT]: { name: 'Jackpot', solid: false, transparent: true, color: '#ffd54f', type: 'stone', drop: BLOCKS.JACKPOT }
+    [BLOCKS.JACKPOT]: { name: 'Jackpot', solid: false, transparent: true, color: '#ffd54f', type: 'stone', drop: BLOCKS.JACKPOT },
+    [BLOCKS.ACCELERATOR_LEFT]: { name: 'Accelerator Left', solid: false, transparent: true, color: '#42a5f5', type: 'stone', drop: BLOCKS.ACCELERATOR_LEFT },
+    [BLOCKS.ACCELERATOR_RIGHT]: { name: 'Accelerator Right', solid: false, transparent: true, color: '#66bb6a', type: 'stone', drop: BLOCKS.ACCELERATOR_RIGHT }
 };
 
 export const HOTBAR_ITEMS = [
@@ -72,5 +76,7 @@ export const HOTBAR_ITEMS = [
     BLOCKS.JUMP_PAD,
     BLOCKS.TNT,
     BLOCKS.SAPLING,
-    BLOCKS.JACKPOT
+    BLOCKS.JACKPOT,
+    BLOCKS.ACCELERATOR_LEFT,
+    BLOCKS.ACCELERATOR_RIGHT
 ];
