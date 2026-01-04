@@ -226,12 +226,12 @@ export class World {
         
         return {
             [BIOMES.PLAINS]: {
-                weight: 50, // 50%
+                weight: 40, // 40%
                 baseHeight: halfHeight,
                 terrain: { largeAmplitude: 10, smallAmplitude: 3, largeFrequency: 32, smallFrequency: 9 }
             },
             [BIOMES.DESERT]: {
-                weight: 10, // 10%
+                weight: 20, // 20%
                 baseHeight: halfHeight + 8,
                 terrain: { largeAmplitude: 6, smallAmplitude: 2, largeFrequency: 36, smallFrequency: 12 }
             },
