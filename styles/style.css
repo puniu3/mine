@@ -77,9 +77,60 @@ button:active {
     display: flex;
     gap: 5px;
     background: rgba(0, 0, 0, 0.5);
-    padding: 5px;
+    padding: 5px 10px;
     border-radius: 4px;
     pointer-events: auto;
+    max-width: calc(100% - 40px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
+}
+
+#hotbar::-webkit-scrollbar {
+    height: 6px;
+}
+
+#hotbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 3px;
+}
+
+#hotbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#hotbar::before,
+#hotbar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0));
+}
+
+#hotbar::before {
+    left: 0;
+    border-radius: 4px 0 0 4px;
+}
+
+#hotbar::after {
+    right: 0;
+    transform: scaleX(-1);
+    border-radius: 0 4px 4px 0;
+}
+
+#hotbar.is-scrollable.show-left-fade::before {
+    opacity: 1;
+}
+
+#hotbar.is-scrollable.show-right-fade::after {
+    opacity: 1;
 }
 
 .slot {

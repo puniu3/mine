@@ -16,6 +16,22 @@ export function getSelectedBlockId() {
     return HOTBAR_ITEMS[selectedHotbarIndex];
 }
 
+function updateHotbarScrollHints(container) {
+    if (!container) return;
+    const isScrollable = container.scrollWidth > container.clientWidth + 1;
+    container.classList.toggle('is-scrollable', isScrollable);
+
+    if (!isScrollable) {
+        container.classList.remove('show-left-fade', 'show-right-fade');
+        return;
+    }
+
+    const atStart = container.scrollLeft <= 0;
+    const atEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
+    container.classList.toggle('show-left-fade', !atStart);
+    container.classList.toggle('show-right-fade', !atEnd);
+}
+
 export function updateInventoryUI() {
     HOTBAR_ITEMS.forEach((block, i) => {
         const countEl = document.getElementById(`slot-count-${i}`);
@@ -74,6 +90,10 @@ export function initHotbarUI(textures) {
 
     // Set initial selection visually
     selectHotbar(selectedHotbarIndex);
+
+    updateHotbarScrollHints(container);
+    container.addEventListener('scroll', () => updateHotbarScrollHints(container));
+    window.addEventListener('resize', () => updateHotbarScrollHints(container));
 }
 
 export function selectHotbar(index) {
