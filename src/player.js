@@ -97,7 +97,10 @@ export class Player {
         const feetX = Math.floor(this.getCenterX() / TILE_SIZE);
         const feetY = Math.floor((this.y + this.height + 0.1) / TILE_SIZE);
         if (this.world.getBlock(feetX, feetY) === BLOCKS.JUMP_PAD) {
-             this.vy = -JUMP_FORCE * 1.8;
+             // Count stacked JUMP_PADs in both directions
+             const stackCount = this.countVerticalJumpPads(feetX, feetY);
+             // Multiply velocity by square root of stack count
+             this.vy = -JUMP_FORCE * 1.8 * Math.pow(stackCount, 0.5);
              this.grounded = false;
              sounds.playBigJump();
         }
@@ -131,6 +134,32 @@ export class Player {
         this.wrapVertically();
 
         if (Math.abs(totalVx) > 0.1) this.animTimer += dt;
+    }
+
+    /**
+     * Count total consecutive JUMP_PAD blocks in both vertical directions
+     * @param {number} x - tile x coordinate
+     * @param {number} y - tile y coordinate (starting point)
+     * @returns {number} total count of consecutive JUMP_PAD blocks (including starting point)
+     */
+    countVerticalJumpPads(x, y) {
+        let count = 0;
+
+        // Count upward (including starting point)
+        let currentY = y;
+        while (this.world.getBlock(x, currentY) === BLOCKS.JUMP_PAD) {
+            count++;
+            currentY--;
+        }
+
+        // Count downward (excluding starting point to avoid double-counting)
+        currentY = y + 1;
+        while (this.world.getBlock(x, currentY) === BLOCKS.JUMP_PAD) {
+            count++;
+            currentY++;
+        }
+
+        return count;
     }
 
     wrapHorizontally() {
@@ -186,7 +215,10 @@ export class Player {
                             this.y = (y + 1) * TILE_SIZE + 0.01;
                             // Check if hitting JUMP_PAD from below
                             if (block === BLOCKS.JUMP_PAD) {
-                                this.vy = JUMP_FORCE * 1.8;
+                                // Count stacked JUMP_PADs in both directions
+                                const stackCount = this.countVerticalJumpPads(x, y);
+                                // Multiply velocity by square root of stack count
+                                this.vy = JUMP_FORCE * 1.8 * Math.pow(stackCount, 0.5);
                                 sounds.playBigJump();
                             } else {
                                 this.vy = 0;
