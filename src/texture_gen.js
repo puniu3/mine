@@ -316,5 +316,65 @@ export function generateTextures() {
         addNoise(ctx, 0.04);
     });
 
+    createTexture(BLOCKS.ACCELERATOR_LEFT, (ctx, s) => {
+        // Clear background
+        ctx.clearRect(0, 0, s, s);
+
+        // Blue background with semi-transparency
+        ctx.fillStyle = 'rgba(66, 165, 245, 0.7)';
+        ctx.fillRect(0, 0, s, s);
+
+        // Border for visibility
+        ctx.strokeStyle = '#1976d2';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(1, 1, s - 2, s - 2);
+
+        // Draw left-pointing arrow
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        // Arrow pointing left
+        ctx.moveTo(s * 0.25, s * 0.5);  // Left point
+        ctx.lineTo(s * 0.65, s * 0.2);  // Top right
+        ctx.lineTo(s * 0.65, s * 0.4);  // Top inner
+        ctx.lineTo(s * 0.75, s * 0.4);  // Arrow shaft top
+        ctx.lineTo(s * 0.75, s * 0.6);  // Arrow shaft bottom
+        ctx.lineTo(s * 0.65, s * 0.6);  // Bottom inner
+        ctx.lineTo(s * 0.65, s * 0.8);  // Bottom right
+        ctx.closePath();
+        ctx.fill();
+
+        addNoise(ctx, 0.05);
+    });
+
+    createTexture(BLOCKS.ACCELERATOR_RIGHT, (ctx, s) => {
+        // Clear background
+        ctx.clearRect(0, 0, s, s);
+
+        // Green background with semi-transparency
+        ctx.fillStyle = 'rgba(102, 187, 106, 0.7)';
+        ctx.fillRect(0, 0, s, s);
+
+        // Border for visibility
+        ctx.strokeStyle = '#388e3c';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(1, 1, s - 2, s - 2);
+
+        // Draw right-pointing arrow
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        // Arrow pointing right
+        ctx.moveTo(s * 0.75, s * 0.5);  // Right point
+        ctx.lineTo(s * 0.35, s * 0.2);  // Top left
+        ctx.lineTo(s * 0.35, s * 0.4);  // Top inner
+        ctx.lineTo(s * 0.25, s * 0.4);  // Arrow shaft top
+        ctx.lineTo(s * 0.25, s * 0.6);  // Arrow shaft bottom
+        ctx.lineTo(s * 0.35, s * 0.6);  // Bottom inner
+        ctx.lineTo(s * 0.35, s * 0.8);  // Bottom left
+        ctx.closePath();
+        ctx.fill();
+
+        addNoise(ctx, 0.05);
+    });
+
     return textures;
 }

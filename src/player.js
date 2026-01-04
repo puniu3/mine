@@ -15,8 +15,9 @@ export class Player {
         this.height = 1.8 * TILE_SIZE;
         this.x = (world.width / 2) * TILE_SIZE;
         this.y = 0;
-        this.vx = 0;
+        this.vx = 0; // Input-derived velocity
         this.vy = 0;
+        this.boardVx = 0; // Accelerator board velocity
         this.grounded = false;
         this.facingRight = true;
         this.animTimer = 0;
@@ -48,6 +49,28 @@ export class Player {
         return { x: this.x, y: this.y, w: this.width, h: this.height };
     }
 
+    checkAcceleratorOverlap() {
+        const startX = Math.floor(this.x / TILE_SIZE);
+        const endX = Math.floor((this.x + this.width) / TILE_SIZE);
+        const startY = Math.floor(this.y / TILE_SIZE);
+        const endY = Math.floor((this.y + this.height) / TILE_SIZE);
+
+        for (let y = startY; y <= endY; y++) {
+            for (let x = startX; x <= endX; x++) {
+                const block = this.world.getBlock(x, y);
+                if (block === BLOCKS.ACCELERATOR_LEFT) {
+                    this.boardVx = -15;
+                    this.facingRight = false;
+                    return;
+                } else if (block === BLOCKS.ACCELERATOR_RIGHT) {
+                    this.boardVx = 15;
+                    this.facingRight = true;
+                    return;
+                }
+            }
+        }
+    }
+
     update(input, dt) {
         if (input.keys.left) {
             this.vx = -5;
@@ -75,9 +98,26 @@ export class Player {
              sounds.playBigJump();
         }
 
+        // Accelerator Check
+        // Check tiles player overlaps with
+        this.checkAcceleratorOverlap();
+
+        // Board velocity decay (linear decay to 0 over 1 second)
+        if (this.boardVx !== 0) {
+            const decayAmount = 15 * (dt / 1000); // 15 units per second
+            if (this.boardVx > 0) {
+                this.boardVx = Math.max(0, this.boardVx - decayAmount);
+            } else {
+                this.boardVx = Math.min(0, this.boardVx + decayAmount);
+            }
+        }
+
         this.vy = Math.min(this.vy + GRAVITY, TERMINAL_VELOCITY);
-        this.x += this.vx;
-        this.handleCollisions(true);
+
+        // Use combined velocity for movement
+        const totalVx = this.vx + this.boardVx;
+        this.x += totalVx;
+        this.handleCollisions(true, totalVx);
         this.y += this.vy;
         this.handleCollisions(false);
 
@@ -85,7 +125,7 @@ export class Player {
         this.wrapHorizontally();
         this.wrapVertically();
 
-        if (Math.abs(this.vx) > 0.1) this.animTimer += dt;
+        if (Math.abs(totalVx) > 0.1) this.animTimer += dt;
     }
 
     wrapHorizontally() {
@@ -111,11 +151,13 @@ export class Player {
     respawn() {
         this.y = 0;
         this.vy = 0;
+        this.vx = 0;
+        this.boardVx = 0;
         this.x = (this.world.width / 2) * TILE_SIZE;
         this.findSpawnPoint();
     }
 
-    handleCollisions(horizontal) {
+    handleCollisions(horizontal, vx = this.vx) {
         const startX = Math.floor(this.x / TILE_SIZE);
         const endX = Math.floor((this.x + this.width) / TILE_SIZE);
         const startY = Math.floor(this.y / TILE_SIZE);
@@ -125,9 +167,10 @@ export class Player {
             for (let x = startX; x <= endX; x++) {
                 if (isBlockSolid(this.world.getBlock(x, y), BLOCK_PROPS)) {
                     if (horizontal) {
-                        if (this.vx > 0) this.x = x * TILE_SIZE - this.width - 0.01;
-                        else if (this.vx < 0) this.x = (x + 1) * TILE_SIZE + 0.01;
+                        if (vx > 0) this.x = x * TILE_SIZE - this.width - 0.01;
+                        else if (vx < 0) this.x = (x + 1) * TILE_SIZE + 0.01;
                         this.vx = 0;
+                        this.boardVx = 0; // Also reset board velocity on collision
                     } else {
                         if (this.vy > 0) {
                             this.y = y * TILE_SIZE - this.height - 0.01;
