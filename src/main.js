@@ -21,12 +21,10 @@ import {
 } from './utils.js';
 import { sounds } from './audio.js';
 import {
-    TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, GRAVITY, JUMP_FORCE, REACH, CAMERA_SMOOTHING,
-    BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY
+    TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH, CAMERA_SMOOTHING,
+    BLOCKS, BLOCK_PROPS
 } from './constants.js';
 import { generateTextures } from './texture_gen.js';
-
-// New modules
 import { createInput } from './input.js';
 import {
     updateInventoryUI, addToInventory, consumeFromInventory,
@@ -36,203 +34,11 @@ import { isCraftingOpen, updateCrafting } from './crafting.js';
 import { update as updateFireworks, draw as drawFireworks, createExplosionParticles } from './fireworks.js';
 import { createActions } from './actions.js';
 import { World } from './world.js';
+import { Player } from './player.js';
+import { getSkyGradientColors } from './sky.js';
 
 // --- Texture Generator ---
 let textures = {};
-
-// --- Sky Coloring Helpers ---
-const SKY_BANDS = {
-    surface: { top: '#87CEEB', bottom: '#E0F7FA' },
-    underground: { top: '#1b1b25', bottom: '#0a0c14' },
-    stratosphere: { top: '#0d1b42', bottom: '#6fb3ff' }
-};
-
-function lerp(a, b, t) {
-    return a + (b - a) * t;
-}
-
-function lerpColor(c1, c2, t) {
-    const r1 = parseInt(c1.slice(1, 3), 16);
-    const g1 = parseInt(c1.slice(3, 5), 16);
-    const b1 = parseInt(c1.slice(5, 7), 16);
-    const r2 = parseInt(c2.slice(1, 3), 16);
-    const g2 = parseInt(c2.slice(3, 5), 16);
-    const b2 = parseInt(c2.slice(5, 7), 16);
-
-    const r = Math.round(lerp(r1, r2, t));
-    const g = Math.round(lerp(g1, g2, t));
-    const b = Math.round(lerp(b1, b2, t));
-
-    const toHex = (value) => value.toString(16).padStart(2, '0');
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function getSkyGradientColors(altitude) {
-    // altitude: 0 = top of world (high sky), 1 = bottom (deep underground)
-    const surfaceLower = 0.45;
-    const surfaceUpper = 0.55;
-
-    if (altitude < surfaceLower) {
-        const t = clamp(altitude / surfaceLower, 0, 1);
-        return {
-            top: lerpColor(SKY_BANDS.stratosphere.top, SKY_BANDS.surface.top, t),
-            bottom: lerpColor(SKY_BANDS.stratosphere.bottom, SKY_BANDS.surface.bottom, t)
-        };
-    }
-
-    if (altitude > surfaceUpper) {
-        const t = clamp((altitude - surfaceUpper) / (1 - surfaceUpper), 0, 1);
-        return {
-            top: lerpColor(SKY_BANDS.surface.top, SKY_BANDS.underground.top, t),
-            bottom: lerpColor(SKY_BANDS.surface.bottom, SKY_BANDS.underground.bottom, t)
-        };
-    }
-
-    return SKY_BANDS.surface;
-}
-
-class Player {
-    constructor(world) {
-        this.world = world;
-        this.width = 0.6 * TILE_SIZE;
-        this.height = 1.8 * TILE_SIZE;
-        this.x = (world.width / 2) * TILE_SIZE;
-        this.y = 0;
-        this.vx = 0;
-        this.vy = 0;
-        this.grounded = false;
-        this.facingRight = true;
-        this.animTimer = 0;
-
-        this.findSpawnPoint();
-    }
-
-    findSpawnPoint() {
-        const sx = Math.floor(this.x / TILE_SIZE);
-        for (let y = 0; y < this.world.height; y++) {
-            if (this.world.getBlock(sx, y) !== BLOCKS.AIR) {
-                this.y = (y - 2) * TILE_SIZE;
-                break;
-            }
-        }
-    }
-
-    getCenterX() {
-        return this.x + this.width / 2;
-    }
-
-    getCenterY() {
-        return this.y + this.height / 2;
-    }
-
-    getRect() {
-        return { x: this.x, y: this.y, w: this.width, h: this.height };
-    }
-
-    update(input, dt) {
-        if (input.keys.left) {
-            this.vx = -5;
-            this.facingRight = false;
-        } else if (input.keys.right) {
-            this.vx = 5;
-            this.facingRight = true;
-        } else {
-            this.vx *= 0.8;
-        }
-
-        if (input.keys.jump && this.grounded) {
-            this.vy = -JUMP_FORCE;
-            this.grounded = false;
-            sounds.playJump();
-        }
-
-        // Jump Pad Check
-        // Check block directly under feet center
-        const feetX = Math.floor(this.getCenterX() / TILE_SIZE);
-        const feetY = Math.floor((this.y + this.height + 0.1) / TILE_SIZE);
-        if (this.world.getBlock(feetX, feetY) === BLOCKS.JUMP_PAD) {
-             this.vy = -JUMP_FORCE * 1.8;
-             this.grounded = false;
-             sounds.playBigJump();
-        }
-
-        this.vy = Math.min(this.vy + GRAVITY, TERMINAL_VELOCITY);
-        this.x += this.vx;
-        this.handleCollisions(true);
-        this.y += this.vy;
-        this.handleCollisions(false);
-
-        // Clamp position
-        this.x = clamp(this.x, 0, this.world.width * TILE_SIZE - this.width);
-        this.wrapVertically();
-
-        if (Math.abs(this.vx) > 0.1) this.animTimer += dt;
-    }
-
-    wrapVertically() {
-        const worldSpan = this.world.height * TILE_SIZE;
-        while (this.y >= worldSpan) {
-            this.y -= worldSpan;
-        }
-        while (this.y + this.height <= 0) {
-            this.y += worldSpan;
-        }
-    }
-
-    respawn() {
-        this.y = 0;
-        this.vy = 0;
-        this.x = (this.world.width / 2) * TILE_SIZE;
-        this.findSpawnPoint();
-    }
-
-    handleCollisions(horizontal) {
-        const startX = Math.floor(this.x / TILE_SIZE);
-        const endX = Math.floor((this.x + this.width) / TILE_SIZE);
-        const startY = Math.floor(this.y / TILE_SIZE);
-        const endY = Math.floor((this.y + this.height) / TILE_SIZE);
-
-        for (let y = startY; y <= endY; y++) {
-            for (let x = startX; x <= endX; x++) {
-                if (isBlockSolid(this.world.getBlock(x, y), BLOCK_PROPS)) {
-                    if (horizontal) {
-                        if (this.vx > 0) this.x = x * TILE_SIZE - this.width - 0.01;
-                        else if (this.vx < 0) this.x = (x + 1) * TILE_SIZE + 0.01;
-                        this.vx = 0;
-                    } else {
-                        if (this.vy > 0) {
-                            this.y = y * TILE_SIZE - this.height - 0.01;
-                            this.grounded = true;
-                            this.vy = 0;
-                        } else if (this.vy < 0) {
-                            this.y = (y + 1) * TILE_SIZE + 0.01;
-                            this.vy = 0;
-                        }
-                    }
-                    return;
-                }
-            }
-        }
-        if (!horizontal) this.grounded = false;
-    }
-
-    draw(ctx) {
-        ctx.save();
-        ctx.translate(Math.floor(this.x), Math.floor(this.y));
-        const swing = Math.sin(this.animTimer * 0.01) * 5;
-        ctx.fillStyle = '#f8b090';
-        ctx.fillRect(4, 0, 12, 12); // Head
-        ctx.fillStyle = '#00bcd4';
-        ctx.fillRect(4, 12, 12, 18); // Body
-        ctx.fillStyle = '#3f51b5'; // Legs
-        ctx.fillRect(4, 30, 5, 18 + (Math.abs(this.vx) > 0.1 ? swing : 0));
-        ctx.fillRect(11, 30, 5, 18 - (Math.abs(this.vx) > 0.1 ? swing : 0));
-        ctx.fillStyle = '#f8b090'; // Arms
-        if (this.facingRight) ctx.fillRect(10, 12, 6, 18 + swing);
-        else ctx.fillRect(4, 12, -6, 18 + swing);
-        ctx.restore();
-    }
-}
 
 // --- Main Loop ---
 const canvas = document.getElementById('gameCanvas');
