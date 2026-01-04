@@ -99,9 +99,8 @@ export class Player {
         if (this.world.getBlock(feetX, feetY) === BLOCKS.JUMP_PAD) {
              // Count stacked JUMP_PADs in both directions
              const stackCount = this.countVerticalJumpPads(feetX, feetY);
-             console.log(`[JUMP_PAD] From below: feetX=${feetX}, feetY=${feetY}, stackCount=${stackCount}, velocity=${-JUMP_FORCE * 1.8 * stackCount}`);
-             // Multiply velocity by stack count
-             this.vy = -JUMP_FORCE * 1.8 * stackCount;
+             // Multiply velocity by square root of stack count
+             this.vy = -JUMP_FORCE * 1.8 * Math.pow(stackCount, 0.5);
              this.grounded = false;
              sounds.playBigJump();
         }
@@ -146,13 +145,10 @@ export class Player {
     countVerticalJumpPads(x, y) {
         let count = 0;
 
-        console.log(`[countVerticalJumpPads] Starting at x=${x}, y=${y}`);
-
         // Count upward (including starting point)
         let currentY = y;
         while (this.world.getBlock(x, currentY) === BLOCKS.JUMP_PAD) {
             count++;
-            console.log(`  Found JUMP_PAD upward at y=${currentY}, count=${count}`);
             currentY--;
         }
 
@@ -160,11 +156,9 @@ export class Player {
         currentY = y + 1;
         while (this.world.getBlock(x, currentY) === BLOCKS.JUMP_PAD) {
             count++;
-            console.log(`  Found JUMP_PAD downward at y=${currentY}, count=${count}`);
             currentY++;
         }
 
-        console.log(`[countVerticalJumpPads] Final count=${count}`);
         return count;
     }
 
@@ -223,9 +217,8 @@ export class Player {
                             if (block === BLOCKS.JUMP_PAD) {
                                 // Count stacked JUMP_PADs in both directions
                                 const stackCount = this.countVerticalJumpPads(x, y);
-                                console.log(`[JUMP_PAD] From above: x=${x}, y=${y}, stackCount=${stackCount}, velocity=${JUMP_FORCE * 1.8 * stackCount}`);
-                                // Multiply velocity by stack count
-                                this.vy = JUMP_FORCE * 1.8 * stackCount;
+                                // Multiply velocity by square root of stack count
+                                this.vy = JUMP_FORCE * 1.8 * Math.pow(stackCount, 0.5);
                                 sounds.playBigJump();
                             } else {
                                 this.vy = 0;
