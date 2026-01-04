@@ -12,6 +12,7 @@ export const REACH = 5 * TILE_SIZE;
 export const CAMERA_SMOOTHING = 0.1;
 
 // Block Types
+// Note: Craftable blocks (FIREWORK, JUMP_PAD, TNT, SAPLING, JACKPOT) are at the end
 export const BLOCKS = {
     AIR: 0,
     DIRT: 1,
@@ -25,11 +26,13 @@ export const BLOCKS = {
     WORKBENCH: 9,
     SAND: 10,
     SNOW: 11,
-    FIREWORK: 12,
-    JUMP_PAD: 13,
-    TNT: 14,
-    SAPLING: 15,
-    JACKPOT: 16
+    CLOUD: 12,
+    // Craftable blocks below
+    FIREWORK: 13,
+    JUMP_PAD: 14,
+    TNT: 15,
+    SAPLING: 16,
+    JACKPOT: 17
 };
 
 export const BLOCK_PROPS = {
@@ -46,6 +49,7 @@ export const BLOCK_PROPS = {
 
     [BLOCKS.SAND]: { name: 'Sand', solid: true, color: '#d7c27a', type: 'sand', drop: BLOCKS.SAND },
     [BLOCKS.SNOW]: { name: 'Snow', solid: true, color: '#e0f7fa', type: 'snow', drop: BLOCKS.SNOW },
+    [BLOCKS.CLOUD]: { name: 'Cloud', solid: true, color: '#ffffff', type: 'cloud', drop: BLOCKS.CLOUD },
     [BLOCKS.FIREWORK]: { name: 'Firework', solid: true, color: '#ef5350', type: 'wood', drop: BLOCKS.FIREWORK },
     [BLOCKS.JUMP_PAD]: { name: 'Jump Pad', solid: true, color: '#ab47bc', type: 'stone', drop: BLOCKS.JUMP_PAD },
     [BLOCKS.TNT]: { name: 'TNT', solid: true, color: '#d32f2f', type: 'wood', drop: BLOCKS.TNT },
@@ -62,6 +66,8 @@ export const HOTBAR_ITEMS = [
     BLOCKS.GOLD,
     BLOCKS.SAND,
     BLOCKS.SNOW,
+    BLOCKS.CLOUD,
+    // Craftable blocks below
     BLOCKS.FIREWORK,
     BLOCKS.JUMP_PAD,
     BLOCKS.TNT,
