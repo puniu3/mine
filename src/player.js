@@ -81,11 +81,21 @@ export class Player {
         this.y += this.vy;
         this.handleCollisions(false);
 
-        // Clamp position
-        this.x = clamp(this.x, 0, this.world.width * TILE_SIZE - this.width);
+        // Wrap position
+        this.wrapHorizontally();
         this.wrapVertically();
 
         if (Math.abs(this.vx) > 0.1) this.animTimer += dt;
+    }
+
+    wrapHorizontally() {
+        const worldSpan = this.world.width * TILE_SIZE;
+        while (this.x >= worldSpan) {
+            this.x -= worldSpan;
+        }
+        while (this.x + this.width <= 0) {
+            this.x += worldSpan;
+        }
     }
 
     wrapVertically() {

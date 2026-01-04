@@ -116,13 +116,12 @@ export function tileToWorld(tileX, tileY, tileSize) {
  * @returns {number} Array index (-1 if out of bounds)
  */
 export function coordToIndex(x, y, width, height) {
-    if (x < 0 || x >= width) {
-        return -1;
-    }
+    // Wrap horizontally so the world connects left-to-right
+    const wrappedX = ((x % width) + width) % width;
 
     // Wrap vertically so the world connects top-to-bottom
     const wrappedY = ((y % height) + height) % height;
-    return wrappedY * width + x;
+    return wrappedY * width + wrappedX;
 }
 
 /**
@@ -355,6 +354,29 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
         }
         x += length;
         lastSegmentStart = x - length;
+    }
+
+    // Add slope at world wrap point to connect end to beginning
+    const firstHeight = heights[0];
+    const lastHeight = heights[width - 1];
+
+    if (firstHeight !== lastHeight) {
+        const slopeLength = Math.min(8, width / 2); // Max 8 tiles slope
+
+        if (lastHeight > firstHeight) {
+            // Slope down at the end
+            for (let i = 0; i < slopeLength; i++) {
+                const idx = width - slopeLength + i;
+                const t = (i + 1) / slopeLength;
+                heights[idx] = Math.round(lerp(heights[idx], firstHeight, t));
+            }
+        } else {
+            // Slope up at the beginning
+            for (let i = 0; i < slopeLength; i++) {
+                const t = (i + 1) / slopeLength;
+                heights[i] = Math.round(lerp(lastHeight, heights[i], t));
+            }
+        }
     }
 
     return { heights, biomeByColumn };

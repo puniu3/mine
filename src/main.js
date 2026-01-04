@@ -138,9 +138,21 @@ function update(dt) {
     // Camera with smooth following
     const targetCamX = player.getCenterX() - canvas.width / 2;
     const targetCamY = player.getCenterY() - canvas.height / 2;
+
+    // Handle horizontal wrapping: if player wrapped around, adjust camera to follow smoothly
+    const worldWidthPixels = world.width * TILE_SIZE;
+    const cameraDiff = targetCamX - cameraX;
+    if (Math.abs(cameraDiff) > worldWidthPixels / 2) {
+        // Player wrapped, adjust camera to maintain continuity
+        if (cameraDiff > 0) {
+            cameraX += worldWidthPixels;
+        } else {
+            cameraX -= worldWidthPixels;
+        }
+    }
+
     cameraX = smoothCamera(cameraX, targetCamX, CAMERA_SMOOTHING);
     cameraY = targetCamY;
-    cameraX = clampCamera(cameraX, 0, world.width * TILE_SIZE, canvas.width);
 
     // Interaction
     if (input.mouse.leftDown) {
