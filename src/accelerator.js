@@ -16,12 +16,12 @@ export function handleAcceleratorOverlap(player, world) {
             const key = `${x},${y}`;
 
             if (block === BLOCKS.ACCELERATOR_LEFT && !acceleratorCooldowns.has(key)) {
-                player.boardVx = -ACCELERATION_AMOUNT;
+                player.boardVx = -Math.sqrt(player.boardVx * player.boardVx + ACCELERATION_AMOUNT * ACCELERATION_AMOUNT);
                 player.facingRight = false;
                 acceleratorCooldowns.set(key, COOLDOWN);
                 return;
             } else if (block === BLOCKS.ACCELERATOR_RIGHT && !acceleratorCooldowns.has(key)) {
-                player.boardVx = ACCELERATION_AMOUNT;
+                player.boardVx = Math.sqrt(player.boardVx * player.boardVx + ACCELERATION_AMOUNT * ACCELERATION_AMOUNT);
                 player.facingRight = true;
                 acceleratorCooldowns.set(key, COOLDOWN);
                 return;
