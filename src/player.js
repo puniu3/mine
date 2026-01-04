@@ -72,6 +72,9 @@ export class Player {
     }
 
     update(input, dt) {
+        // Time Scale: normalize physics to 60 FPS target
+        const timeScale = dt / (1000 / 60);
+
         if (input.keys.left) {
             this.vx = -5;
             this.facingRight = false;
@@ -79,7 +82,8 @@ export class Player {
             this.vx = 5;
             this.facingRight = true;
         } else {
-            this.vx *= 0.8;
+            // Apply friction with time scaling (exponential decay)
+            this.vx *= Math.pow(0.8, timeScale);
         }
 
         if (input.keys.jump && this.grounded) {
@@ -112,13 +116,14 @@ export class Player {
             }
         }
 
-        this.vy = Math.min(this.vy + GRAVITY, TERMINAL_VELOCITY);
+        // Apply gravity with time scaling
+        this.vy = Math.min(this.vy + GRAVITY * timeScale, TERMINAL_VELOCITY);
 
-        // Use combined velocity for movement
+        // Use combined velocity for movement with time scaling
         const totalVx = this.vx + this.boardVx;
-        this.x += totalVx;
+        this.x += totalVx * timeScale;
         this.handleCollisions(true, totalVx);
-        this.y += this.vy;
+        this.y += this.vy * timeScale;
         this.handleCollisions(false);
 
         // Wrap position

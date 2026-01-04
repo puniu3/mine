@@ -26,6 +26,9 @@ export function handleJackpotOverlap(player, world, sounds) {
 }
 
 export function updateJackpots(dt) {
+    // Time Scale: normalize physics to 60 FPS target
+    const timeScale = dt / (1000 / 60);
+
     jackpotCooldowns.forEach((time, key) => {
         const next = time - dt;
         if (next <= 0) {
@@ -37,10 +40,13 @@ export function updateJackpots(dt) {
 
     for (let i = jackpotParticles.length - 1; i >= 0; i--) {
         const p = jackpotParticles[i];
-        p.vx *= 0.99;
-        p.vy += PARTICLE_GRAVITY;
-        p.x += p.vx;
-        p.y += p.vy;
+        // Apply friction with time scaling (exponential decay)
+        p.vx *= Math.pow(0.99, timeScale);
+        // Apply gravity with time scaling
+        p.vy += PARTICLE_GRAVITY * timeScale;
+        // Apply velocity to position with time scaling
+        p.x += p.vx * timeScale;
+        p.y += p.vy * timeScale;
         p.life -= dt;
         if (p.life <= 0) {
             jackpotParticles.splice(i, 1);
