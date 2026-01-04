@@ -22,7 +22,7 @@ import {
 import { sounds } from './audio.js';
 import {
     TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH, CAMERA_SMOOTHING,
-    BLOCKS, BLOCK_PROPS
+    BLOCKS, BLOCK_PROPS, TNT_KNOCKBACK_STRENGTH
 } from './constants.js';
 import { generateTextures } from './texture_gen.js';
 import { createInput } from './input.js';
@@ -219,6 +219,35 @@ function explodeTNT(x, y) { // x, y are tile coordinates
 
     // Create particles at center
     createExplosionParticles(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2);
+
+    // Apply knockback to player
+    const explosionX = x * TILE_SIZE + TILE_SIZE / 2;
+    const explosionY = y * TILE_SIZE + TILE_SIZE / 2;
+    const playerCenterX = player.getCenterX();
+    const playerCenterY = player.getCenterY();
+
+    // Calculate distance in world coordinates
+    const distanceX = playerCenterX - explosionX;
+    const distanceY = playerCenterY - explosionY;
+    const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+
+    // Apply knockback if player is within range (using radius in pixels)
+    const knockbackRange = radius * TILE_SIZE;
+    if (distance < knockbackRange && distance > 0) {
+        // Normalize direction vector
+        const dirX = distanceX / distance;
+        const dirY = distanceY / distance;
+
+        // Calculate knockback strength:
+        const clampedDistance = Math.max(distance, TILE_SIZE);
+        const knockbackStrength =
+            (TNT_KNOCKBACK_STRENGTH * knockbackRange) / (clampedDistance + TILE_SIZE * 2);
+
+        // Apply velocity to player
+        player.vx = dirX * knockbackStrength;
+        player.vy = dirY * knockbackStrength;
+        player.grounded = false;
+    }
 
     for (let by = startY; by <= endY; by++) {
         for (let bx = startX; bx <= endX; bx++) {
