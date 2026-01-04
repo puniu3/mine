@@ -1,8 +1,6 @@
-import { BLOCKS, TILE_SIZE } from './constants.js';
+import { BLOCKS, TILE_SIZE, ACCELERATOR_COOLDOWN, ACCELERATOR_ACCELERATION_AMOUNT } from './constants.js';
 
 const acceleratorCooldowns = new Map();
-const COOLDOWN = 500; // 0.5 seconds as requested
-const ACCELERATION_AMOUNT = 15; // Fixed acceleration amount
 
 export function handleAcceleratorOverlap(player, world) {
     const startX = Math.floor(player.x / TILE_SIZE);
@@ -16,14 +14,14 @@ export function handleAcceleratorOverlap(player, world) {
             const key = `${x},${y}`;
 
             if (block === BLOCKS.ACCELERATOR_LEFT && !acceleratorCooldowns.has(key)) {
-                player.boardVx = -Math.sqrt(player.boardVx * player.boardVx + ACCELERATION_AMOUNT * ACCELERATION_AMOUNT);
+                player.boardVx = -Math.sqrt(player.boardVx * player.boardVx + ACCELERATOR_ACCELERATION_AMOUNT * ACCELERATOR_ACCELERATION_AMOUNT);
                 player.facingRight = false;
-                acceleratorCooldowns.set(key, COOLDOWN);
+                acceleratorCooldowns.set(key, ACCELERATOR_COOLDOWN);
                 return;
             } else if (block === BLOCKS.ACCELERATOR_RIGHT && !acceleratorCooldowns.has(key)) {
-                player.boardVx = Math.sqrt(player.boardVx * player.boardVx + ACCELERATION_AMOUNT * ACCELERATION_AMOUNT);
+                player.boardVx = Math.sqrt(player.boardVx * player.boardVx + ACCELERATOR_ACCELERATION_AMOUNT * ACCELERATOR_ACCELERATION_AMOUNT);
                 player.facingRight = true;
-                acceleratorCooldowns.set(key, COOLDOWN);
+                acceleratorCooldowns.set(key, ACCELERATOR_COOLDOWN);
                 return;
             }
         }
