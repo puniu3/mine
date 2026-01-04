@@ -26,7 +26,8 @@ export const BLOCKS = {
     SNOW: 11,
     FIREWORK: 12,
     JUMP_PAD: 13,
-    TNT: 14
+    TNT: 14,
+    SPRAWL: 15
 };
 
 export const BLOCK_PROPS = {
@@ -45,7 +46,8 @@ export const BLOCK_PROPS = {
     [BLOCKS.SNOW]: { name: 'Snow', solid: true, color: '#e0f7fa', type: 'snow', drop: BLOCKS.SNOW },
     [BLOCKS.FIREWORK]: { name: 'Firework', solid: true, color: '#ef5350', type: 'wood', drop: BLOCKS.FIREWORK },
     [BLOCKS.JUMP_PAD]: { name: 'Jump Pad', solid: true, color: '#ab47bc', type: 'stone', drop: BLOCKS.JUMP_PAD },
-    [BLOCKS.TNT]: { name: 'TNT', solid: true, color: '#d32f2f', type: 'wood', drop: BLOCKS.TNT }
+    [BLOCKS.TNT]: { name: 'TNT', solid: true, color: '#d32f2f', type: 'wood', drop: BLOCKS.TNT },
+    [BLOCKS.SPRAWL]: { name: 'Sprawl', solid: false, transparent: true, color: '#6fa85b', type: 'plant', drop: BLOCKS.SPRAWL }
 };
 
 export const HOTBAR_ITEMS = [
@@ -59,5 +61,6 @@ export const HOTBAR_ITEMS = [
     BLOCKS.SNOW,
     BLOCKS.FIREWORK,
     BLOCKS.JUMP_PAD,
-    BLOCKS.TNT
+    BLOCKS.TNT,
+    BLOCKS.SPRAWL
 ];

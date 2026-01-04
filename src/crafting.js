@@ -17,6 +17,11 @@ const CRAFTING_RECIPES = [
         id: BLOCKS.TNT,
         cost: { [BLOCKS.COAL]: 4, [BLOCKS.WOOD]: 2 },
         count: 1
+    },
+    {
+        id: BLOCKS.SPRAWL,
+        cost: { [BLOCKS.WOOD]: 1, [BLOCKS.LEAVES]: 1 },
+        count: 1
     }
 ];
 

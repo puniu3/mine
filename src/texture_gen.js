@@ -109,6 +109,22 @@ export function generateTextures() {
         for (let i = 0; i < 10; i++) ctx.fillRect(Math.random() * s, Math.random() * s, 4, 4);
     });
 
+    createTexture(BLOCKS.SPRAWL, (ctx, s) => {
+        ctx.fillStyle = '#6fa85b';
+        ctx.fillRect(0, 0, s, s);
+        ctx.fillStyle = '#4a7f3b';
+        for (let i = 0; i < 6; i++) {
+            const x = Math.random() * s;
+            const y = Math.random() * s;
+            ctx.fillRect(x, y, 4, 4);
+        }
+        ctx.fillStyle = '#b7dcb0';
+        for (let i = 0; i < 3; i++) {
+            ctx.fillRect(Math.random() * s, Math.random() * s, 2, 8);
+        }
+        addNoise(ctx, 0.15);
+    });
+
     createTexture(BLOCKS.BEDROCK, (ctx, s) => {
         ctx.fillStyle = '#212121';
         ctx.fillRect(0, 0, s, s);

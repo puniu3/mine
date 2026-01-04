@@ -237,6 +237,8 @@ let cameraX = 0, cameraY = 0;
 let input;
 let actions;
 const tntTimers = [];
+const sprawlTimers = [];
+const SPRAWL_GROWTH_TIME = 6000;
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -287,6 +289,8 @@ function init() {
         onBlockPlaced: (x, y, type) => {
             if (type === BLOCKS.TNT) {
                 tntTimers.push({ x, y, timer: 3000 });
+            } else if (type === BLOCKS.SPRAWL) {
+                sprawlTimers.push({ x, y, timer: SPRAWL_GROWTH_TIME });
             }
         }
     });
@@ -343,6 +347,20 @@ function update(dt) {
             tntTimers.splice(i, 1);
         }
     }
+
+    // --- Update Sprawl Growth ---
+    for (let i = sprawlTimers.length - 1; i >= 0; i--) {
+        const sprawl = sprawlTimers[i];
+        if (world.getBlock(sprawl.x, sprawl.y) !== BLOCKS.SPRAWL) {
+            sprawlTimers.splice(i, 1);
+            continue;
+        }
+        sprawl.timer -= dt;
+        if (sprawl.timer <= 0) {
+            growSprawl(sprawl.x, sprawl.y);
+            sprawlTimers.splice(i, 1);
+        }
+    }
 }
 
 function explodeTNT(x, y) { // x, y are tile coordinates
@@ -374,6 +392,76 @@ function explodeTNT(x, y) { // x, y are tile coordinates
             }
         }
     }
+}
+
+function liftPlayerAbove(blockRect) {
+    const targetY = blockRect.y - player.height - 0.1;
+    if (player.y > targetY) {
+        player.y = targetY;
+    }
+    player.vy = 0;
+    player.grounded = true;
+
+    const startX = Math.floor(player.x / TILE_SIZE);
+    const endX = Math.floor((player.x + player.width) / TILE_SIZE);
+    const startY = Math.floor(player.y / TILE_SIZE);
+    const endY = Math.floor((player.y + player.height) / TILE_SIZE);
+
+    let adjustedTop = null;
+
+    for (let y = startY; y <= endY; y++) {
+        for (let x = startX; x <= endX; x++) {
+            const block = world.getBlock(x, y);
+            if (!isBlockSolid(block, BLOCK_PROPS)) continue;
+
+            if (isBlockBreakable(block, BLOCK_PROPS)) {
+                world.setBlock(x, y, BLOCKS.AIR);
+            } else {
+                const candidateTop = y * TILE_SIZE;
+                adjustedTop = adjustedTop === null ? candidateTop : Math.min(adjustedTop, candidateTop);
+            }
+        }
+    }
+
+    if (adjustedTop !== null) {
+        player.y = adjustedTop - player.height - 0.1;
+    }
+}
+
+function placeGrowthBlock(x, y, type) {
+    if (x < 0 || x >= world.width || y < 0 || y >= world.height) return;
+
+    const existing = world.getBlock(x, y);
+    if (BLOCK_PROPS[existing] && BLOCK_PROPS[existing].unbreakable) return;
+
+    if (existing !== BLOCKS.AIR && existing !== BLOCKS.SPRAWL) {
+        world.setBlock(x, y, BLOCKS.AIR);
+    }
+
+    const blockRect = { x: x * TILE_SIZE, y: y * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
+    if (rectsIntersect(player.getRect(), blockRect)) {
+        liftPlayerAbove(blockRect);
+    }
+
+    world.setBlock(x, y, type);
+}
+
+function growSprawl(x, y) {
+    const height = 4;
+    const placements = [];
+    for (let i = 0; i < height; i++) {
+        placements.push({ x, y: y - i, type: BLOCKS.WOOD });
+    }
+
+    const topY = y - (height - 1);
+    for (let lx = x - 2; lx <= x + 2; lx++) {
+        for (let ly = topY - 2; ly <= topY; ly++) {
+            if (Math.abs(lx - x) === 2 && Math.abs(ly - topY) === 2) continue;
+            placements.push({ x: lx, y: ly, type: BLOCKS.LEAVES });
+        }
+    }
+
+    placements.forEach(({ x: px, y: py, type }) => placeGrowthBlock(px, py, type));
 }
 
 function draw() {
