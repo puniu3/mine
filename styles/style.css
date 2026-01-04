@@ -87,6 +87,7 @@ button:active {
     padding: 5px;
     border-radius: 4px;
     overflow-x: auto;
+    overflow-y: hidden;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE/Edge */
 }
