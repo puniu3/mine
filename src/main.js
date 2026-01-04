@@ -22,7 +22,7 @@ import {
 import { sounds } from './audio.js';
 import {
     TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH, CAMERA_SMOOTHING,
-    BLOCKS, BLOCK_PROPS
+    BLOCKS, BLOCK_PROPS, TNT_KNOCKBACK_STRENGTH
 } from './constants.js';
 import { generateTextures } from './texture_gen.js';
 import { createInput } from './input.js';
@@ -238,9 +238,10 @@ function explodeTNT(x, y) { // x, y are tile coordinates
         const dirX = distanceX / distance;
         const dirY = distanceY / distance;
 
-        // Calculate knockback strength (inverse square law with minimum distance)
-        const effectiveDistance = Math.max(distance, TILE_SIZE);
-        const knockbackStrength = 50 * (knockbackRange / effectiveDistance);
+        // Calculate knockback strength:
+        const clampedDistance = Math.max(distance, TILE_SIZE);
+        const knockbackStrength =
+            (TNT_KNOCKBACK_STRENGTH * knockbackRange) / (clampedDistance + TILE_SIZE * 2);
 
         // Apply velocity to player
         player.vx = dirX * knockbackStrength;
