@@ -69,17 +69,52 @@ button:active {
 }
 
 /* HUD - Hotbar */
-#hotbar {
+#hotbar-wrapper {
     position: absolute;
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
+    align-items: center;
+    max-width: calc(100vw - 20px);
+    pointer-events: auto;
+}
+
+#hotbar {
+    display: flex;
     gap: 5px;
     background: rgba(0, 0, 0, 0.5);
     padding: 5px;
     border-radius: 4px;
-    pointer-events: auto;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+#hotbar::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.hotbar-scroll-indicator {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    padding: 0 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    user-select: none;
+}
+
+.hotbar-scroll-indicator.visible {
+    opacity: 1;
+}
+
+.hotbar-scroll-indicator.left {
+    margin-right: 2px;
+}
+
+.hotbar-scroll-indicator.right {
+    margin-left: 2px;
 }
 
 .slot {
