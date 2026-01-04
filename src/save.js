@@ -106,7 +106,7 @@ export function createSaveManager({ world, player, timers, inventory, utils, con
             player.grounded = state.player.grounded ?? player.grounded;
             player.facingRight = state.player.facingRight ?? player.facingRight;
             player.wrapVertically();
-            player.x = utils.clamp(player.x, 0, world.width * constants.TILE_SIZE - player.width);
+            player.wrapHorizontally();
         }
 
         if (state.inventory) {
