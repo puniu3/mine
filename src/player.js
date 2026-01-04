@@ -102,6 +102,15 @@ export class Player {
              sounds.playBigJump();
         }
 
+        // Jump Pad Check from below
+        // Check block directly above head center when moving upward
+        const headX = Math.floor(this.getCenterX() / TILE_SIZE);
+        const headY = Math.floor((this.y - 0.1) / TILE_SIZE);
+        if (this.vy < 0 && this.world.getBlock(headX, headY) === BLOCKS.JUMP_PAD) {
+            this.vy = JUMP_FORCE * 1.8;
+            sounds.playBigJump();
+        }
+
         // Accelerator Check
         // Check tiles player overlaps with
         this.checkAcceleratorOverlap();
