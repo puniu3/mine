@@ -102,15 +102,6 @@ export class Player {
              sounds.playBigJump();
         }
 
-        // Jump Pad Check from below
-        // Check block directly above head center when moving upward
-        const headX = Math.floor(this.getCenterX() / TILE_SIZE);
-        const headY = Math.floor((this.y - 0.1) / TILE_SIZE);
-        if (this.vy < 0 && this.world.getBlock(headX, headY) === BLOCKS.JUMP_PAD) {
-            this.vy = JUMP_FORCE * 1.8;
-            sounds.playBigJump();
-        }
-
         // Accelerator Check
         // Check tiles player overlaps with
         this.checkAcceleratorOverlap();
@@ -179,7 +170,8 @@ export class Player {
 
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
-                if (isBlockSolid(this.world.getBlock(x, y), BLOCK_PROPS)) {
+                const block = this.world.getBlock(x, y);
+                if (isBlockSolid(block, BLOCK_PROPS)) {
                     if (horizontal) {
                         if (vx > 0) this.x = x * TILE_SIZE - this.width - 0.01;
                         else if (vx < 0) this.x = (x + 1) * TILE_SIZE + 0.01;
@@ -192,7 +184,13 @@ export class Player {
                             this.vy = 0;
                         } else if (this.vy < 0) {
                             this.y = (y + 1) * TILE_SIZE + 0.01;
-                            this.vy = 0;
+                            // Check if hitting JUMP_PAD from below
+                            if (block === BLOCKS.JUMP_PAD) {
+                                this.vy = JUMP_FORCE * 1.8;
+                                sounds.playBigJump();
+                            } else {
+                                this.vy = 0;
+                            }
                         }
                         return;
                     }
