@@ -125,11 +125,13 @@ export function createActions({
             }
 
             if (canPlace) {
-                // Check neighbors (allow placement if climbing OR has neighbor)
-                const hasNeighbor = shouldClimb || hasAdjacentBlock(bx, by, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
+                const selectedBlock = inventory.getSelectedBlockId();
+                // Cloud blocks can be placed in mid-air without adjacent support
+                const isCloud = selectedBlock === BLOCKS.CLOUD;
+                // Check neighbors (allow placement if climbing OR has neighbor OR is cloud)
+                const hasNeighbor = isCloud || shouldClimb || hasAdjacentBlock(bx, by, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
 
                 if (hasNeighbor) {
-                    const selectedBlock = inventory.getSelectedBlockId();
                     if (inventory.consumeFromInventory(selectedBlock)) {
                         world.setBlock(bx, by, selectedBlock);
                         sounds.playDig('dirt');

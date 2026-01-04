@@ -97,7 +97,7 @@ export class World {
 
     generateClouds() {
         const cloudY = Math.floor(this.height * 0.15); // Cloud layer around 15% from top
-        const cloudCount = Math.floor(this.width / 80); // Roughly 1 cloud per 80 blocks
+        const cloudCount = Math.floor(this.width / 40); // Roughly 1 cloud per 40 blocks (denser clouds)
 
         for (let i = 0; i < cloudCount; i++) {
             const startX = Math.floor(Math.random() * (this.width - 30));
