@@ -47,6 +47,20 @@ export function consumeFromInventory(blockType) {
     return false;
 }
 
+function updateScrollIndicators() {
+    const hotbar = document.getElementById('hotbar');
+    const leftIndicator = document.getElementById('hotbar-scroll-left');
+    const rightIndicator = document.getElementById('hotbar-scroll-right');
+
+    if (!hotbar || !leftIndicator || !rightIndicator) return;
+
+    const canScrollLeft = hotbar.scrollLeft > 0;
+    const canScrollRight = hotbar.scrollLeft < hotbar.scrollWidth - hotbar.clientWidth - 1;
+
+    leftIndicator.classList.toggle('visible', canScrollLeft);
+    rightIndicator.classList.toggle('visible', canScrollRight);
+}
+
 export function initHotbarUI(textures) {
     const container = document.getElementById('hotbar');
     container.innerHTML = '';
@@ -74,6 +88,12 @@ export function initHotbarUI(textures) {
 
     // Set initial selection visually
     selectHotbar(selectedHotbarIndex);
+
+    // Setup scroll indicators
+    container.addEventListener('scroll', updateScrollIndicators);
+    window.addEventListener('resize', updateScrollIndicators);
+    // Initial check after DOM is ready
+    setTimeout(updateScrollIndicators, 0);
 }
 
 export function selectHotbar(index) {

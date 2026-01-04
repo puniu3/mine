@@ -83,8 +83,12 @@
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui-layer">
-        <div id="hotbar">
-            <!-- Slots injected by JS -->
+        <div id="hotbar-wrapper">
+            <span class="hotbar-scroll-indicator left" id="hotbar-scroll-left">◀</span>
+            <div id="hotbar">
+                <!-- Slots injected by JS -->
+            </div>
+            <span class="hotbar-scroll-indicator right" id="hotbar-scroll-right">▶</span>
         </div>
 
         <div class="touch-controls" id="mobile-controls">
