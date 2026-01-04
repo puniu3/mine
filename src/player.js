@@ -2,15 +2,16 @@
  * Player module
  */
 
-import { clamp, isBlockSolid } from './utils.js';
+import { clamp, isBlockSolid, isBlockBreakable, getBlockMaterialType } from './utils.js';
 import { sounds } from './audio.js';
 import {
     TILE_SIZE, GRAVITY, JUMP_FORCE, BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY
 } from './constants.js';
 
 export class Player {
-    constructor(world) {
+    constructor(world, addToInventory = null) {
         this.world = world;
+        this.addToInventory = addToInventory;
         this.width = 0.6 * TILE_SIZE;
         this.height = 1.8 * TILE_SIZE;
         this.x = (world.width / 2) * TILE_SIZE;
@@ -190,6 +191,20 @@ export class Player {
                             this.vy = 0;
                         } else if (this.vy < 0) {
                             this.y = (y + 1) * TILE_SIZE + 0.01;
+
+                            // Check if hitting block from below with high velocity (vy < -9)
+                            if (this.vy < -9 && isBlockBreakable(block, BLOCK_PROPS)) {
+                                // Destroy the block
+                                if (this.addToInventory) {
+                                    this.addToInventory(block);
+                                }
+                                sounds.playDig(getBlockMaterialType(block, BLOCK_PROPS));
+                                this.world.setBlock(x, y, BLOCKS.AIR);
+                                // Reduce upward velocity but keep some momentum
+                                this.vy += 2;
+                                return;
+                            }
+
                             // Check if hitting JUMP_PAD from below
                             if (block === BLOCKS.JUMP_PAD) {
                                 // Count stacked JUMP_PADs in both directions

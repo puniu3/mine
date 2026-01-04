@@ -71,7 +71,7 @@ window.addEventListener('resize', resize);
 
 function init(savedState = null) {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
-    player = new Player(world);
+    player = new Player(world, addToInventory);
     textures = generateTextures(); // Initialize textures here
 
     // Initialize TNT Manager
