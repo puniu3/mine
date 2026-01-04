@@ -97,8 +97,9 @@ export class Player {
         const feetX = Math.floor(this.getCenterX() / TILE_SIZE);
         const feetY = Math.floor((this.y + this.height + 0.1) / TILE_SIZE);
         if (this.world.getBlock(feetX, feetY) === BLOCKS.JUMP_PAD) {
-             // Count stacked JUMP_PADs going upward (direction -1)
-             const stackCount = this.countVerticalJumpPads(feetX, feetY, -1);
+             // Count stacked JUMP_PADs in both directions
+             const stackCount = this.countVerticalJumpPads(feetX, feetY);
+             console.log(`[JUMP_PAD] From below: feetX=${feetX}, feetY=${feetY}, stackCount=${stackCount}, velocity=${-JUMP_FORCE * 1.8 * stackCount}`);
              // Multiply velocity by stack count
              this.vy = -JUMP_FORCE * 1.8 * stackCount;
              this.grounded = false;
@@ -137,22 +138,33 @@ export class Player {
     }
 
     /**
-     * Count consecutive JUMP_PAD blocks in vertical direction
+     * Count total consecutive JUMP_PAD blocks in both vertical directions
      * @param {number} x - tile x coordinate
-     * @param {number} y - tile y coordinate
-     * @param {number} direction - 1 for down, -1 for up
-     * @returns {number} count of consecutive JUMP_PAD blocks
+     * @param {number} y - tile y coordinate (starting point)
+     * @returns {number} total count of consecutive JUMP_PAD blocks (including starting point)
      */
-    countVerticalJumpPads(x, y, direction) {
+    countVerticalJumpPads(x, y) {
         let count = 0;
-        let currentY = y;
 
-        // Count consecutive JUMP_PAD blocks in the specified direction
+        console.log(`[countVerticalJumpPads] Starting at x=${x}, y=${y}`);
+
+        // Count upward (including starting point)
+        let currentY = y;
         while (this.world.getBlock(x, currentY) === BLOCKS.JUMP_PAD) {
             count++;
-            currentY += direction;
+            console.log(`  Found JUMP_PAD upward at y=${currentY}, count=${count}`);
+            currentY--;
         }
 
+        // Count downward (excluding starting point to avoid double-counting)
+        currentY = y + 1;
+        while (this.world.getBlock(x, currentY) === BLOCKS.JUMP_PAD) {
+            count++;
+            console.log(`  Found JUMP_PAD downward at y=${currentY}, count=${count}`);
+            currentY++;
+        }
+
+        console.log(`[countVerticalJumpPads] Final count=${count}`);
         return count;
     }
 
@@ -209,8 +221,9 @@ export class Player {
                             this.y = (y + 1) * TILE_SIZE + 0.01;
                             // Check if hitting JUMP_PAD from below
                             if (block === BLOCKS.JUMP_PAD) {
-                                // Count stacked JUMP_PADs going downward (direction 1)
-                                const stackCount = this.countVerticalJumpPads(x, y, 1);
+                                // Count stacked JUMP_PADs in both directions
+                                const stackCount = this.countVerticalJumpPads(x, y);
+                                console.log(`[JUMP_PAD] From above: x=${x}, y=${y}, stackCount=${stackCount}, velocity=${JUMP_FORCE * 1.8 * stackCount}`);
                                 // Multiply velocity by stack count
                                 this.vy = JUMP_FORCE * 1.8 * stackCount;
                                 sounds.playBigJump();
