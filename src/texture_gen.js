@@ -248,6 +248,39 @@ export function generateTextures() {
         addNoise(ctx, 0.1);
     });
 
+    const drawSpeedPad = (ctx, s, direction) => {
+        ctx.fillStyle = '#263238';
+        ctx.fillRect(0, 0, s, s);
+
+        ctx.fillStyle = '#4fc3f7';
+        ctx.fillRect(2, 2, s - 4, s - 4);
+
+        ctx.fillStyle = '#e1f5fe';
+        ctx.beginPath();
+        const arrowPadding = 6;
+        const midY = s / 2;
+        if (direction === 'left') {
+            ctx.moveTo(arrowPadding, midY);
+            ctx.lineTo(s - arrowPadding, arrowPadding);
+            ctx.lineTo(s - arrowPadding, s - arrowPadding);
+        } else {
+            ctx.moveTo(s - arrowPadding, midY);
+            ctx.lineTo(arrowPadding, arrowPadding);
+            ctx.lineTo(arrowPadding, s - arrowPadding);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(2, 2, s - 4, s - 4);
+
+        addNoise(ctx, 0.05);
+    };
+
+    createTexture(BLOCKS.SPEED_PAD_LEFT, (ctx, s) => drawSpeedPad(ctx, s, 'left'));
+    createTexture(BLOCKS.SPEED_PAD_RIGHT, (ctx, s) => drawSpeedPad(ctx, s, 'right'));
+
     createTexture(BLOCKS.TNT, (ctx, s) => {
         // Red base
         ctx.fillStyle = '#d32f2f';

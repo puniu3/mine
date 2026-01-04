@@ -12,7 +12,7 @@ export const REACH = 5 * TILE_SIZE;
 export const CAMERA_SMOOTHING = 0.1;
 
 // Block Types
-// Note: Craftable blocks (FIREWORK, JUMP_PAD, TNT, SAPLING, JACKPOT) are at the end
+// Note: Craftable blocks (FIREWORK, JUMP_PAD, TNT, SAPLING, JACKPOT, SPEED_PAD_LEFT, SPEED_PAD_RIGHT) are at the end
 export const BLOCKS = {
     AIR: 0,
     DIRT: 1,
@@ -32,7 +32,9 @@ export const BLOCKS = {
     JUMP_PAD: 14,
     TNT: 15,
     SAPLING: 16,
-    JACKPOT: 17
+    JACKPOT: 17,
+    SPEED_PAD_LEFT: 18,
+    SPEED_PAD_RIGHT: 19
 };
 
 export const BLOCK_PROPS = {
@@ -54,7 +56,9 @@ export const BLOCK_PROPS = {
     [BLOCKS.JUMP_PAD]: { name: 'Jump Pad', solid: true, color: '#ab47bc', type: 'stone', drop: BLOCKS.JUMP_PAD },
     [BLOCKS.TNT]: { name: 'TNT', solid: true, color: '#d32f2f', type: 'wood', drop: BLOCKS.TNT },
     [BLOCKS.SAPLING]: { name: 'Sapling', solid: false, transparent: true, color: '#6fa85b', type: 'plant', drop: BLOCKS.SAPLING },
-    [BLOCKS.JACKPOT]: { name: 'Jackpot', solid: false, transparent: true, color: '#ffd54f', type: 'stone', drop: BLOCKS.JACKPOT }
+    [BLOCKS.JACKPOT]: { name: 'Jackpot', solid: false, transparent: true, color: '#ffd54f', type: 'stone', drop: BLOCKS.JACKPOT },
+    [BLOCKS.SPEED_PAD_LEFT]: { name: 'Speed Pad (Left)', solid: false, transparent: true, color: '#4fc3f7', type: 'stone', drop: BLOCKS.SPEED_PAD_LEFT },
+    [BLOCKS.SPEED_PAD_RIGHT]: { name: 'Speed Pad (Right)', solid: false, transparent: true, color: '#29b6f6', type: 'stone', drop: BLOCKS.SPEED_PAD_RIGHT }
 };
 
 export const HOTBAR_ITEMS = [
@@ -72,5 +76,7 @@ export const HOTBAR_ITEMS = [
     BLOCKS.JUMP_PAD,
     BLOCKS.TNT,
     BLOCKS.SAPLING,
-    BLOCKS.JACKPOT
+    BLOCKS.JACKPOT,
+    BLOCKS.SPEED_PAD_LEFT,
+    BLOCKS.SPEED_PAD_RIGHT
 ];

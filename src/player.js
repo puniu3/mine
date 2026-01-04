@@ -81,6 +81,8 @@ export class Player {
         this.y += this.vy;
         this.handleCollisions(false);
 
+        this.applySpeedPads();
+
         // Wrap position
         this.wrapHorizontally();
         this.wrapVertically();
@@ -143,6 +145,31 @@ export class Player {
             }
         }
         if (!horizontal) this.grounded = false;
+    }
+
+    applySpeedPads() {
+        const startX = Math.floor(this.x / TILE_SIZE);
+        const endX = Math.floor((this.x + this.width) / TILE_SIZE);
+        const startY = Math.floor(this.y / TILE_SIZE);
+        const endY = Math.floor((this.y + this.height) / TILE_SIZE);
+
+        const boostSpeed = 14;
+
+        for (let y = startY; y <= endY; y++) {
+            for (let x = startX; x <= endX; x++) {
+                const block = this.world.getBlock(x, y);
+                if (block === BLOCKS.SPEED_PAD_LEFT) {
+                    this.vx = -boostSpeed;
+                    this.facingRight = false;
+                    return;
+                }
+                if (block === BLOCKS.SPEED_PAD_RIGHT) {
+                    this.vx = boostSpeed;
+                    this.facingRight = true;
+                    return;
+                }
+            }
+        }
     }
 
     draw(ctx) {
