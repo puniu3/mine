@@ -27,7 +27,9 @@ export class Player {
     findSpawnPoint() {
         const sx = Math.floor(this.x / TILE_SIZE);
         for (let y = 0; y < this.world.height; y++) {
-            if (this.world.getBlock(sx, y) !== BLOCKS.AIR) {
+            const block = this.world.getBlock(sx, y);
+            // Skip air and cloud blocks to ensure spawning on solid ground
+            if (block !== BLOCKS.AIR && block !== BLOCKS.CLOUD) {
                 this.y = (y - 2) * TILE_SIZE;
                 break;
             }
