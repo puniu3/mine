@@ -78,6 +78,13 @@ button:active {
     padding: 5px;
     border-radius: 4px;
     pointer-events: auto;
+    max-width: 90vw;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+}
+
+#hotbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
 }
 
 .slot {
