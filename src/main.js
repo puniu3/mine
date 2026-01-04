@@ -237,8 +237,8 @@ let cameraX = 0, cameraY = 0;
 let input;
 let actions;
 const tntTimers = [];
-const sprawlTimers = [];
-const SPRAWL_GROWTH_TIME = 6000;
+const saplingTimers = [];
+const SAPLING_GROWTH_TIME = 6000;
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -289,8 +289,8 @@ function init() {
         onBlockPlaced: (x, y, type) => {
             if (type === BLOCKS.TNT) {
                 tntTimers.push({ x, y, timer: 3000 });
-            } else if (type === BLOCKS.SPRAWL) {
-                sprawlTimers.push({ x, y, timer: SPRAWL_GROWTH_TIME });
+            } else if (type === BLOCKS.SAPLING) {
+                saplingTimers.push({ x, y, timer: SAPLING_GROWTH_TIME });
             }
         }
     });
@@ -348,17 +348,17 @@ function update(dt) {
         }
     }
 
-    // --- Update Sprawl Growth ---
-    for (let i = sprawlTimers.length - 1; i >= 0; i--) {
-        const sprawl = sprawlTimers[i];
-        if (world.getBlock(sprawl.x, sprawl.y) !== BLOCKS.SPRAWL) {
-            sprawlTimers.splice(i, 1);
+    // --- Update Sapling Growth ---
+    for (let i = saplingTimers.length - 1; i >= 0; i--) {
+        const sapling = saplingTimers[i];
+        if (world.getBlock(sapling.x, sapling.y) !== BLOCKS.SAPLING) {
+            saplingTimers.splice(i, 1);
             continue;
         }
-        sprawl.timer -= dt;
-        if (sprawl.timer <= 0) {
-            growSprawl(sprawl.x, sprawl.y);
-            sprawlTimers.splice(i, 1);
+        sapling.timer -= dt;
+        if (sapling.timer <= 0) {
+            growSapling(sapling.x, sapling.y);
+            saplingTimers.splice(i, 1);
         }
     }
 }
@@ -434,7 +434,7 @@ function placeGrowthBlock(x, y, type) {
     const existing = world.getBlock(x, y);
     if (BLOCK_PROPS[existing] && BLOCK_PROPS[existing].unbreakable) return;
 
-    if (existing !== BLOCKS.AIR && existing !== BLOCKS.SPRAWL) {
+    if (existing !== BLOCKS.AIR && existing !== BLOCKS.SAPLING) {
         world.setBlock(x, y, BLOCKS.AIR);
     }
 
@@ -446,7 +446,7 @@ function placeGrowthBlock(x, y, type) {
     world.setBlock(x, y, type);
 }
 
-function growSprawl(x, y) {
+function growSapling(x, y) {
     const height = 4;
     const placements = [];
     for (let i = 0; i < height; i++) {

@@ -109,20 +109,40 @@ export function generateTextures() {
         for (let i = 0; i < 10; i++) ctx.fillRect(Math.random() * s, Math.random() * s, 4, 4);
     });
 
-    createTexture(BLOCKS.SPRAWL, (ctx, s) => {
-        ctx.fillStyle = '#6fa85b';
-        ctx.fillRect(0, 0, s, s);
-        ctx.fillStyle = '#4a7f3b';
-        for (let i = 0; i < 6; i++) {
-            const x = Math.random() * s;
-            const y = Math.random() * s;
-            ctx.fillRect(x, y, 4, 4);
-        }
-        ctx.fillStyle = '#b7dcb0';
-        for (let i = 0; i < 3; i++) {
-            ctx.fillRect(Math.random() * s, Math.random() * s, 2, 8);
-        }
-        addNoise(ctx, 0.15);
+    createTexture(BLOCKS.SAPLING, (ctx, s) => {
+        ctx.clearRect(0, 0, s, s);
+
+        // Soil mound at the base
+        ctx.fillStyle = '#5d4037';
+        ctx.beginPath();
+        ctx.moveTo(s * 0.15, s * 0.85);
+        ctx.quadraticCurveTo(s * 0.5, s * 0.7, s * 0.85, s * 0.85);
+        ctx.lineTo(s * 0.85, s);
+        ctx.lineTo(s * 0.15, s);
+        ctx.closePath();
+        ctx.fill();
+
+        // Stem
+        ctx.fillStyle = '#7a5a3a';
+        ctx.fillRect(s * 0.47, s * 0.4, s * 0.06, s * 0.35);
+        ctx.fillRect(s * 0.42, s * 0.58, s * 0.16, s * 0.05);
+
+        // Leaves canopy
+        ctx.fillStyle = '#3e8f4e';
+        ctx.beginPath();
+        ctx.ellipse(s * 0.5, s * 0.35, s * 0.2, s * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2d6f3b';
+        ctx.beginPath();
+        ctx.ellipse(s * 0.56, s * 0.3, s * 0.12, s * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Light highlights
+        ctx.fillStyle = 'rgba(183, 220, 176, 0.7)';
+        ctx.fillRect(s * 0.45, s * 0.25, s * 0.08, s * 0.04);
+        ctx.fillRect(s * 0.35, s * 0.32, s * 0.06, s * 0.03);
+
+        addNoise(ctx, 0.12);
     });
 
     createTexture(BLOCKS.BEDROCK, (ctx, s) => {

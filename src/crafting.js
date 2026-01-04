@@ -19,7 +19,7 @@ const CRAFTING_RECIPES = [
         count: 1
     },
     {
-        id: BLOCKS.SPRAWL,
+        id: BLOCKS.SAPLING,
         cost: { [BLOCKS.WOOD]: 1, [BLOCKS.LEAVES]: 1 },
         count: 1
     }
