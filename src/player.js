@@ -192,8 +192,8 @@ export class Player {
                         } else if (this.vy < 0) {
                             this.y = (y + 1) * TILE_SIZE + 0.01;
 
-                            // Check if hitting block from below with high velocity (vy < -9)
-                            if (this.vy < -9 && isBlockBreakable(block, BLOCK_PROPS)) {
+                            // Check if hitting block from below with high velocity (vy < -20)
+                            if (this.vy < -20 && isBlockBreakable(block, BLOCK_PROPS) && block <= 12) {
                                 // Destroy the block
                                 if (this.addToInventory) {
                                     this.addToInventory(block);
