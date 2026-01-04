@@ -66,8 +66,9 @@ function emitJackpotParticles(tx, ty) {
         jackpotParticles.push({
             x: originX + (Math.random() - 0.5) * TILE_SIZE * 0.6,
             y: originY + (Math.random() - 0.5) * TILE_SIZE * 0.2,
-            vx: (Math.random() - 0.5) * 1.5,
-            vy: Math.random() * -0.4,
+            vx: (Math.random() - 0.5) * 1.2,
+            // Give each coin an upward burst first so it visibly arcs before falling
+            vy: -(1.2 + Math.random() * 1.5),
             life: 900 + Math.random() * 400,
             color: i % 2 === 0 ? '#ffd54f' : '#fbc02d'
         });
