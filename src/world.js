@@ -90,6 +90,135 @@ export class World {
                 this.setBlock(x, h - 1, BLOCKS.WORKBENCH);
             }
         }
+
+        // Generate clouds in the sky
+        this.generateClouds(heights);
+    }
+
+    generateClouds(heights) {
+        const minHeightAboveGround = 20; // Clouds must be at least 20 blocks above ground
+        const cloudCount = Math.floor(this.width / 25); // Roughly 1 cloud per 25 blocks (even denser)
+
+        for (let i = 0; i < cloudCount; i++) {
+            const startX = Math.floor(Math.random() * (this.width - 30));
+
+            // Get the ground height at this position
+            const groundHeight = heights[Math.min(startX, this.width - 1)];
+
+            // Calculate valid cloud range: from top of world to 20 blocks above ground
+            const maxCloudY = groundHeight - minHeightAboveGround; // Highest Y value (lowest in sky)
+            const minCloudY = 5; // Don't spawn too close to top edge
+
+            if (maxCloudY <= minCloudY) continue; // Skip if not enough space
+
+            // Random Y position anywhere in the valid sky range
+            const y = minCloudY + Math.floor(Math.random() * (maxCloudY - minCloudY));
+            const shape = Math.floor(Math.random() * 5); // 5 different cloud shapes
+
+            this.generateCloudShape(startX, y, shape);
+        }
+    }
+
+    generateCloudShape(startX, startY, shapeType) {
+        // Different cloud patterns
+        switch (shapeType) {
+            case 0: // Small puffy cloud
+                this.generatePuffyCloud(startX, startY, 4, 2);
+                break;
+            case 1: // Long thin cloud
+                this.generateLongCloud(startX, startY, 12, 1);
+                break;
+            case 2: // Large fluffy cloud
+                this.generatePuffyCloud(startX, startY, 8, 3);
+                break;
+            case 3: // Layered cloud
+                this.generateLayeredCloud(startX, startY);
+                break;
+            case 4: // Scattered cloud cluster
+                this.generateClusterCloud(startX, startY);
+                break;
+        }
+    }
+
+    generatePuffyCloud(x, y, width, height) {
+        // Generate a puffy, rounded cloud
+        for (let dx = 0; dx < width; dx++) {
+            for (let dy = 0; dy < height; dy++) {
+                // Create rounded edges using distance from center
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const distX = Math.abs(dx - centerX) / centerX;
+                const distY = Math.abs(dy - centerY) / centerY;
+
+                // Add some randomness to edges
+                const threshold = 0.7 + Math.random() * 0.3;
+                if (distX + distY < threshold) {
+                    this.setBlock(x + dx, y + dy, BLOCKS.CLOUD);
+                }
+            }
+        }
+        // Add extra puffs on top
+        const puffCount = Math.floor(width / 3);
+        for (let i = 0; i < puffCount; i++) {
+            const puffX = x + 1 + Math.floor(Math.random() * (width - 2));
+            if (Math.random() > 0.4) {
+                this.setBlock(puffX, y - 1, BLOCKS.CLOUD);
+            }
+        }
+    }
+
+    generateLongCloud(x, y, length, thickness) {
+        // Generate a long, stretched cloud
+        for (let dx = 0; dx < length; dx++) {
+            for (let dy = 0; dy < thickness; dy++) {
+                // Taper the ends
+                if ((dx < 2 || dx >= length - 2) && dy > 0) {
+                    if (Math.random() > 0.5) continue;
+                }
+                this.setBlock(x + dx, y + dy, BLOCKS.CLOUD);
+            }
+            // Occasional bumps on top
+            if (Math.random() > 0.7 && dx > 0 && dx < length - 1) {
+                this.setBlock(x + dx, y - 1, BLOCKS.CLOUD);
+            }
+        }
+    }
+
+    generateLayeredCloud(x, y) {
+        // Top layer (smaller)
+        for (let dx = 2; dx < 8; dx++) {
+            if (Math.random() > 0.3) {
+                this.setBlock(x + dx, y, BLOCKS.CLOUD);
+            }
+        }
+        // Middle layer (wider)
+        for (let dx = 0; dx < 12; dx++) {
+            this.setBlock(x + dx, y + 1, BLOCKS.CLOUD);
+        }
+        // Bottom layer (medium, with gaps)
+        for (let dx = 1; dx < 10; dx++) {
+            if (Math.random() > 0.2) {
+                this.setBlock(x + dx, y + 2, BLOCKS.CLOUD);
+            }
+        }
+    }
+
+    generateClusterCloud(x, y) {
+        // Generate small scattered cloud puffs
+        const clusterCount = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < clusterCount; i++) {
+            const offsetX = Math.floor(Math.random() * 15);
+            const offsetY = Math.floor(Math.random() * 4);
+            const size = 2 + Math.floor(Math.random() * 3);
+
+            for (let dx = 0; dx < size; dx++) {
+                for (let dy = 0; dy < Math.ceil(size / 2); dy++) {
+                    if (Math.random() > 0.3) {
+                        this.setBlock(x + offsetX + dx, y + offsetY + dy, BLOCKS.CLOUD);
+                    }
+                }
+            }
+        }
     }
 
     getBiomeConfigs() {

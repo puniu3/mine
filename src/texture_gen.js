@@ -281,6 +281,40 @@ export function generateTextures() {
 
         addNoise(ctx, 0.1);
     });
-    
+
+    createTexture(BLOCKS.CLOUD, (ctx, s) => {
+        // Light semi-transparent base for a thin cloud look when solo
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillRect(0, 0, s, s);
+
+        // Add soft puffy shapes that connect when blocks are adjacent
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+
+        // Top edge puffs (connect horizontally)
+        ctx.beginPath();
+        ctx.arc(s * 0.25, s * 0.3, s * 0.22, 0, Math.PI * 2);
+        ctx.arc(s * 0.5, s * 0.2, s * 0.25, 0, Math.PI * 2);
+        ctx.arc(s * 0.75, s * 0.3, s * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Middle area fill
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.fillRect(0, s * 0.25, s, s * 0.5);
+
+        // Bottom edge puffs
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(s * 0.2, s * 0.7, s * 0.2, 0, Math.PI * 2);
+        ctx.arc(s * 0.5, s * 0.75, s * 0.22, 0, Math.PI * 2);
+        ctx.arc(s * 0.8, s * 0.7, s * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Light shadow/depth at bottom
+        ctx.fillStyle = 'rgba(200, 220, 240, 0.3)';
+        ctx.fillRect(0, s * 0.7, s, s * 0.3);
+
+        addNoise(ctx, 0.04);
+    });
+
     return textures;
 }
