@@ -39,6 +39,7 @@ import { Player } from './player.js';
 import { getSkyGradientColors } from './sky.js';
 import { drawJackpotParticles, handleJackpotOverlap, updateJackpots } from './jackpot.js';
 import { handleAcceleratorOverlap, updateAccelerators } from './accelerator.js';
+import { createSaveManager, loadGameState } from './save.js';
 
 // --- Texture Generator ---
 let textures = {};
@@ -54,9 +55,7 @@ let actions;
 const tntTimers = [];
 const saplingTimers = [];
 const SAPLING_GROWTH_TIME = 6000;
-const SAVE_KEY = 'blockCraftSave';
-const AUTOSAVE_INTERVAL = 5000;
-let autosaveHandle = null;
+let saveManager = null;
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -121,14 +120,34 @@ function init(savedState = null) {
 
     initHotbarUI(textures);
 
+    // Initialize Save Manager
+    saveManager = createSaveManager({
+        world,
+        player,
+        timers: {
+            tnt: tntTimers,
+            saplings: saplingTimers
+        },
+        inventory: {
+            getInventoryState,
+            loadInventoryState
+        },
+        utils: {
+            clamp
+        },
+        constants: {
+            TILE_SIZE
+        }
+    });
+
     if (savedState) {
-        applySavedState(savedState);
+        saveManager.applySavedState(savedState);
     } else {
         updateInventoryUI();
     }
     resize();
-    startAutosave();
-    saveGameState();
+    saveManager.startAutosave();
+    saveManager.saveGameState();
     requestAnimationFrame(loop);
 }
 
@@ -411,114 +430,6 @@ function loop(timestamp) {
     update(dt);
     draw();
     requestAnimationFrame(loop);
-}
-
-function uint8ToBase64(bytes) {
-    const chunkSize = 0x8000;
-    const chunks = [];
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-        const slice = bytes.subarray(i, i + chunkSize);
-        chunks.push(String.fromCharCode(...slice));
-    }
-    return btoa(chunks.join(''));
-}
-
-function base64ToUint8(base64) {
-    const binary = atob(base64);
-    const len = binary.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-}
-
-function saveGameState() {
-    if (!world || !player) return;
-    try {
-        const state = {
-            world: {
-                width: world.width,
-                height: world.height,
-                map: uint8ToBase64(world.map)
-            },
-            player: {
-                x: player.x,
-                y: player.y,
-                vx: player.vx,
-                vy: player.vy,
-                grounded: player.grounded,
-                facingRight: player.facingRight
-            },
-            inventory: getInventoryState(),
-            timers: {
-                tnt: tntTimers.map(t => ({ x: t.x, y: t.y, timer: t.timer })),
-                saplings: saplingTimers.map(s => ({ x: s.x, y: s.y, timer: s.timer }))
-            }
-        };
-        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-    } catch (err) {
-        console.warn('Failed to save game state', err);
-    }
-}
-
-function loadGameState() {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return null;
-    try {
-        return JSON.parse(raw);
-    } catch (err) {
-        console.warn('Failed to parse saved state', err);
-        localStorage.removeItem(SAVE_KEY);
-        return null;
-    }
-}
-
-function applySavedState(state) {
-    if (!state) return;
-
-    if (state.world && state.world.map && state.world.width === world.width && state.world.height === world.height) {
-        const decodedMap = base64ToUint8(state.world.map);
-        if (decodedMap.length === world.map.length) {
-            world.map = decodedMap;
-        }
-    }
-
-    if (state.player) {
-        player.x = state.player.x ?? player.x;
-        player.y = state.player.y ?? player.y;
-        player.vx = state.player.vx ?? player.vx;
-        player.vy = state.player.vy ?? player.vy;
-        player.grounded = state.player.grounded ?? player.grounded;
-        player.facingRight = state.player.facingRight ?? player.facingRight;
-        player.wrapVertically();
-        player.x = clamp(player.x, 0, world.width * TILE_SIZE - player.width);
-    }
-
-    if (state.inventory) {
-        loadInventoryState(state.inventory);
-    }
-
-    if (state.timers) {
-        tntTimers.length = 0;
-        (state.timers.tnt || []).forEach(t => {
-            if (typeof t.x === 'number' && typeof t.y === 'number' && typeof t.timer === 'number') {
-                tntTimers.push({ x: t.x, y: t.y, timer: t.timer });
-            }
-        });
-
-        saplingTimers.length = 0;
-        (state.timers.saplings || []).forEach(s => {
-            if (typeof s.x === 'number' && typeof s.y === 'number' && typeof s.timer === 'number') {
-                saplingTimers.push({ x: s.x, y: s.y, timer: s.timer });
-            }
-        });
-    }
-}
-
-function startAutosave() {
-    if (autosaveHandle) clearInterval(autosaveHandle);
-    autosaveHandle = setInterval(saveGameState, AUTOSAVE_INTERVAL);
 }
 
 function hideStartScreen() {
