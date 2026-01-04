@@ -41,10 +41,9 @@ import { World } from './world.js';
 let textures = {};
 
 // --- Sky Coloring Helpers ---
-const SKY_BANDS = {
-    surface: { top: '#87CEEB', bottom: '#E0F7FA' },
-    underground: { top: '#1b1b25', bottom: '#0a0c14' },
-    stratosphere: { top: '#0d1b42', bottom: '#6fb3ff' }
+const SKY_GRADIENT_ANCHORS = {
+    top: { top: '#87CEEB', bottom: '#B3E5FC' },
+    bottom: { top: '#1b1b25', bottom: '#0a0c14' }
 };
 
 function lerp(a, b, t) {
@@ -68,27 +67,11 @@ function lerpColor(c1, c2, t) {
 }
 
 function getSkyGradientColors(altitude) {
-    // altitude: 0 = top of world (high sky), 1 = bottom (deep underground)
-    const surfaceLower = 0.45;
-    const surfaceUpper = 0.55;
-
-    if (altitude < surfaceLower) {
-        const t = clamp(altitude / surfaceLower, 0, 1);
-        return {
-            top: lerpColor(SKY_BANDS.stratosphere.top, SKY_BANDS.surface.top, t),
-            bottom: lerpColor(SKY_BANDS.stratosphere.bottom, SKY_BANDS.surface.bottom, t)
-        };
-    }
-
-    if (altitude > surfaceUpper) {
-        const t = clamp((altitude - surfaceUpper) / (1 - surfaceUpper), 0, 1);
-        return {
-            top: lerpColor(SKY_BANDS.surface.top, SKY_BANDS.underground.top, t),
-            bottom: lerpColor(SKY_BANDS.surface.bottom, SKY_BANDS.underground.bottom, t)
-        };
-    }
-
-    return SKY_BANDS.surface;
+    const t = clamp(altitude, 0, 1);
+    return {
+        top: lerpColor(SKY_GRADIENT_ANCHORS.top.top, SKY_GRADIENT_ANCHORS.bottom.top, t),
+        bottom: lerpColor(SKY_GRADIENT_ANCHORS.top.bottom, SKY_GRADIENT_ANCHORS.bottom.bottom, t)
+    };
 }
 
 class Player {
@@ -165,9 +148,12 @@ class Player {
         // Clamp position
         this.x = clamp(this.x, 0, this.world.width * TILE_SIZE - this.width);
 
-        // Respawn if fallen off
-        if (this.y > this.world.height * TILE_SIZE) {
-            this.respawn();
+        // Wrap vertically so the world connects top-to-bottom
+        const worldSpan = this.world.height * TILE_SIZE;
+        if (this.y >= worldSpan) {
+            this.y -= worldSpan;
+        } else if (this.y + this.height <= 0) {
+            this.y += worldSpan;
         }
 
         if (Math.abs(this.vx) > 0.1) this.animTimer += dt;

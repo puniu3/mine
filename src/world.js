@@ -18,7 +18,9 @@ export class World {
     }
 
     getIndex(x, y) {
-        return coordToIndex(x, y, this.width, this.height);
+        if (x < 0 || x >= this.width) return -1;
+        const wrappedY = ((y % this.height) + this.height) % this.height;
+        return coordToIndex(x, wrappedY, this.width, this.height);
     }
 
     getBlock(x, y) {
@@ -58,9 +60,7 @@ export class World {
             const surfaceBlock = this.getSurfaceBlock(biome, h);
 
             for (let y = 0; y < this.height; y++) {
-                if (y === this.height - 1) {
-                    this.setBlock(x, y, BLOCKS.BEDROCK);
-                } else if (y > h) {
+                if (y > h) {
                     if (y > h + 5) {
                         const r = Math.random();
                         if (r > 0.985 && y > h + 15) this.setBlock(x, y, BLOCKS.GOLD);
@@ -175,9 +175,7 @@ export class World {
                 if (x * x + y * y <= radius * radius) {
                     const worldX = cx + x;
                     const worldY = cy + y;
-                    if (worldY < this.height - 1) {
-                        this.setBlock(worldX, worldY, BLOCKS.AIR);
-                    }
+                    this.setBlock(worldX, worldY, BLOCKS.AIR);
                 }
             }
         }
