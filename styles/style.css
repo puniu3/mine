@@ -47,6 +47,16 @@ body {
     pointer-events: auto;
 }
 
+.start-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+#continue-btn {
+    display: none;
+}
+
 h1 {
     font-size: 40px;
     text-shadow: 4px 4px 0 #333;
