@@ -30,12 +30,12 @@ const CRAFTING_RECIPES = [
     },
     {
         id: BLOCKS.ACCELERATOR_LEFT,
-        cost: { [BLOCKS.GOLD]: 1, [BLOCKS.SAND]: 3 },
+        cost: { [BLOCKS.GOLD]: 1, [BLOCKS.SAND]: 2 },
         count: 1
     },
     {
         id: BLOCKS.ACCELERATOR_RIGHT,
-        cost: { [BLOCKS.GOLD]: 1, [BLOCKS.SAND]: 3 },
+        cost: { [BLOCKS.GOLD]: 1, [BLOCKS.SNOW]: 2 },
         count: 1
     }
 ];
