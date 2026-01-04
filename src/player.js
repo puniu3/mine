@@ -16,6 +16,7 @@ export class Player {
         this.x = (world.width / 2) * TILE_SIZE;
         this.y = 0;
         this.vx = 0;
+        this.moveVx = 0;
         this.vy = 0;
         this.grounded = false;
         this.facingRight = true;
@@ -50,14 +51,19 @@ export class Player {
 
     update(input, dt) {
         if (input.keys.left) {
-            this.vx = -5;
+            this.moveVx = -5;
             this.facingRight = false;
         } else if (input.keys.right) {
-            this.vx = 5;
+            this.moveVx = 5;
             this.facingRight = true;
         } else {
-            this.vx *= 0.8;
+            this.moveVx *= 0.8;
         }
+
+        const padVx = this.computeSpeedPadBoost();
+        if (padVx !== 0) this.facingRight = padVx > 0;
+
+        this.vx = this.moveVx + padVx;
 
         if (input.keys.jump && this.grounded) {
             this.vy = -JUMP_FORCE;
@@ -80,8 +86,6 @@ export class Player {
         this.handleCollisions(true);
         this.y += this.vy;
         this.handleCollisions(false);
-
-        this.applySpeedPads();
 
         // Wrap position
         this.wrapHorizontally();
@@ -130,6 +134,7 @@ export class Player {
                         if (this.vx > 0) this.x = x * TILE_SIZE - this.width - 0.01;
                         else if (this.vx < 0) this.x = (x + 1) * TILE_SIZE + 0.01;
                         this.vx = 0;
+                        this.moveVx = 0;
                     } else {
                         if (this.vy > 0) {
                             this.y = y * TILE_SIZE - this.height - 0.01;
@@ -147,29 +152,27 @@ export class Player {
         if (!horizontal) this.grounded = false;
     }
 
-    applySpeedPads() {
+    computeSpeedPadBoost() {
         const startX = Math.floor(this.x / TILE_SIZE);
         const endX = Math.floor((this.x + this.width) / TILE_SIZE);
         const startY = Math.floor(this.y / TILE_SIZE);
         const endY = Math.floor((this.y + this.height) / TILE_SIZE);
 
-        const boostSpeed = 14;
+        const boostSpeed = 22;
 
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
                 const block = this.world.getBlock(x, y);
                 if (block === BLOCKS.SPEED_PAD_LEFT) {
-                    this.vx = -boostSpeed;
-                    this.facingRight = false;
-                    return;
+                    return -boostSpeed;
                 }
                 if (block === BLOCKS.SPEED_PAD_RIGHT) {
-                    this.vx = boostSpeed;
-                    this.facingRight = true;
-                    return;
+                    return boostSpeed;
                 }
             }
         }
+
+        return 0;
     }
 
     draw(ctx) {
