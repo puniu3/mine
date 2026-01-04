@@ -28,7 +28,8 @@ import { generateTextures } from './texture_gen.js';
 import { createInput } from './input.js';
 import {
     updateInventoryUI, addToInventory, consumeFromInventory,
-    initHotbarUI, selectHotbar, getSelectedBlockId
+    initHotbarUI, selectHotbar, getSelectedBlockId,
+    getInventoryState, loadInventoryState
 } from './inventory.js';
 import { isCraftingOpen, updateCrafting } from './crafting.js';
 import { update as updateFireworks, draw as drawFireworks, createExplosionParticles } from './fireworks.js';
@@ -52,6 +53,9 @@ let actions;
 const tntTimers = [];
 const saplingTimers = [];
 const SAPLING_GROWTH_TIME = 6000;
+const SAVE_KEY = 'blockCraftSave';
+const AUTOSAVE_INTERVAL = 5000;
+let autosaveHandle = null;
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -64,7 +68,7 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 
-function init() {
+function init(savedState = null) {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
     player = new Player(world);
     textures = generateTextures(); // Initialize textures here
@@ -115,8 +119,15 @@ function init() {
     });
 
     initHotbarUI(textures);
-    updateInventoryUI();
+
+    if (savedState) {
+        applySavedState(savedState);
+    } else {
+        updateInventoryUI();
+    }
     resize();
+    startAutosave();
+    saveGameState();
     requestAnimationFrame(loop);
 }
 
@@ -342,9 +353,142 @@ function loop(timestamp) {
     requestAnimationFrame(loop);
 }
 
-// Start Screen Button
+function uint8ToBase64(bytes) {
+    const chunkSize = 0x8000;
+    const chunks = [];
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const slice = bytes.subarray(i, i + chunkSize);
+        chunks.push(String.fromCharCode(...slice));
+    }
+    return btoa(chunks.join(''));
+}
+
+function base64ToUint8(base64) {
+    const binary = atob(base64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+function saveGameState() {
+    if (!world || !player) return;
+    try {
+        const state = {
+            world: {
+                width: world.width,
+                height: world.height,
+                map: uint8ToBase64(world.map)
+            },
+            player: {
+                x: player.x,
+                y: player.y,
+                vx: player.vx,
+                vy: player.vy,
+                grounded: player.grounded,
+                facingRight: player.facingRight
+            },
+            inventory: getInventoryState(),
+            timers: {
+                tnt: tntTimers.map(t => ({ x: t.x, y: t.y, timer: t.timer })),
+                saplings: saplingTimers.map(s => ({ x: s.x, y: s.y, timer: s.timer }))
+            }
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    } catch (err) {
+        console.warn('Failed to save game state', err);
+    }
+}
+
+function loadGameState() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    try {
+        return JSON.parse(raw);
+    } catch (err) {
+        console.warn('Failed to parse saved state', err);
+        localStorage.removeItem(SAVE_KEY);
+        return null;
+    }
+}
+
+function applySavedState(state) {
+    if (!state) return;
+
+    if (state.world && state.world.map && state.world.width === world.width && state.world.height === world.height) {
+        const decodedMap = base64ToUint8(state.world.map);
+        if (decodedMap.length === world.map.length) {
+            world.map = decodedMap;
+        }
+    }
+
+    if (state.player) {
+        player.x = state.player.x ?? player.x;
+        player.y = state.player.y ?? player.y;
+        player.vx = state.player.vx ?? player.vx;
+        player.vy = state.player.vy ?? player.vy;
+        player.grounded = state.player.grounded ?? player.grounded;
+        player.facingRight = state.player.facingRight ?? player.facingRight;
+        player.wrapVertically();
+        player.x = clamp(player.x, 0, world.width * TILE_SIZE - player.width);
+    }
+
+    if (state.inventory) {
+        loadInventoryState(state.inventory);
+    }
+
+    if (state.timers) {
+        tntTimers.length = 0;
+        (state.timers.tnt || []).forEach(t => {
+            if (typeof t.x === 'number' && typeof t.y === 'number' && typeof t.timer === 'number') {
+                tntTimers.push({ x: t.x, y: t.y, timer: t.timer });
+            }
+        });
+
+        saplingTimers.length = 0;
+        (state.timers.saplings || []).forEach(s => {
+            if (typeof s.x === 'number' && typeof s.y === 'number' && typeof s.timer === 'number') {
+                saplingTimers.push({ x: s.x, y: s.y, timer: s.timer });
+            }
+        });
+    }
+}
+
+function startAutosave() {
+    if (autosaveHandle) clearInterval(autosaveHandle);
+    autosaveHandle = setInterval(saveGameState, AUTOSAVE_INTERVAL);
+}
+
+function hideStartScreen() {
+    const screen = document.getElementById('start-screen');
+    if (screen) screen.style.display = 'none';
+}
+
+function refreshContinueButton() {
+    const savedState = loadGameState();
+    const continueBtn = document.getElementById('continue-btn');
+    if (!continueBtn) return;
+    continueBtn.style.display = savedState ? 'inline-block' : 'none';
+}
+
+refreshContinueButton();
+
+// Start Screen Buttons
 document.getElementById('start-btn').addEventListener('click', () => {
-    document.getElementById('start-screen').style.display = 'none';
+    hideStartScreen();
     sounds.init();
     init();
 });
+
+const continueButton = document.getElementById('continue-btn');
+if (continueButton) {
+    continueButton.addEventListener('click', () => {
+        const savedState = loadGameState();
+        if (!savedState) return;
+        hideStartScreen();
+        sounds.init();
+        init(savedState);
+    });
+}

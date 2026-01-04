@@ -16,6 +16,29 @@ export function getSelectedBlockId() {
     return HOTBAR_ITEMS[selectedHotbarIndex];
 }
 
+export function getInventoryState() {
+    const counts = {};
+    HOTBAR_ITEMS.forEach(id => {
+        counts[id] = inventory[id] || 0;
+    });
+    return {
+        counts,
+        selectedIndex: selectedHotbarIndex
+    };
+}
+
+export function loadInventoryState(state) {
+    if (!state || !state.counts) return;
+    HOTBAR_ITEMS.forEach(id => {
+        inventory[id] = state.counts[id] ?? 0;
+    });
+
+    const requestedIndex = state.selectedIndex ?? 0;
+    selectedHotbarIndex = Math.min(Math.max(0, requestedIndex), HOTBAR_ITEMS.length - 1);
+    updateInventoryUI();
+    selectHotbar(selectedHotbarIndex, { playSound: false });
+}
+
 export function updateInventoryUI() {
     HOTBAR_ITEMS.forEach((block, i) => {
         const countEl = document.getElementById(`slot-count-${i}`);
@@ -87,7 +110,7 @@ export function initHotbarUI(textures) {
     });
 
     // Set initial selection visually
-    selectHotbar(selectedHotbarIndex);
+    selectHotbar(selectedHotbarIndex, { playSound: false });
 
     // Setup scroll indicators
     container.addEventListener('scroll', updateScrollIndicators);
@@ -96,12 +119,12 @@ export function initHotbarUI(textures) {
     setTimeout(updateScrollIndicators, 0);
 }
 
-export function selectHotbar(index) {
+export function selectHotbar(index, { playSound = true } = {}) {
     if (index < 0 || index >= HOTBAR_ITEMS.length) return;
     const slots = document.querySelectorAll('.slot');
     slots.forEach(s => s.classList.remove('active'));
     if (slots[index]) slots[index].classList.add('active');
 
     selectedHotbarIndex = index;
-    sounds.playPop();
+    if (playSound) sounds.playPop();
 }
