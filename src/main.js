@@ -54,8 +54,13 @@ const saplingTimers = [];
 const SAPLING_GROWTH_TIME = 6000;
 
 function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const viewportWidth = window.visualViewport?.width ?? Math.max(window.innerWidth, document.documentElement.clientWidth);
+    const viewportHeight = window.visualViewport?.height ?? Math.max(window.innerHeight, document.documentElement.clientHeight);
+
+    canvas.width = viewportWidth;
+    canvas.height = viewportHeight;
+    canvas.style.width = `${viewportWidth}px`;
+    canvas.style.height = `${viewportHeight}px`;
     ctx.imageSmoothingEnabled = false;
     if (window.innerWidth <= 768) {
         const el = document.getElementById('mobile-controls');
