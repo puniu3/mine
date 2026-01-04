@@ -9,7 +9,6 @@ export const inventory = {};
 HOTBAR_ITEMS.forEach(id => inventory[id] = 0);
 // Give a small starter kit
 inventory[BLOCKS.DIRT] = 10;
-inventory[BLOCKS.GOLD] = 10;
 
 // State for selected item
 let selectedHotbarIndex = 0;
