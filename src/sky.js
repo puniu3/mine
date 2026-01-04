@@ -30,7 +30,8 @@ function lerpColor(c1, c2, t) {
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-export function getSkyGradientColors(altitude) {
+// 元のロジックを内部関数として定義（端の処理なし）
+function getRawSkyGradientColors(altitude) {
     // altitude: 0 = top of world (high sky), 1 = bottom (deep underground)
     const surfaceLower = 0.45;
     const surfaceUpper = 0.55;
@@ -52,4 +53,43 @@ export function getSkyGradientColors(altitude) {
     }
 
     return SKY_BANDS.surface;
+}
+
+// 公開する関数：端の処理を追加
+export function getSkyGradientColors(altitude) {
+    // 端からどれくらいの範囲でブレンドするか (0.0〜0.15, 0.85〜1.0 の範囲で補間)
+    const LOOP_SMOOTH_MARGIN = 0.15; 
+    
+    const baseColor = getRawSkyGradientColors(altitude);
+
+    // 上端付近 (0.0): 下端 (1.0) の色を混ぜる
+    if (altitude < LOOP_SMOOTH_MARGIN) {
+        const otherColor = getRawSkyGradientColors(1.0);
+        // t は端(0)で0、範囲終了(margin)で1
+        const t = altitude / LOOP_SMOOTH_MARGIN;
+        // 端で50%ブレンド、範囲終了で0%ブレンド（元の色に戻る）
+        const blendFactor = 0.5 * (1 - t);
+        
+        return {
+            top: lerpColor(baseColor.top, otherColor.top, blendFactor),
+            bottom: lerpColor(baseColor.bottom, otherColor.bottom, blendFactor)
+        };
+    }
+
+    // 下端付近 (1.0): 上端 (0.0) の色を混ぜる
+    if (altitude > 1.0 - LOOP_SMOOTH_MARGIN) {
+        const otherColor = getRawSkyGradientColors(0.0);
+        // t は端(1)で0、範囲終了(1-margin)で1
+        const t = (1.0 - altitude) / LOOP_SMOOTH_MARGIN;
+        // 端で50%ブレンド、範囲終了で0%ブレンド
+        const blendFactor = 0.5 * (1 - t);
+
+        return {
+            top: lerpColor(baseColor.top, otherColor.top, blendFactor),
+            bottom: lerpColor(baseColor.bottom, otherColor.bottom, blendFactor)
+        };
+    }
+
+    // それ以外の範囲は元の色をそのまま返す
+    return baseColor;
 }
