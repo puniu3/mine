@@ -22,6 +22,11 @@ const CRAFTING_RECIPES = [
         id: BLOCKS.SAPLING,
         cost: { [BLOCKS.WOOD]: 1, [BLOCKS.LEAVES]: 1 },
         count: 1
+    },
+    {
+        id: BLOCKS.JACKPOT,
+        cost: { [BLOCKS.GOLD]: 3 },
+        count: 1
     }
 ];
 

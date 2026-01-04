@@ -28,7 +28,8 @@ export const BLOCKS = {
     FIREWORK: 12,
     JUMP_PAD: 13,
     TNT: 14,
-    SAPLING: 15
+    SAPLING: 15,
+    JACKPOT: 16
 };
 
 export const BLOCK_PROPS = {
@@ -48,7 +49,8 @@ export const BLOCK_PROPS = {
     [BLOCKS.FIREWORK]: { name: 'Firework', solid: true, color: '#ef5350', type: 'wood', drop: BLOCKS.FIREWORK },
     [BLOCKS.JUMP_PAD]: { name: 'Jump Pad', solid: true, color: '#ab47bc', type: 'stone', drop: BLOCKS.JUMP_PAD },
     [BLOCKS.TNT]: { name: 'TNT', solid: true, color: '#d32f2f', type: 'wood', drop: BLOCKS.TNT },
-    [BLOCKS.SAPLING]: { name: 'Sapling', solid: false, transparent: true, color: '#6fa85b', type: 'plant', drop: BLOCKS.SAPLING }
+    [BLOCKS.SAPLING]: { name: 'Sapling', solid: false, transparent: true, color: '#6fa85b', type: 'plant', drop: BLOCKS.SAPLING },
+    [BLOCKS.JACKPOT]: { name: 'Jackpot', solid: false, transparent: true, color: '#ffd54f', type: 'stone', drop: BLOCKS.JACKPOT }
 };
 
 export const HOTBAR_ITEMS = [
@@ -63,5 +65,6 @@ export const HOTBAR_ITEMS = [
     BLOCKS.FIREWORK,
     BLOCKS.JUMP_PAD,
     BLOCKS.TNT,
-    BLOCKS.SAPLING
+    BLOCKS.SAPLING,
+    BLOCKS.JACKPOT
 ];

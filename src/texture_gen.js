@@ -164,6 +164,26 @@ export function generateTextures() {
     createTexture(BLOCKS.COAL, createOre('#757575', '#000'));
     createTexture(BLOCKS.GOLD, createOre('#757575', '#FFD700'));
 
+    createTexture(BLOCKS.JACKPOT, (ctx, s) => {
+        ctx.fillStyle = '#4e342e';
+        ctx.fillRect(0, 0, s, s);
+
+        ctx.fillStyle = '#ffd54f';
+        ctx.fillRect(2, 2, s - 4, s - 4);
+
+        ctx.fillStyle = '#f9a825';
+        for (let i = 0; i < 6; i++) {
+            const w = 6 + Math.random() * 4;
+            const h = 6 + Math.random() * 4;
+            ctx.fillRect(4 + Math.random() * (s - 8 - w), 4 + Math.random() * (s - 8 - h), w, h);
+        }
+
+        ctx.strokeStyle = '#fff9c4';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(3, 3, s - 6, s - 6);
+        addNoise(ctx, 0.06);
+    });
+
     createTexture(BLOCKS.WORKBENCH, (ctx, s) => {
         // Wood base
         ctx.fillStyle = '#8d6e63';

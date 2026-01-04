@@ -36,6 +36,7 @@ import { createActions } from './actions.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { getSkyGradientColors } from './sky.js';
+import { drawJackpotParticles, handleJackpotOverlap, updateJackpots } from './jackpot.js';
 
 // --- Texture Generator ---
 let textures = {};
@@ -140,6 +141,10 @@ function update(dt) {
 
     // --- Check Crafting ---
     updateCrafting(player, world, textures);
+
+    // --- Jackpot Blocks ---
+    handleJackpotOverlap(player, world, sounds);
+    updateJackpots(dt);
 
     // --- Update Fireworks ---
     updateFireworks(dt, world, cameraX, cameraY, canvas);
@@ -310,6 +315,9 @@ function draw() {
     }
 
     player.draw(ctx);
+
+    // Jackpot Particles
+    drawJackpotParticles(ctx);
 
     // Particles
     drawFireworks(ctx);
