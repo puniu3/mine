@@ -125,6 +125,7 @@ button:active {
     cursor: pointer;
     position: relative;
     image-rendering: pixelated;
+    flex-shrink: 0;
 }
 
 .slot.active {
