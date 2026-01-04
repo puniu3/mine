@@ -22,7 +22,7 @@ import {
 import { sounds } from './audio.js';
 import {
     TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH, CAMERA_SMOOTHING,
-    BLOCKS, BLOCK_PROPS, TNT_KNOCKBACK_STRENGTH
+    BLOCKS, BLOCK_PROPS
 } from './constants.js';
 import { generateTextures } from './texture_gen.js';
 import { createInput } from './input.js';
@@ -40,6 +40,7 @@ import { getSkyGradientColors } from './sky.js';
 import { drawJackpotParticles, handleJackpotOverlap, updateJackpots } from './jackpot.js';
 import { handleAcceleratorOverlap, updateAccelerators } from './accelerator.js';
 import { createSaveManager, loadGameState } from './save.js';
+import { createTNTManager } from './tnt.js';
 
 // --- Texture Generator ---
 let textures = {};
@@ -52,7 +53,7 @@ let lastTime = 0;
 let cameraX = 0, cameraY = 0;
 let input;
 let actions;
-const tntTimers = [];
+let tntManager = null;
 const saplingTimers = [];
 const SAPLING_GROWTH_TIME = 6000;
 let saveManager = null;
@@ -72,6 +73,15 @@ function init(savedState = null) {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
     player = new Player(world);
     textures = generateTextures(); // Initialize textures here
+
+    // Initialize TNT Manager
+    tntManager = createTNTManager({
+        world,
+        player,
+        sounds,
+        addToInventory,
+        createExplosionParticles
+    });
 
     // Initialize Actions
     actions = createActions({
@@ -105,7 +115,7 @@ function init(savedState = null) {
         },
         onBlockPlaced: (x, y, type) => {
             if (type === BLOCKS.TNT) {
-                tntTimers.push({ x, y, timer: 3000 });
+                tntManager.onBlockPlaced(x, y);
             } else if (type === BLOCKS.SAPLING) {
                 saplingTimers.push({ x, y, timer: SAPLING_GROWTH_TIME });
             }
@@ -125,7 +135,7 @@ function init(savedState = null) {
         world,
         player,
         timers: {
-            tnt: tntTimers,
+            tnt: tntManager.getTimers(),
             saplings: saplingTimers
         },
         inventory: {
@@ -197,19 +207,7 @@ function update(dt) {
     updateFireworks(dt, world, cameraX, cameraY, canvas);
 
     // --- Update TNT ---
-    for (let i = tntTimers.length - 1; i >= 0; i--) {
-        const tnt = tntTimers[i];
-        // Remove timers for TNT blocks that no longer exist
-        if (world.getBlock(tnt.x, tnt.y) !== BLOCKS.TNT) {
-            tntTimers.splice(i, 1);
-            continue;
-        }
-        tnt.timer -= dt;
-        if (tnt.timer <= 0) {
-            explodeTNT(tnt.x, tnt.y);
-            tntTimers.splice(i, 1);
-        }
-    }
+    tntManager.update(dt);
 
     // --- Update Sapling Growth ---
     for (let i = saplingTimers.length - 1; i >= 0; i--) {
@@ -222,66 +220,6 @@ function update(dt) {
         if (sapling.timer <= 0) {
             growSapling(sapling.x, sapling.y);
             saplingTimers.splice(i, 1);
-        }
-    }
-}
-
-function explodeTNT(x, y) { // x, y are tile coordinates
-    sounds.playExplosion();
-
-    // Explosion Radius
-    const radius = 8;
-    const startX = Math.max(0, x - radius);
-    const endX = Math.min(world.width - 1, x + radius);
-    const startY = Math.max(0, y - radius);
-    const endY = Math.min(world.height - 1, y + radius);
-
-    // Create particles at center
-    createExplosionParticles(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2);
-
-    // Apply knockback to player
-    const explosionX = x * TILE_SIZE + TILE_SIZE / 2;
-    const explosionY = y * TILE_SIZE + TILE_SIZE / 2;
-    const playerCenterX = player.getCenterX();
-    const playerCenterY = player.getCenterY();
-
-    // Calculate distance in world coordinates
-    const distanceX = playerCenterX - explosionX;
-    const distanceY = playerCenterY - explosionY;
-    const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-
-    // Apply knockback if player is within range (using radius in pixels)
-    const knockbackRange = radius * TILE_SIZE;
-    if (distance < knockbackRange && distance > 0) {
-        // Normalize direction vector
-        const dirX = distanceX / distance;
-        const dirY = distanceY / distance;
-
-        // Calculate knockback strength:
-        const clampedDistance = Math.max(distance, TILE_SIZE);
-        const knockbackStrength =
-            (TNT_KNOCKBACK_STRENGTH * knockbackRange) / (clampedDistance + TILE_SIZE * 2);
-
-        // Apply velocity to player
-        player.vx = dirX * knockbackStrength;
-        player.vy = dirY * knockbackStrength;
-        player.grounded = false;
-    }
-
-    for (let by = startY; by <= endY; by++) {
-        for (let bx = startX; bx <= endX; bx++) {
-            // Distance check for circle shape
-            const dx = bx - x;
-            const dy = by - y;
-            if (dx*dx + dy*dy <= radius*radius) {
-                const block = world.getBlock(bx, by);
-                if (block !== BLOCKS.AIR && isBlockBreakable(block, BLOCK_PROPS)) {
-                    if (block !== BLOCKS.TNT) {
-                        addToInventory(block);
-                    }
-                    world.setBlock(bx, by, BLOCKS.AIR);
-                }
-            }
         }
     }
 }
