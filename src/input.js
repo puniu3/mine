@@ -15,6 +15,9 @@ export function createInput(canvas, { onHotbarSelect, onTouch }) {
             case 'Digit4': if (onHotbarSelect) onHotbarSelect(3); break;
             case 'Digit5': if (onHotbarSelect) onHotbarSelect(4); break;
             case 'Digit6': if (onHotbarSelect) onHotbarSelect(5); break;
+            case 'Digit7': if (onHotbarSelect) onHotbarSelect(6); break;
+            case 'Digit8': if (onHotbarSelect) onHotbarSelect(7); break;
+            case 'Digit9': if (onHotbarSelect) onHotbarSelect(8); break;
         }
     });
 
