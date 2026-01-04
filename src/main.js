@@ -220,6 +220,34 @@ function explodeTNT(x, y) { // x, y are tile coordinates
     // Create particles at center
     createExplosionParticles(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2);
 
+    // Apply knockback to player
+    const explosionX = x * TILE_SIZE + TILE_SIZE / 2;
+    const explosionY = y * TILE_SIZE + TILE_SIZE / 2;
+    const playerCenterX = player.getCenterX();
+    const playerCenterY = player.getCenterY();
+
+    // Calculate distance in world coordinates
+    const distanceX = playerCenterX - explosionX;
+    const distanceY = playerCenterY - explosionY;
+    const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+
+    // Apply knockback if player is within range (using radius in pixels)
+    const knockbackRange = radius * TILE_SIZE;
+    if (distance < knockbackRange && distance > 0) {
+        // Normalize direction vector
+        const dirX = distanceX / distance;
+        const dirY = distanceY / distance;
+
+        // Calculate knockback strength (inverse square law with minimum distance)
+        const effectiveDistance = Math.max(distance, TILE_SIZE);
+        const knockbackStrength = 50 * (knockbackRange / effectiveDistance);
+
+        // Apply velocity to player
+        player.vx = dirX * knockbackStrength;
+        player.vy = dirY * knockbackStrength;
+        player.grounded = false;
+    }
+
     for (let by = startY; by <= endY; by++) {
         for (let bx = startX; bx <= endX; bx++) {
             // Distance check for circle shape
