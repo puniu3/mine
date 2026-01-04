@@ -246,6 +246,16 @@ export function getBlockMaterialType(blockType, blockProps) {
     return props ? props.type : undefined;
 }
 
+/**
+ * Check if a block is a natural block (spawned naturally, not craftable)
+ * @param {number} blockType - Block type ID
+ * @param {number} maxNaturalBlockId - Maximum block ID for natural blocks
+ * @returns {boolean} True if natural block
+ */
+export function isNaturalBlock(blockType, maxNaturalBlockId) {
+    return blockType >= 0 && blockType <= maxNaturalBlockId;
+}
+
 // ============================================================================
 // Terrain Generation
 // ============================================================================

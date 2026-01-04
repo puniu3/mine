@@ -2,10 +2,11 @@
  * Player module
  */
 
-import { clamp, isBlockSolid, isBlockBreakable, getBlockMaterialType } from './utils.js';
+import { clamp, isBlockSolid, isBlockBreakable, getBlockMaterialType, isNaturalBlock } from './utils.js';
 import { sounds } from './audio.js';
 import {
-    TILE_SIZE, GRAVITY, JUMP_FORCE, BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY
+    TILE_SIZE, GRAVITY, JUMP_FORCE, BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY,
+    UPWARD_COLLISION_VELOCITY_THRESHOLD, MAX_NATURAL_BLOCK_ID
 } from './constants.js';
 
 export class Player {
@@ -192,8 +193,10 @@ export class Player {
                         } else if (this.vy < 0) {
                             this.y = (y + 1) * TILE_SIZE + 0.01;
 
-                            // Check if hitting block from below with high velocity (vy < -20)
-                            if (this.vy < -20 && isBlockBreakable(block, BLOCK_PROPS) && block <= 12) {
+                            // Check if hitting block from below with high velocity
+                            if (this.vy < UPWARD_COLLISION_VELOCITY_THRESHOLD &&
+                                isBlockBreakable(block, BLOCK_PROPS) &&
+                                isNaturalBlock(block, MAX_NATURAL_BLOCK_ID)) {
                                 // Destroy the block
                                 if (this.addToInventory) {
                                     this.addToInventory(block);

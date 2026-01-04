@@ -15,6 +15,14 @@ export const TNT_EXPLOSION_RADIUS = 8; // tiles
 export const TNT_KNOCKBACK_STRENGTH = 15.0;
 export const TNT_KNOCKBACK_DISTANCE_OFFSET = 2; // multiplied by TILE_SIZE
 
+// Player collision constants
+export const UPWARD_COLLISION_VELOCITY_THRESHOLD = -20; // Velocity threshold for breaking blocks from below
+export const MAX_NATURAL_BLOCK_ID = 12; // Maximum block ID for natural blocks (0-12)
+
+// Accelerator constants
+export const ACCELERATOR_COOLDOWN = 500; // milliseconds
+export const ACCELERATOR_ACCELERATION_AMOUNT = 15; // Fixed acceleration amount
+
 // Block Types
 // Note: Craftable blocks (FIREWORK, JUMP_PAD, TNT, SAPLING, JACKPOT) are at the end
 export const BLOCKS = {
