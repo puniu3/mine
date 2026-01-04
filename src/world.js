@@ -1,4 +1,4 @@
-import { coordToIndex, isBlockSolid, generateBiomeHeights } from './utils.js';
+import { coordToIndex, isBlockSolid, generateBiomeHeights, randomInt } from './utils.js';
 import { TILE_SIZE, BLOCKS, BLOCK_PROPS } from './constants.js';
 
 const BIOMES = {
@@ -90,6 +90,8 @@ export class World {
                 this.setBlock(x, h - 1, BLOCKS.WORKBENCH);
             }
         }
+
+        this.generateClouds();
     }
 
     getBiomeConfigs() {
@@ -188,6 +190,39 @@ export class World {
             for (let ly = y - height - 2; ly <= y - height; ly++) {
                 if (Math.abs(lx - x) === 2 && Math.abs(ly - (y - height)) === 2) continue;
                 if (this.getBlock(lx, ly) === BLOCKS.AIR) this.setBlock(lx, ly, BLOCKS.LEAVES);
+            }
+        }
+    }
+
+    generateClouds() {
+        const cloudClusters = Math.max(10, Math.floor(this.width / 160));
+        for (let i = 0; i < cloudClusters; i++) {
+            const centerX = randomInt(4, this.width - 5);
+            const centerY = randomInt(6, Math.max(12, Math.floor(this.height / 6)));
+            const puffCount = randomInt(2, 4);
+
+            for (let p = 0; p < puffCount; p++) {
+                const offsetX = randomInt(-8, 8);
+                const offsetY = randomInt(-2, 2);
+                const radiusX = randomInt(3, 7);
+                const radiusY = randomInt(1, 3);
+                this.paintCloud(centerX + offsetX, centerY + offsetY, radiusX, radiusY);
+            }
+        }
+    }
+
+    paintCloud(cx, cy, radiusX, radiusY) {
+        const maxY = Math.floor(this.height / 3);
+        for (let x = -radiusX; x <= radiusX; x++) {
+            for (let y = -radiusY; y <= radiusY; y++) {
+                const nx = cx + x;
+                const ny = cy + y;
+                const normalized = (x * x) / (radiusX * radiusX) + (y * y) / (radiusY * radiusY);
+                if (normalized <= 1 && nx >= 1 && nx < this.width - 1 && ny >= 0 && ny < maxY) {
+                    if (this.getBlock(nx, ny) === BLOCKS.AIR) {
+                        this.setBlock(nx, ny, BLOCKS.CLOUD);
+                    }
+                }
             }
         }
     }

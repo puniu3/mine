@@ -93,6 +93,30 @@ export function generateTextures() {
         addNoise(ctx, 0.06);
     });
 
+    createTexture(BLOCKS.CLOUD, (ctx, s) => {
+        ctx.clearRect(0, 0, s, s);
+        const puffs = [
+            { x: s * 0.2, y: s * 0.6, r: s * 0.22 },
+            { x: s * 0.45, y: s * 0.55, r: s * 0.28 },
+            { x: s * 0.7, y: s * 0.62, r: s * 0.24 },
+            { x: s * 0.5, y: s * 0.38, r: s * 0.18 }
+        ];
+
+        ctx.fillStyle = '#f5f5f5';
+        puffs.forEach(puff => {
+            ctx.beginPath();
+            ctx.arc(puff.x, puff.y, puff.r, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(s * 0.16, s * 0.55, s * 0.68, s * 0.2, s * 0.1);
+        ctx.fill();
+
+        addNoise(ctx, 0.05);
+    });
+
     createTexture(BLOCKS.WOOD, (ctx, s) => {
         ctx.fillStyle = '#6d4c41';
         ctx.fillRect(0, 0, s, s);
