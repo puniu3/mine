@@ -58,9 +58,7 @@ export class World {
             const surfaceBlock = this.getSurfaceBlock(biome, h);
 
             for (let y = 0; y < this.height; y++) {
-                if (y === this.height - 1) {
-                    this.setBlock(x, y, BLOCKS.BEDROCK);
-                } else if (y > h) {
+                if (y > h) {
                     if (y > h + 5) {
                         const r = Math.random();
                         if (r > 0.985 && y > h + 15) this.setBlock(x, y, BLOCKS.GOLD);

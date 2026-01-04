@@ -164,13 +164,19 @@ class Player {
 
         // Clamp position
         this.x = clamp(this.x, 0, this.world.width * TILE_SIZE - this.width);
-
-        // Respawn if fallen off
-        if (this.y > this.world.height * TILE_SIZE) {
-            this.respawn();
-        }
+        this.wrapVertically();
 
         if (Math.abs(this.vx) > 0.1) this.animTimer += dt;
+    }
+
+    wrapVertically() {
+        const worldSpan = this.world.height * TILE_SIZE;
+        while (this.y >= worldSpan) {
+            this.y -= worldSpan;
+        }
+        while (this.y + this.height <= 0) {
+            this.y += worldSpan;
+        }
     }
 
     respawn() {
@@ -315,9 +321,8 @@ function update(dt) {
     const targetCamX = player.getCenterX() - canvas.width / 2;
     const targetCamY = player.getCenterY() - canvas.height / 2;
     cameraX = smoothCamera(cameraX, targetCamX, CAMERA_SMOOTHING);
-    cameraY = smoothCamera(cameraY, targetCamY, CAMERA_SMOOTHING);
+    cameraY = targetCamY;
     cameraX = clampCamera(cameraX, 0, world.width * TILE_SIZE, canvas.width);
-    cameraY = clampCamera(cameraY, -500, world.height * TILE_SIZE, canvas.height);
 
     // Interaction
     if (input.mouse.leftDown) {

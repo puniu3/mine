@@ -116,10 +116,13 @@ export function tileToWorld(tileX, tileY, tileSize) {
  * @returns {number} Array index (-1 if out of bounds)
  */
 export function coordToIndex(x, y, width, height) {
-    if (x < 0 || x >= width || y < 0 || y >= height) {
+    if (x < 0 || x >= width) {
         return -1;
     }
-    return y * width + x;
+
+    // Wrap vertically so the world connects top-to-bottom
+    const wrappedY = ((y % height) + height) % height;
+    return wrappedY * width + x;
 }
 
 /**
