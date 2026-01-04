@@ -97,7 +97,10 @@ export class Player {
         const feetX = Math.floor(this.getCenterX() / TILE_SIZE);
         const feetY = Math.floor((this.y + this.height + 0.1) / TILE_SIZE);
         if (this.world.getBlock(feetX, feetY) === BLOCKS.JUMP_PAD) {
-             this.vy = -JUMP_FORCE * 1.8;
+             // Count stacked JUMP_PADs going upward (direction -1)
+             const stackCount = this.countVerticalJumpPads(feetX, feetY, -1);
+             // Multiply velocity by stack count
+             this.vy = -JUMP_FORCE * 1.8 * stackCount;
              this.grounded = false;
              sounds.playBigJump();
         }
@@ -131,6 +134,26 @@ export class Player {
         this.wrapVertically();
 
         if (Math.abs(totalVx) > 0.1) this.animTimer += dt;
+    }
+
+    /**
+     * Count consecutive JUMP_PAD blocks in vertical direction
+     * @param {number} x - tile x coordinate
+     * @param {number} y - tile y coordinate
+     * @param {number} direction - 1 for down, -1 for up
+     * @returns {number} count of consecutive JUMP_PAD blocks
+     */
+    countVerticalJumpPads(x, y, direction) {
+        let count = 0;
+        let currentY = y;
+
+        // Count consecutive JUMP_PAD blocks in the specified direction
+        while (this.world.getBlock(x, currentY) === BLOCKS.JUMP_PAD) {
+            count++;
+            currentY += direction;
+        }
+
+        return count;
     }
 
     wrapHorizontally() {
@@ -186,7 +209,10 @@ export class Player {
                             this.y = (y + 1) * TILE_SIZE + 0.01;
                             // Check if hitting JUMP_PAD from below
                             if (block === BLOCKS.JUMP_PAD) {
-                                this.vy = JUMP_FORCE * 1.8;
+                                // Count stacked JUMP_PADs going downward (direction 1)
+                                const stackCount = this.countVerticalJumpPads(x, y, 1);
+                                // Multiply velocity by stack count
+                                this.vy = JUMP_FORCE * 1.8 * stackCount;
                                 sounds.playBigJump();
                             } else {
                                 this.vy = 0;
