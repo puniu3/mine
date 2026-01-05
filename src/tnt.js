@@ -14,11 +14,14 @@ import { isBlockBreakable } from './utils.js';
  * @param {number} x - Tile X coordinate
  * @param {number} y - Tile Y coordinate
  * @param {Object} context - Context object containing dependencies
+ * @param {boolean} playSound - Whether to play explosion sound (default: true)
  */
-function explodeTNT(x, y, context) {
+function explodeTNT(x, y, context, playSound = true) {
     const { world, player, sounds, addToInventory, createExplosionParticles } = context;
 
-    sounds.playExplosion();
+    if (playSound) {
+        sounds.playExplosion();
+    }
 
     // Explosion Radius
     const radius = TNT_EXPLOSION_RADIUS;
@@ -54,27 +57,40 @@ function explodeTNT(x, y, context) {
             (TNT_KNOCKBACK_STRENGTH * knockbackRange) / (clampedDistance + TILE_SIZE * TNT_KNOCKBACK_DISTANCE_OFFSET);
 
         // Apply velocity to player
-        player.vx = dirX * knockbackStrength;
-        player.vy = dirY * knockbackStrength;
+        player.vx += dirX * knockbackStrength;
+        player.vy += dirY * knockbackStrength;
         player.grounded = false;
     }
 
     // Destroy blocks in explosion radius
+    const chainReactionTNTs = [];
     for (let by = startY; by <= endY; by++) {
-        for (let bx = startX; bx <= endX; bx++) {
-            // Distance check for circle shape
-            const dx = bx - x;
-            const dy = by - y;
-            if (dx * dx + dy * dy <= radius * radius) {
-                const block = world.getBlock(bx, by);
-                if (block !== BLOCKS.AIR && isBlockBreakable(block, BLOCK_PROPS)) {
-                    if (block !== BLOCKS.TNT) {
-                        addToInventory(block);
-                    }
-                    world.setBlock(bx, by, BLOCKS.AIR);
-                }
+      for (let bx = startX; bx <= endX; bx++) {
+        const dx = bx - x;
+        const dy = by - y;
+        if (dx * dx + dy * dy <= radius * radius) {
+          const block = world.getBlock(bx, by);
+          if (block !== BLOCKS.AIR && isBlockBreakable(block, BLOCK_PROPS)) {
+            if (block === BLOCKS.TNT) {
+              // ✅ Skip the origin TNT to prevent self chain explosion
+              if (!(bx === x && by === y)) {
+                chainReactionTNTs.push({ x: bx, y: by });
+              }
+            } else {
+              addToInventory(block);
             }
+            world.setBlock(bx, by, BLOCKS.AIR);
+          }
         }
+      }
+    }
+    
+    // Trigger chain reaction for TNT blocks found in explosion radius
+    for (const tnt of chainReactionTNTs) {
+      // ✅ Only explode if the TNT still exists (guards against duplicates / overlaps)
+      if (world.getBlock(tnt.x, tnt.y) === BLOCKS.TNT) {
+        explodeTNT(tnt.x, tnt.y, context, false);
+      }
     }
 }
 
