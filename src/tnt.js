@@ -14,11 +14,14 @@ import { isBlockBreakable } from './utils.js';
  * @param {number} x - Tile X coordinate
  * @param {number} y - Tile Y coordinate
  * @param {Object} context - Context object containing dependencies
+ * @param {boolean} playSound - Whether to play explosion sound (default: true)
  */
-function explodeTNT(x, y, context) {
+function explodeTNT(x, y, context, playSound = true) {
     const { world, player, sounds, addToInventory, createExplosionParticles } = context;
 
-    sounds.playExplosion();
+    if (playSound) {
+        sounds.playExplosion();
+    }
 
     // Explosion Radius
     const radius = TNT_EXPLOSION_RADIUS;
@@ -60,6 +63,7 @@ function explodeTNT(x, y, context) {
     }
 
     // Destroy blocks in explosion radius
+    const chainReactionTNTs = [];
     for (let by = startY; by <= endY; by++) {
         for (let bx = startX; bx <= endX; bx++) {
             // Distance check for circle shape
@@ -68,13 +72,21 @@ function explodeTNT(x, y, context) {
             if (dx * dx + dy * dy <= radius * radius) {
                 const block = world.getBlock(bx, by);
                 if (block !== BLOCKS.AIR && isBlockBreakable(block, BLOCK_PROPS)) {
-                    if (block !== BLOCKS.TNT) {
+                    if (block === BLOCKS.TNT) {
+                        // Collect TNT blocks for chain reaction (don't add to inventory)
+                        chainReactionTNTs.push({ x: bx, y: by });
+                    } else {
                         addToInventory(block);
                     }
                     world.setBlock(bx, by, BLOCKS.AIR);
                 }
             }
         }
+    }
+
+    // Trigger chain reaction for TNT blocks found in explosion radius
+    for (const tnt of chainReactionTNTs) {
+        explodeTNT(tnt.x, tnt.y, context, false); // Silent explosion for chain reactions
     }
 }
 
