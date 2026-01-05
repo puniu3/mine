@@ -33,7 +33,7 @@ export class Player {
             const block = this.world.getBlock(sx, y);
             // Skip air and cloud blocks to ensure spawning on solid ground
             if (block !== BLOCKS.AIR && block !== BLOCKS.CLOUD) {
-                this.y = (y - 2) * TILE_SIZE; //hot fix; no one knows why this works. AI failed to fix 6 times.
+                this.y = (y - 2) * TILE_SIZE;
                 break;
             }
         }
