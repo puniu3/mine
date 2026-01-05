@@ -58,11 +58,28 @@ const saplingTimers = [];
 const SAPLING_GROWTH_TIME = 6000;
 let saveManager = null;
 
+// Logical (CSS) canvas dimensions for coordinate calculations
+let logicalWidth = window.innerWidth;
+let logicalHeight = window.innerHeight;
+
 function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+    logicalWidth = window.innerWidth;
+    logicalHeight = window.innerHeight;
+
+    // Set canvas resolution to match physical pixels
+    canvas.width = logicalWidth * dpr;
+    canvas.height = logicalHeight * dpr;
+
+    // Set CSS size to match logical pixels
+    canvas.style.width = logicalWidth + 'px';
+    canvas.style.height = logicalHeight + 'px';
+
+    // Scale context so drawing uses logical coordinates
+    ctx.scale(dpr, dpr);
     ctx.imageSmoothingEnabled = false;
-    if (window.innerWidth <= 768) {
+
+    if (logicalWidth <= 768) {
         const el = document.getElementById('mobile-controls');
         if (el) el.style.display = 'block';
     }
@@ -158,8 +175,8 @@ function init(savedState = null) {
     resize();
 
     // Initialize camera to center on player immediately
-    cameraX = player.getCenterX() - canvas.width / 2;
-    cameraY = player.getCenterY() - canvas.height / 2;
+    cameraX = player.getCenterX() - logicalWidth / 2;
+    cameraY = player.getCenterY() - logicalHeight / 2;
 
     saveManager.startAutosave();
     saveManager.saveGameState();
@@ -171,8 +188,8 @@ function update(dt) {
     player.update(input, dt);
 
     // Camera with smooth following
-    const targetCamX = player.getCenterX() - canvas.width / 2;
-    const targetCamY = player.getCenterY() - canvas.height / 2;
+    const targetCamX = player.getCenterX() - logicalWidth / 2;
+    const targetCamY = player.getCenterY() - logicalHeight / 2;
 
     // Handle horizontal wrapping: if player wrapped around, adjust camera to follow smoothly
     const worldWidthPixels = world.width * TILE_SIZE;
@@ -209,7 +226,7 @@ function update(dt) {
     updateAccelerators(dt);
 
     // --- Update Fireworks ---
-    updateFireworks(dt, world, cameraX, cameraY, canvas);
+    updateFireworks(dt, world, cameraX, cameraY, { width: logicalWidth, height: logicalHeight });
 
     // --- Update TNT ---
     tntManager.update(dt);
@@ -304,18 +321,18 @@ function draw() {
     const altitude = player ? clamp(player.getCenterY() / (world.height * TILE_SIZE), 0, 1) : 0.5;
     const { top: skyTop, bottom: skyBottom } = getSkyGradientColors(altitude);
 
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, logicalHeight);
     gradient.addColorStop(0, skyTop);
     gradient.addColorStop(1, skyBottom);
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
     ctx.save();
     ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
 
     // Calculate visible range (used by fireworks update too, but we recalculate here for drawing)
     const { startX, endX, startY, endY } = calculateVisibleTileRange(
-        cameraX, cameraY, canvas.width, canvas.height, TILE_SIZE
+        cameraX, cameraY, logicalWidth, logicalHeight, TILE_SIZE
     );
 
     // Blocks that should not be darkened when under other blocks
