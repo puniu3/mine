@@ -51,48 +51,54 @@ function explodeTNT(x, y, context, playSound = true) {
         const dirX = distanceX / distance;
         const dirY = distanceY / distance;
 
-        // Calculate knockback strength:
+        // Calculate knockback energy
         const clampedDistance = Math.max(distance, TILE_SIZE);
-        const knockbackStrength =
-            (TNT_KNOCKBACK_STRENGTH * knockbackRange) / (clampedDistance + TILE_SIZE * TNT_KNOCKBACK_DISTANCE_OFFSET);
+        const explosionEnergy = 
+            (TNT_KNOCKBACK_STRENGTH ** 2 * knockbackRange) / (clampedDistance + TILE_SIZE * TNT_KNOCKBACK_DISTANCE_OFFSET);
 
-        // Apply velocity to player
-        player.vx += dirX * knockbackStrength;
-        player.vy += dirY * knockbackStrength;
+        // Project current player velocity onto the explosion direction
+        const vDotN = player.vx * dirX + player.vy * dirY;
+
+        // Calculate velocity change (deltaV) based on Kinetic Energy formula:
+        // deltaV = -vDotN + sqrt(vDotN^2 + 2 * Energy)
+        const deltaV = -vDotN + Math.sqrt(Math.max(0, vDotN * vDotN + 2 * explosionEnergy));
+
+        // Apply calculated velocity change
+        player.vx += dirX * deltaV;
+        player.vy += dirY * deltaV;
         player.grounded = false;
     }
 
     // Destroy blocks in explosion radius
     const chainReactionTNTs = [];
     for (let by = startY; by <= endY; by++) {
-      for (let bx = startX; bx <= endX; bx++) {
-        const dx = bx - x;
-        const dy = by - y;
-        if (dx * dx + dy * dy <= radius * radius) {
-          const block = world.getBlock(bx, by);
-          if (block !== BLOCKS.AIR && isBlockBreakable(block, BLOCK_PROPS)) {
-            if (block === BLOCKS.TNT) {
-              // ✅ Skip the origin TNT to prevent self chain explosion
-              if (!(bx === x && by === y)) {
-                chainReactionTNTs.push({ x: bx, y: by });
-                // ✅ Fix: Do not destroy the TNT here. Let the recursive explodeTNT call handle it.
-                continue; 
-              }
-            } else {
-              addToInventory(block);
+        for (let bx = startX; bx <= endX; bx++) {
+            const dx = bx - x;
+            const dy = by - y;
+            if (dx * dx + dy * dy <= radius * radius) {
+                const block = world.getBlock(bx, by);
+                if (block !== BLOCKS.AIR && isBlockBreakable(block, BLOCK_PROPS)) {
+                    if (block === BLOCKS.TNT) {
+                        // Skip the origin TNT to prevent self chain explosion
+                        if (!(bx === x && by === y)) {
+                            chainReactionTNTs.push({ x: bx, y: by });
+                            continue;
+                        }
+                    } else {
+                        addToInventory(block);
+                    }
+                    world.setBlock(bx, by, BLOCKS.AIR);
+                }
             }
-            world.setBlock(bx, by, BLOCKS.AIR);
-          }
         }
-      }
     }
-    
+
     // Trigger chain reaction for TNT blocks found in explosion radius
     for (const tnt of chainReactionTNTs) {
-      // ✅ Only explode if the TNT still exists (guards against duplicates / overlaps)
-      if (world.getBlock(tnt.x, tnt.y) === BLOCKS.TNT) {
-        explodeTNT(tnt.x, tnt.y, context, false);
-      }
+        // Only explode if the TNT still exists
+        if (world.getBlock(tnt.x, tnt.y) === BLOCKS.TNT) {
+            explodeTNT(tnt.x, tnt.y, context, false);
+        }
     }
 }
 
