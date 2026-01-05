@@ -43,7 +43,7 @@ body {
     justify-content: center;
     align-items: center;
     color: white;
-    z-index: 100;
+    z-index: 2000;
     pointer-events: auto;
 }
 
@@ -320,12 +320,12 @@ button:active {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 1);
     border: 4px solid #42a5f5;
     padding: 24px;
     color: white;
     font-family: monospace;
-    z-index: 200;
+    z-index: 2100;
     border-radius: 8px;
     text-align: center;
     min-width: 280px;
@@ -372,4 +372,16 @@ button:active {
 #world-close-btn {
     margin-top: 16px;
     background: #555;
+}
+
+@media (max-width: 480px) {
+    .start-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .start-buttons button {
+        width: 100%;
+        max-width: 260px;
+    }
 }
