@@ -29,14 +29,35 @@ export class Player {
 
     findSpawnPoint() {
         const sx = Math.floor(this.x / TILE_SIZE);
+        let foundY = -1;
+        let foundBlock = -1;
         for (let y = 0; y < this.world.height; y++) {
             const block = this.world.getBlock(sx, y);
             // Skip air and cloud blocks to ensure spawning on solid ground
             if (block !== BLOCKS.AIR && block !== BLOCKS.CLOUD) {
+                foundY = y;
+                foundBlock = block;
                 this.y = (y - 2) * TILE_SIZE;
                 break;
             }
         }
+        // DEBUG: Log spawn point calculation
+        const playerTileY = Math.floor(this.y / TILE_SIZE);
+        const playerBottomTileY = Math.floor((this.y + this.height) / TILE_SIZE);
+        console.log('=== SPAWN DEBUG ===');
+        console.log('Spawn X tile:', sx);
+        console.log('Found block at Y:', foundY, 'Block type:', foundBlock);
+        console.log('Player this.y (px):', this.y, '-> tile:', playerTileY);
+        console.log('Player bottom (px):', this.y + this.height, '-> tile:', playerBottomTileY);
+        console.log('Player height:', this.height, 'px =', this.height / TILE_SIZE, 'tiles');
+        // Check blocks around player
+        console.log('Blocks at player position:');
+        for (let ty = playerTileY; ty <= playerBottomTileY + 1; ty++) {
+            const b = this.world.getBlock(sx, ty);
+            const solid = BLOCK_PROPS[b]?.solid ? 'SOLID' : 'non-solid';
+            console.log('  y=' + ty + ':', b, '(' + (BLOCK_PROPS[b]?.name || 'unknown') + ')', solid);
+        }
+        console.log('===================');
     }
 
     getCenterX() {
