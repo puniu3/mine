@@ -41,6 +41,7 @@ import { drawJackpotParticles, handleJackpotOverlap, updateJackpots } from './ja
 import { handleAcceleratorOverlap, updateAccelerators } from './accelerator.js';
 import { createSaveManager, loadGameState } from './save.js';
 import { createTNTManager } from './tnt.js';
+import { exportWorldToImage, importWorldFromImage, downloadBlob, findSpawnPosition } from './world_share.js';
 
 // --- Texture Generator ---
 let textures = {};
@@ -427,3 +428,88 @@ if (continueButton) {
         init(savedState);
     });
 }
+
+// World Share Modal
+const worldModal = document.getElementById('world-modal');
+const worldBtn = document.getElementById('world-btn');
+const worldCloseBtn = document.getElementById('world-close-btn');
+const exportBtn = document.getElementById('export-btn');
+const importBtn = document.getElementById('import-btn');
+const importFile = document.getElementById('import-file');
+
+function showWorldModal() {
+    worldModal.style.display = 'block';
+}
+
+function hideWorldModal() {
+    worldModal.style.display = 'none';
+}
+
+worldBtn.addEventListener('click', showWorldModal);
+worldCloseBtn.addEventListener('click', hideWorldModal);
+
+// Export world to image
+exportBtn.addEventListener('click', async () => {
+    const savedState = loadGameState();
+    if (!savedState || !savedState.world || !savedState.world.map) {
+        alert('セーブデータがありません');
+        return;
+    }
+
+    // Decode base64 to Uint8Array
+    const binary = atob(savedState.world.map);
+    const worldMap = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        worldMap[i] = binary.charCodeAt(i);
+    }
+
+    const blob = await exportWorldToImage(worldMap, savedState.world.width, savedState.world.height);
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+    downloadBlob(blob, `world_${timestamp}.png`);
+});
+
+// Import world from image
+importBtn.addEventListener('click', async () => {
+    const file = importFile.files[0];
+    if (!file) {
+        alert('画像ファイルを選択してください');
+        return;
+    }
+
+    try {
+        const worldMap = await importWorldFromImage(file);
+
+        // Load inventory from existing save if available
+        const savedState = loadGameState();
+        const inventoryState = savedState?.inventory || null;
+
+        hideWorldModal();
+        hideStartScreen();
+        sounds.init();
+
+        // Initialize game
+        init();
+
+        // Replace world map
+        world.map = worldMap;
+
+        // Restore inventory if available
+        if (inventoryState) {
+            loadInventoryState(inventoryState);
+        }
+
+        // Find spawn position and teleport player
+        const spawn = findSpawnPosition(worldMap, WORLD_WIDTH, WORLD_HEIGHT);
+        player.x = spawn.x * TILE_SIZE;
+        player.y = spawn.y * TILE_SIZE;
+        player.vx = 0;
+        player.vy = 0;
+
+        // Update camera
+        cameraX = player.getCenterX() - logicalWidth / 2;
+        cameraY = player.getCenterY() - logicalHeight / 2;
+
+    } catch (err) {
+        alert('画像の読み込みに失敗しました: ' + err.message);
+    }
+});
