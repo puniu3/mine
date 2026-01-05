@@ -75,6 +75,8 @@ function explodeTNT(x, y, context, playSound = true) {
               // ✅ Skip the origin TNT to prevent self chain explosion
               if (!(bx === x && by === y)) {
                 chainReactionTNTs.push({ x: bx, y: by });
+                // ✅ Fix: Do not destroy the TNT here. Let the recursive explodeTNT call handle it.
+                continue; 
               }
             } else {
               addToInventory(block);
