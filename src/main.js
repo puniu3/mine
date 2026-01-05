@@ -472,7 +472,7 @@ exportBtn.addEventListener('click', async () => {
 importBtn.addEventListener('click', async () => {
     const file = importFile.files[0];
     if (!file) {
-        alert('画像ファイルを選択してください');
+        alert('えを えらんでね');
         return;
     }
 
@@ -510,6 +510,6 @@ importBtn.addEventListener('click', async () => {
         cameraY = player.getCenterY() - logicalHeight / 2;
 
     } catch (err) {
-        alert('画像の読み込みに失敗しました: ' + err.message);
+        alert('この えでは ワールドを つくれないよ' + err.message);
     }
 });
