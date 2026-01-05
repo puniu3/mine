@@ -34,7 +34,8 @@ mine/
     ├── jackpot.js      # Jackpot block: coin burst particles on player overlap
     ├── sky.js          # Dynamic sky gradient based on altitude (surface/underground/stratosphere)
     ├── save.js         # Save/load system using localStorage with autosave functionality
-    └── tnt.js          # TNT explosion logic, timers, knockback, and block destruction
+    ├── tnt.js          # TNT explosion logic, timers, knockback, and block destruction
+    └── world_share.js  # World export/import as PNG images (1 tile = 1 pixel)
 ```
 
 ## Module Dependency Graph
@@ -55,7 +56,8 @@ main.js
 ├── jackpot.js (imports: constants)
 ├── fireworks.js
 ├── save.js
-└── tnt.js (imports: constants, utils)
+├── tnt.js (imports: constants, utils)
+└── world_share.js (imports: constants, world)
 ```
 
 ## Key Constants (constants.js)
@@ -134,6 +136,17 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
   - Applies knockback to player (inverse-square falloff)
   - Adds destroyed blocks to inventory
   - Creates explosion particles and sound
+
+### World Share (world_share.js)
+- `exportWorldToImage()`: Converts world map to PNG image (1 tile = 1 pixel)
+  - Each block type mapped to unique color (RGB)
+  - Returns PNG blob for download
+- `importWorldFromImage()`: Loads world from PNG image file
+  - Scales image to world dimensions using nearest-neighbor
+  - Converts pixel colors to nearest block types (Euclidean distance)
+- `downloadBlob()`: Triggers browser download for blob
+- `findSpawnPosition()`: Locates suitable spawn point in imported world (center-top, searches for ground)
+- Pre-computed RGB lookup table for performance
 
 ## Game Loop (main.js)
 
