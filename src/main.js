@@ -156,6 +156,11 @@ function init(savedState = null) {
         updateInventoryUI();
     }
     resize();
+
+    // Initialize camera to center on player immediately
+    cameraX = player.getCenterX() - canvas.width / 2;
+    cameraY = player.getCenterY() - canvas.height / 2;
+
     saveManager.startAutosave();
     saveManager.saveGameState();
     requestAnimationFrame(loop);
