@@ -76,21 +76,22 @@ function explodeTNT(x, y, context, playSound = true) {
               if (!(bx === x && by === y)) {
                 chainReactionTNTs.push({ x: bx, y: by });
               }
+              // Leave TNT blocks intact here so chain explosions still apply their knockback
             } else {
               addToInventory(block);
+              world.setBlock(bx, by, BLOCKS.AIR);
             }
-            world.setBlock(bx, by, BLOCKS.AIR);
           }
         }
       }
     }
-    
+
+    // Clear the origin block after evaluating the area (non-TNT blocks already cleared)
+    world.setBlock(x, y, BLOCKS.AIR);
+
     // Trigger chain reaction for TNT blocks found in explosion radius
     for (const tnt of chainReactionTNTs) {
-      // ✅ Only explode if the TNT still exists (guards against duplicates / overlaps)
-      if (world.getBlock(tnt.x, tnt.y) === BLOCKS.TNT) {
-        explodeTNT(tnt.x, tnt.y, context, false);
-      }
+      explodeTNT(tnt.x, tnt.y, context, false);
     }
 }
 
