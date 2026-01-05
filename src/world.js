@@ -48,9 +48,36 @@ export class World {
         return true;
     }
 
+    ensureAllBiomesPresent(biomeByColumn) {
+        const allBiomes = Object.values(BIOMES);
+
+        const present = new Set(biomeByColumn);
+        const missing = allBiomes.filter(b => !present.has(b));
+        if (missing.length === 0) return;
+
+        const segmentWidth = Math.max(12, Math.floor(this.width / (allBiomes.length * 4)));
+
+        for (let i = 0; i < missing.length; i++) {
+            const biome = missing[i];
+
+            const center = Math.floor(((i + 1) / (missing.length + 1)) * this.width);
+            let startX = Math.max(2, center - Math.floor(segmentWidth / 2));
+            let endX = Math.min(this.width - 3, startX + segmentWidth);
+
+            startX = Math.max(0, Math.min(this.width - 1, startX));
+            endX = Math.max(0, Math.min(this.width - 1, endX));
+
+            for (let x = startX; x <= endX; x++) {
+                biomeByColumn[x] = biome;
+            }
+        }
+    }
+
     generate() {
         const biomeConfigs = this.getBiomeConfigs();
         const { heights, biomeByColumn } = generateBiomeHeights(this.width, biomeConfigs, 96, 192);
+
+        this.ensureAllBiomesPresent(biomeByColumn);
 
         for (let x = 0; x < this.width; x++) {
             const h = heights[x];
@@ -70,9 +97,11 @@ export class World {
                     }
                 } else if (y === h) {
                     this.setBlock(x, y, surfaceBlock);
-                    
-                    const isTreeGround = surfaceBlock === BLOCKS.GRASS || (biome === BIOMES.SNOWFIELD && surfaceBlock === BLOCKS.SNOW);
-                    
+
+                    const isTreeGround =
+                        surfaceBlock === BLOCKS.GRASS ||
+                        (biome === BIOMES.SNOWFIELD && surfaceBlock === BLOCKS.SNOW);
+
                     if (isTreeGround && x > 5 && x < this.width - 5 && Math.random() < 0.05) {
                         this.generateTree(x, y - 1);
                     }
@@ -223,7 +252,7 @@ export class World {
 
     getBiomeConfigs() {
         const halfHeight = this.height / 2;
-        
+
         return {
             [BIOMES.PLAINS]: {
                 weight: 40, // 40%
