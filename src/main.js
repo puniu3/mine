@@ -368,11 +368,15 @@ function draw() {
 }
 
 function loop(timestamp) {
-    const dt = timestamp - lastTime;
-    lastTime = timestamp;
-    update(dt);
-    draw();
-    requestAnimationFrame(loop);
+  let dt = timestamp - lastTime;
+  lastTime = timestamp;
+
+  // Clamp dt to avoid huge physics jumps after tab switching
+  dt = Math.min(dt, 50); // 50ms ~= 3 frames at 60fps
+
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
 }
 
 function hideStartScreen() {
