@@ -41,6 +41,7 @@
         <div class="start-buttons">
             <button id="start-btn">はじめる</button>
             <button id="continue-btn">つづける</button>
+            <button id="world-btn">ワールド</button>
         </div>
         <div class="instructions">
             [パソコン]<br>
@@ -56,6 +57,26 @@
             ★じぶんの ばしょに おくと<br>
             あしもとに おいて のぼれるよ！
         </div>
+    </div>
+
+    <!-- World Share Modal -->
+    <div id="world-modal">
+        <h2>ワールド</h2>
+    
+        <div class="world-section">
+            <h3>ほぞん</h3>
+            <p>つくった ワールドを えに して のこす</p>
+            <button id="export-btn">えにする</button>
+        </div>
+    
+        <div class="world-section">
+            <h3>よみこみ</h3>
+            <p>えから ワールドを つくる</p>
+            <input type="file" id="import-file" accept="image/*">
+            <button id="import-btn">よみこむ</button>
+        </div>
+    
+        <button id="world-close-btn">もどる</button>
     </div>
 
     <script type="module" src="src/main.js"></script>
