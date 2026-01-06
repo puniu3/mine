@@ -5,10 +5,14 @@
 
 import {
     TILE_SIZE, BLOCKS, BLOCK_PROPS,
-    TNT_FUSE_TIME, TNT_EXPLOSION_RADIUS,
-    TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET
+    TNT_FUSE_TIME, TNT_EXPLOSION_RADIUS
 } from './constants.js';
 import { isBlockBreakable } from './utils.js';
+
+// Local Fixed-point arithmetic helpers to match Player's logic
+const FP_SHIFT = 12;
+const FP_ONE = 1 << FP_SHIFT;
+const toFP = (val) => Math.floor(val * FP_ONE);
 
 /**
  * Finds all contiguous TNT blocks connected to the start coordinates.
@@ -67,101 +71,98 @@ function explodeCluster(tntCluster, context) {
 
     sounds.playExplosion();
 
-    // 1. Calculate Center of Explosion
-    // We use the average position of all blocks in the cluster
+    // 1. Calculate Center of Explosion using Fixed Point arithmetic
+    // We sum up the grid coordinates first, then convert to FP world coordinates.
     let sumX = 0;
     let sumY = 0;
     
-    // Remove the TNT blocks from the world immediately so they don't drop as items
+    // Remove the TNT blocks from the world immediately
     for (const tnt of tntCluster) {
         sumX += tnt.x;
         sumY += tnt.y;
         world.setBlock(tnt.x, tnt.y, BLOCKS.AIR); 
     }
 
-    const centerX = sumX / tntCluster.length;
-    const centerY = sumY / tntCluster.length;
+    // Calculate centroid in grid units (float for averaging, but then snapped to FP)
+    // To ensure determinism, we multiply by FP_ONE before division if possible,
+    // or just assume standard float division is safe enough for grid averages before snapping.
+    // Here we convert to World Pixel Coordinates in FP.
+    // Center = (Sum / Count) * TILE_SIZE + HalfTile
     
-    // Pixel coordinates for particles/knockback
-    const pixelCenterX = centerX * TILE_SIZE + TILE_SIZE / 2;
-    const pixelCenterY = centerY * TILE_SIZE + TILE_SIZE / 2;
+    const count = tntCluster.length;
+    // Calculate average grid position scaled to FP
+    const avgGridX_FP = Math.floor((sumX * FP_ONE) / count);
+    const avgGridY_FP = Math.floor((sumY * FP_ONE) / count);
+
+    // Convert to World Center (in FP)
+    // Coordinate = Grid * TILE_SIZE + TILE_SIZE/2
+    const centerX_FP = avgGridX_FP * TILE_SIZE + toFP(TILE_SIZE / 2);
+    const centerY_FP = avgGridY_FP * TILE_SIZE + toFP(TILE_SIZE / 2);
+    
+    // Float center for particles (visuals only)
+    const pixelCenterX = centerX_FP / FP_ONE;
+    const pixelCenterY = centerY_FP / FP_ONE;
 
     // 2. Calculate Explosion Scale
-    // Area scales linearly with count -> Radius scales with sqrt(count)
-    const clusterSize = tntCluster.length;
-    const sizeMultiplier = Math.sqrt(clusterSize);
-    const radius = TNT_EXPLOSION_RADIUS * sizeMultiplier;
+    // Radius scales with sqrt(count).
+    // We calculate sizeMultiplier in FP.
+    const sizeMultiplier_FP = Math.floor(Math.sqrt(count) * FP_ONE);
+    
+    // Base radius in blocks (FP)
+    const baseRadius_FP = toFP(TNT_EXPLOSION_RADIUS);
+    const radius_FP = Math.floor((baseRadius_FP * sizeMultiplier_FP) / FP_ONE);
 
-    // Create particles
-    // Scale particle count slightly with cluster size to look impressive
-    const particleCount = Math.min(10, Math.ceil(clusterSize * 1.5));
+    // Create particles (Visuals - non-deterministic elements allowed here)
+    const particleCount = Math.min(10, Math.ceil(count * 1.5));
+    const sizeMultiplier = sizeMultiplier_FP / FP_ONE;
     for(let i = 0; i < particleCount; i++) {
-        // Random offset for particles based on the new radius size
         const spread = TILE_SIZE * sizeMultiplier * 0.5;
         const offX = (Math.random() - 0.5) * spread;
         const offY = (Math.random() - 0.5) * spread;
         createExplosionParticles(pixelCenterX + offX, pixelCenterY + offY);
     }
 
-    // 3. Apply Knockback (Calculated from the center of the cluster)
-    const playerCenterX = player.getCenterX();
-    const playerCenterY = player.getCenterY();
-    const distX = playerCenterX - pixelCenterX;
-    const distY = playerCenterY - pixelCenterY;
-    const distance = Math.sqrt(distX * distX + distY * distY);
-    const knockbackRange = radius * TILE_SIZE;
-
-    if (distance < knockbackRange && distance > 0) {
-        const dirX = distX / distance;
-        const dirY = distY / distance;
-        const clampedDist = Math.max(distance, TILE_SIZE);
-        
-        // Calculate Strength
-        // Energy scales linearly with count.
-        // Energy ~ Strength^2.
-        // Therefore, Strength should scale with sqrt(count).
-        // Since sizeMultiplier is already sqrt(count), we use it directly.
-        const totalStrength = TNT_KNOCKBACK_STRENGTH * sizeMultiplier; 
-
-        const explosionEnergy = 
-            (totalStrength ** 2 * knockbackRange) / (clampedDist + TILE_SIZE * TNT_KNOCKBACK_DISTANCE_OFFSET);
-        
-        const vDotN = player.vx * dirX + player.vy * dirY;
-        
-        // Kinetic Energy Formula: deltaV = -vDotN + sqrt(vDotN^2 + 2 * Energy)
-        const deltaV = -vDotN + Math.sqrt(Math.max(0, vDotN * vDotN + 2 * explosionEnergy));
-
-        player.vx += dirX * deltaV;
-        player.vy += dirY * deltaV;
-        player.grounded = false;
-    }
+    // 3. Apply Knockback (Delegated to Player for deterministic physics)
+    player.applyExplosionImpulse(centerX_FP, centerY_FP, radius_FP, sizeMultiplier_FP);
 
     // 4. Destroy blocks in the expanded radius
     // Search area slightly larger than radius to catch edge blocks
-    const searchRadius = Math.ceil(radius);
-    const startX = Math.max(0, Math.floor(centerX - searchRadius));
-    const endX = Math.min(world.width - 1, Math.ceil(centerX + searchRadius));
-    const startY = Math.max(0, Math.floor(centerY - searchRadius));
-    const endY = Math.min(world.height - 1, Math.ceil(centerY + searchRadius));
+    // Convert radius_FP back to blocks for the loop bounds
+    const radiusInBlocks = Math.ceil(radius_FP / FP_ONE);
+    
+    // Center in Grid units
+    const centerGridX = Math.floor(pixelCenterX / TILE_SIZE);
+    const centerGridY = Math.floor(pixelCenterY / TILE_SIZE);
+
+    const startX = Math.max(0, centerGridX - radiusInBlocks);
+    const endX = Math.min(world.width - 1, centerGridX + radiusInBlocks);
+    const startY = Math.max(0, centerGridY - radiusInBlocks);
+    const endY = Math.min(world.height - 1, centerGridY + radiusInBlocks);
+
+    // Squared radius in FP World Units for distance comparison
+    const radiusSq_FP = Math.floor((radius_FP * TILE_SIZE) * (radius_FP * TILE_SIZE));
 
     for (let by = startY; by <= endY; by++) {
         for (let bx = startX; bx <= endX; bx++) {
-            // Calculate distance to the precise floating-point center
-            const dx = bx - centerX;
-            const dy = by - centerY;
+            // Calculate block center in FP World Units
+            const blockCenterX_FP = bx * TILE_SIZE * FP_ONE + toFP(TILE_SIZE / 2);
+            const blockCenterY_FP = by * TILE_SIZE * FP_ONE + toFP(TILE_SIZE / 2);
 
-            // Check if block is within explosion radius
-            if (dx * dx + dy * dy <= radius * radius) {
+            const dx = blockCenterX_FP - centerX_FP;
+            const dy = blockCenterY_FP - centerY_FP;
+
+            // Check if block is within explosion radius using squared distance (Integer math)
+            // Note: Since we are in FP (x4096), squaring can result in large numbers.
+            // 4096^2 = 16,777,216. TILE_SIZE=32.
+            // Max typical distance ~10 blocks = 320 pixels.
+            // 320 * 4096 = 1,310,720.
+            // Square ~= 1.7e12. Safe within JS Number (9e15).
+            if (dx * dx + dy * dy <= radiusSq_FP) {
                 const block = world.getBlock(bx, by);
                 
-                // Skip AIR
                 if (block === BLOCKS.AIR) continue;
 
-                // Handle blocks
                 if (isBlockBreakable(block, BLOCK_PROPS)) {
-                    // If we find a TNT block here, it means it was NOT connected to the cluster
-                    // (because connected ones were already removed).
-                    // So we treat it as a breakable item (add to inventory).
                     addToInventory(block);
                     world.setBlock(bx, by, BLOCKS.AIR);
                 }
