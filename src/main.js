@@ -36,7 +36,12 @@ import { update as updateFireworks, draw as drawFireworks, createExplosionPartic
 import { createActions } from './actions.js';
 import { World } from './world.js';
 import { Player } from './player.js';
-import { getSkyGradientColors, getSunViewPosition, getSunRenderData } from './sky.js';
+import { 
+    getSkyGradientColors, 
+    getSunRenderData, 
+    getMoonRenderData,
+    getStarRenderData
+} from './sky.js';
 import { drawJackpotParticles, handleJackpotOverlap, updateJackpots } from './jackpot.js';
 import { handleAcceleratorOverlap, updateAccelerators } from './accelerator.js';
 import { createSaveManager, loadGameState } from './save.js';
@@ -58,6 +63,9 @@ let tntManager = null;
 const saplingTimers = [];
 const SAPLING_GROWTH_TIME = 6000;
 let saveManager = null;
+
+// Day/Night Cycle Settings
+const DAY_DURATION_MS = 360000; // 6 minutes per day
 
 // Logical (CSS) canvas dimensions for coordinate calculations
 let logicalWidth = window.innerWidth;
@@ -320,31 +328,55 @@ function growSapling(x, y) {
 function draw() {
     if (!world) return;
     
-    // Calculate altitude normalized to 0-1 range for looping world
-    let altitude = player ? (player.getCenterY() / (world.height * TILE_SIZE)) : 0.5;
-    altitude = ((altitude % 1) + 1) % 1;
+    // --- Day/Night Calculation ---
+    const normalizedTime = (Date.now() % DAY_DURATION_MS) / DAY_DURATION_MS;
 
-    const { top: skyTop, bottom: skyBottom } = getSkyGradientColors(altitude);
-
+    // 1. Sky Gradient
+    const { top: skyTop, bottom: skyBottom } = getSkyGradientColors(normalizedTime);
     const gradient = ctx.createLinearGradient(0, 0, 0, logicalHeight);
     gradient.addColorStop(0, skyTop);
     gradient.addColorStop(1, skyBottom);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
-    // Sun rendering
-    const sun = getSunRenderData(altitude, logicalWidth, logicalHeight);
-
-    if (sun.isVisible) {
+    // 2. Stars
+    const stars = getStarRenderData(normalizedTime, logicalWidth, logicalHeight);
+    ctx.fillStyle = '#FFFFFF';
+    stars.forEach(star => {
+        ctx.globalAlpha = star.opacity;
         ctx.beginPath();
-        ctx.arc(sun.x, sun.y, sun.radius, 0, Math.PI * 2);
-        ctx.fillStyle = sun.color;
-        ctx.shadowColor = sun.shadow.color;
-        ctx.shadowBlur = sun.shadow.blur;
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.closePath();
-    }
+    });
+    ctx.globalAlpha = 1.0;
+
+    // 3. Celestial Bodies (Sun & Moon)
+    const sun = getSunRenderData(normalizedTime, logicalWidth, logicalHeight);
+    const moon = getMoonRenderData(normalizedTime, logicalWidth, logicalHeight);
+    
+    const bodies = [sun, moon];
+
+    bodies.forEach(body => {
+        if (body.isVisible) {
+            ctx.beginPath();
+            ctx.arc(body.x, body.y, body.radius, 0, Math.PI * 2);
+            ctx.fillStyle = body.color;
+            ctx.shadowColor = body.shadow.color;
+            ctx.shadowBlur = body.shadow.blur;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.closePath();
+
+            // Simple Moon Craters (Optional Detail)
+            if (body.type === 'moon') {
+                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                ctx.beginPath();
+                ctx.arc(body.x - 8, body.y - 5, 6, 0, Math.PI * 2);
+                ctx.arc(body.x + 10, body.y + 8, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    });
 
     ctx.save();
     ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
