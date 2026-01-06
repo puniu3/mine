@@ -54,6 +54,13 @@ let tntManager = null;
 let saplingManager = null;
 let saveManager = null;
 
+// Physics Settings (720Hz High-Frequency Step)
+// - Syncs perfectly with 144Hz monitors (5 steps per frame).
+// - Prevents "tunneling" (clipping through blocks) at high speeds.
+const PHYSICS_TPS = 720;
+const PHYSICS_DT = 1000 / PHYSICS_TPS; // approx 1.38ms
+let accumulator = 0;
+
 // Day/Night Cycle Settings
 const DAY_DURATION_MS = 360000;
 
@@ -252,12 +259,28 @@ function draw() {
 }
 
 function loop(timestamp) {
-    let dt = timestamp - lastTime;
-    lastTime = timestamp;
-    dt = Math.min(dt, 50); // Cap delta time
+    if (lastTime === 0) {
+        lastTime = timestamp;
+        requestAnimationFrame(loop);
+        return;
+    }
 
-    update(dt);
+    let frameTime = timestamp - lastTime;
+    lastTime = timestamp;
+
+    if (frameTime > 50) {
+        frameTime = 50;
+    }
+
+    accumulator += frameTime;
+
+    while (accumulator >= PHYSICS_DT) {
+        update(PHYSICS_DT);
+        accumulator -= PHYSICS_DT;
+    }
+
     draw();
+    
     requestAnimationFrame(loop);
 }
 
