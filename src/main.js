@@ -325,22 +325,37 @@ function growSapling(x, y) {
     placements.forEach(({ x: px, y: py, type }) => placeGrowthBlock(px, py, type));
 }
 
+// main.js の draw() 関数を以下のように修正
+
 function draw() {
     if (!world) return;
     
-    // --- Day/Night Calculation ---
+    // --- 1. Calculate Time & Altitude ---
     const normalizedTime = (Date.now() % DAY_DURATION_MS) / DAY_DURATION_MS;
+    
+    // Altitude: 0.0 (Top) to 1.0 (Bottom)
+    // Player Y is in pixels, divide by total world height in pixels
+    let altitude = 0.5; // Default if player not ready
+    if (player) {
+        altitude = player.getCenterY() / (world.height * TILE_SIZE);
+    }
+    // Clamp altitude to 0-1 just in case
+    altitude = Math.max(0, Math.min(1, altitude));
 
-    // 1. Sky Gradient
-    const { top: skyTop, bottom: skyBottom } = getSkyGradientColors(normalizedTime);
+
+    // --- 2. Sky Gradient ---
+    // Pass both time and altitude
+    const { top: skyTop, bottom: skyBottom } = getSkyGradientColors(normalizedTime, altitude);
+
     const gradient = ctx.createLinearGradient(0, 0, 0, logicalHeight);
     gradient.addColorStop(0, skyTop);
     gradient.addColorStop(1, skyBottom);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
-    // 2. Stars
-    const stars = getStarRenderData(normalizedTime, logicalWidth, logicalHeight);
+
+    // --- 3. Stars ---
+    const stars = getStarRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
     ctx.fillStyle = '#FFFFFF';
     stars.forEach(star => {
         ctx.globalAlpha = star.opacity;
@@ -348,16 +363,20 @@ function draw() {
         ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         ctx.fill();
     });
-    ctx.globalAlpha = 1.0;
+    ctx.globalAlpha = 1.0; // Reset alpha
 
-    // 3. Celestial Bodies (Sun & Moon)
-    const sun = getSunRenderData(normalizedTime, logicalWidth, logicalHeight);
-    const moon = getMoonRenderData(normalizedTime, logicalWidth, logicalHeight);
+
+    // --- 4. Celestial Bodies (Sun & Moon) ---
+    const sun = getSunRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
+    const moon = getMoonRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
     
     const bodies = [sun, moon];
 
     bodies.forEach(body => {
         if (body.isVisible) {
+            // Apply opacity based on altitude (fade out underground)
+            ctx.globalAlpha = body.opacity !== undefined ? body.opacity : 1.0;
+
             ctx.beginPath();
             ctx.arc(body.x, body.y, body.radius, 0, Math.PI * 2);
             ctx.fillStyle = body.color;
@@ -367,7 +386,7 @@ function draw() {
             ctx.shadowBlur = 0;
             ctx.closePath();
 
-            // Simple Moon Craters (Optional Detail)
+            // Simple Moon Craters
             if (body.type === 'moon') {
                 ctx.fillStyle = 'rgba(0,0,0,0.1)';
                 ctx.beginPath();
@@ -375,6 +394,8 @@ function draw() {
                 ctx.arc(body.x + 10, body.y + 8, 4, 0, Math.PI * 2);
                 ctx.fill();
             }
+            
+            ctx.globalAlpha = 1.0; // Reset alpha
         }
     });
 

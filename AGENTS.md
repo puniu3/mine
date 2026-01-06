@@ -12,14 +12,14 @@ AI-readable project specification for Block Craft 2D XL, a browser-based 2D Mine
 
 ## Directory Structure
 
-```
+
 mine/
 ├── index.html          # Entry HTML with canvas and UI scaffolding
 ├── AGENTS.md           # This file (AI-readable project spec)
 ├── styles/
 │   └── style.css       # Responsive layout, pixel-art viewport, hotbar, touch controls
 └── src/
-    ├── main.js         # Game loop, initialization, TNT/sapling timers, camera
+    ├── main.js         # Game loop, initialization, day/night cycle, camera
     ├── constants.js    # Block IDs, physics values, block metadata (BLOCKS, BLOCK_PROPS)
     ├── utils.js        # Pure helpers: collision, coordinates, visibility, reach checks
     ├── world.js        # World class: terrain generation, block get/set, adjacency
@@ -32,15 +32,14 @@ mine/
     ├── audio.js        # Web Audio API sound effects (jump, mining, UI, coin, explosion)
     ├── fireworks.js    # Firework particle effects for celebrations
     ├── jackpot.js      # Jackpot block: coin burst particles on player overlap
-    ├── sky.js          # Dynamic sky gradient and sun rendering data based on altitude (pure calculations)
+    ├── sky.js          # Dynamic sky colors, sun/moon orbit, and star rendering
     ├── save.js         # Save/load system using localStorage with autosave functionality
     ├── tnt.js          # TNT explosion logic, timers, knockback, and block destruction
     └── world_share.js  # World export/import as PNG images (1 tile = 1 pixel)
-```
 
 ## Module Dependency Graph
 
-```
+
 main.js
 ├── constants.js
 ├── utils.js
@@ -58,7 +57,6 @@ main.js
 ├── save.js
 ├── tnt.js (imports: constants, utils)
 └── world_share.js (imports: constants, world)
-```
 
 ## Key Constants (constants.js)
 
@@ -109,8 +107,10 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - Plays coin sound effect
 
 ### Sky (sky.js)
-- Altitude-based gradient: stratosphere (top) -> surface (middle) -> underground (bottom)
-- Smooth color blending at world wrap edges
+- Time-based day/night cycle (normalized time 0.0-1.0)
+- Non-linear color gradients: Day -> Golden Hour -> Sunset -> Night -> Sunrise
+- Celestial bodies: Sun (changes color at horizon) and Moon (opposite phase)
+- Star field generation with dynamic opacity (twinkling/fading)
 
 ### Audio (audio.js)
 - SoundManager singleton: playJump, playMine, playPlace, playCoin, playExplosion, playBigJump
@@ -150,14 +150,17 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 
 ## Game Loop (main.js)
 
-1. `update(dt)`: player physics, camera, input handling, crafting check, jackpot check, fireworks, TNT timers, sapling growth
+1. `update(dt)`:
+   - Player physics, camera, input handling
+   - Crafting and Jackpot checks
+   - Fireworks updates
+   - TNT timers and Sapling growth
 2. `draw()`:
-   - Sky gradient rendering
-   - Sun rendering (using render data from sky.js)
-   - Visible tiles
-   - Player
-   - Particles
-   - Cursor highlight
+   - Day/Night cycle calculation (15s duration)
+   - Sky gradient rendering (time-based)
+   - Stars, Sun, and Moon rendering
+   - Visible tiles and Player
+   - Particles and Cursor highlight
 
 ## Input Handling (input.js)
 
