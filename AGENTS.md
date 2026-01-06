@@ -12,14 +12,13 @@ AI-readable project specification for Block Craft 2D XL, a browser-based 2D Mine
 
 ## Directory Structure
 
-
 mine/
 ├── index.html          # Entry HTML with canvas and UI scaffolding
 ├── AGENTS.md           # This file (AI-readable project spec)
 ├── styles/
 │   └── style.css       # Responsive layout, pixel-art viewport, hotbar, touch controls
 └── src/
-    ├── main.js         # Game loop, initialization, day/night cycle, camera
+    ├── main.js         # Game entry point, loop, initialization orchestrator
     ├── constants.js    # Block IDs, physics values, block metadata (BLOCKS, BLOCK_PROPS)
     ├── utils.js        # Pure helpers: collision, coordinates, visibility, reach checks
     ├── renderer.js     # Rendering logic: sky, world, entities, and particles
@@ -36,10 +35,11 @@ mine/
     ├── sky.js          # Dynamic sky colors, sun/moon orbit, and star rendering
     ├── save.js         # Save/load system using localStorage with autosave functionality
     ├── tnt.js          # TNT explosion logic, timers, knockback, and block destruction
+    ├── sapling_manager.js # Sapling growth timers and tree generation logic
+    ├── ui_manager.js   # DOM event handling (Start screen, World Share modals)
     └── world_share.js  # World export/import as PNG images (1 tile = 1 pixel)
 
 ## Module Dependency Graph
-
 
 main.js
 ├── constants.js
@@ -51,13 +51,14 @@ main.js
 ├── crafting.js
 ├── actions.js
 ├── world.js
-├── player.js (imports: utils, audio, constants)
-├── renderer.js (imports: utils, constants, sky, jackpot, fireworks)
-├── jackpot.js (imports: constants)
+├── player.js
+├── renderer.js
+├── jackpot.js
 ├── fireworks.js
 ├── save.js
-├── tnt.js (imports: constants, utils)
-└── world_share.js (imports: constants, world)
+├── tnt.js
+├── sapling_manager.js (imports: constants, utils)
+└── ui_manager.js (imports: save, world_share)
 
 ## Key Constants (constants.js)
 
@@ -101,71 +102,41 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 ### Actions (actions.js)
 - Block breaking: reach check, breakability check, inventory add
 - Block placing: reach check, adjacency check, collision check, inventory consume
-- TNT/Sapling placement triggers timers in main.js
+- TNT/Sapling placement triggers delegation to respective managers via callbacks
 
-### Crafting (crafting.js)
-- Modal UI opens near crafting table
-- Recipe validation against inventory
-- Consumes ingredients, adds result
+### UI Manager (ui_manager.js)
+- Decouples DOM manipulation from game logic
+- **Start Screen**: Handles "Start" and "Continue" buttons
+- **World Share UI**: Manages Export/Import modals and file inputs
+- **Callbacks**: Triggers `onStartGame`, `onLoadGame`, `onImportWorld` in `main.js`
 
-### Jackpot (jackpot.js)
-- Player overlap detection on JACKPOT blocks
-- Emits gold coin burst particles (upward arc, gravity fall)
-- Cooldown prevents rapid re-triggering (800ms)
-- Plays coin sound effect
-
-### Sky (sky.js)
-- Time-based day/night cycle (normalized time 0.0-1.0)
-- Non-linear color gradients: Day -> Golden Hour -> Sunset -> Night -> Sunrise
-- Celestial bodies: Sun (changes color at horizon) and Moon (opposite phase)
-- Star field generation with dynamic opacity (twinkling/fading)
-
-### Audio (audio.js)
-- SoundManager singleton: playJump, playMine, playPlace, playCoin, playExplosion, playBigJump
-- Web Audio API oscillator-based synthesis
-
-### Save/Load (save.js)
-- Persists game state to localStorage with base64-encoded world map
-- `loadGameState()`: Standalone function to load saved state (no dependencies)
-- `createSaveManager()`: Factory function creating save manager with dependencies
-  - `saveGameState()`: Saves world, player, inventory, and timers (TNT/saplings)
-  - `applySavedState()`: Restores saved state to game objects
-  - `startAutosave()`: Begins autosave interval (5s)
-- Includes Uint8Array ↔ base64 conversion utilities for compact map storage
+### Sapling Manager (sapling_manager.js)
+- Manages growth timers for all active saplings
+- `growSapling()`: Generates tree structure (trunk + leaves)
+- `liftPlayerAbove()`: Prevents player from getting stuck inside growing trees
+- State persistence: provides timer data to Save Manager
 
 ### TNT System (tnt.js)
-- `createTNTManager()`: Factory function creating TNT manager
-  - `update(dt)`: Decrements fuse timers, triggers explosions when timer expires
-  - `onBlockPlaced(x, y)`: Starts 3s fuse timer when TNT placed
-  - `getTimers()`: Returns timer array (for save/load)
-  - `loadTimers()`: Restores timers from saved state
-- `explodeTNT()`: Handles explosion logic
-  - Destroys blocks in radius (circular pattern)
-  - Applies knockback to player (inverse-square falloff)
-  - Adds destroyed blocks to inventory
-  - Creates explosion particles and sound
+- Manages fuse timers and explosion physics
+- `explodeTNT()`: Destroys blocks, applies player knockback, spawns particles
+- State persistence: provides timer data to Save Manager
+
+### Save/Load (save.js)
+- Persists game state to localStorage
+- Aggregates state from: World, Player, Inventory, TNT Manager, Sapling Manager
+- `startAutosave()`: Periodic saving (5s)
 
 ### World Share (world_share.js)
-- `exportWorldToImage()`: Converts world map to PNG image (1 tile = 1 pixel)
-  - Each block type mapped to unique color (RGB)
-  - Returns PNG blob for download
-- `importWorldFromImage()`: Loads world from PNG image file
-  - Scales image to world dimensions using nearest-neighbor
-  - Converts pixel colors to nearest block types (Euclidean distance)
-- `downloadBlob()`: Triggers browser download for blob
-- `findSpawnPosition()`: Locates suitable spawn point in imported world (center-top, searches for ground)
-- Pre-computed RGB lookup table for performance
+- `exportWorldToImage()`: Converts world map to PNG (1 tile = 1 pixel)
+- `importWorldFromImage()`: Converts PNG back to world map data
+- Used by `ui_manager.js`
 
-## Game Loop (main.js)
-
-1. `update(dt)`:
-   - Player physics, camera, input handling
-   - Crafting and Jackpot checks
-   - Fireworks updates
-   - TNT timers and Sapling growth
-2. `draw()`:
-   - Delegates to `renderer.drawGame()`
-   - Passes world state, camera, and input to renderer
+### Game Loop (main.js)
+- **Orchestrator**: Initializes all subsystems (World, Player, Managers)
+- **Update Loop**:
+  - Updates Physics, Camera, Input
+  - Delegates specific updates to `tntManager`, `saplingManager`, `jackpot`, `fireworks`
+- **Draw Loop**: Calls `renderer.drawGame()`
 
 ## Input Handling (input.js)
 
@@ -178,17 +149,6 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 | 1-9 Keys | Select hotbar slot |
 | Touch (mobile) | Virtual controls |
 
-## Special Blocks
-
-| Block | Behavior |
-|-------|----------|
-| TNT | Explodes after 3s, radius 8 tiles, adds drops to inventory |
-| SAPLING | Grows into tree after 6s (4 wood trunk + leaves canopy) |
-| JUMP_PAD | Boosts player jump by 1.8x |
-| JACKPOT | Emits coin particles on touch, plays sound |
-| CRAFTING_TABLE | Opens crafting modal when nearby |
-| BEDROCK | Unbreakable |
-
 ## Coding Conventions
 
 - All source comments in English
@@ -196,7 +156,3 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - ES modules, no bundler
 - Pure functions preferred in utils.js
 - Class-based for stateful entities (Player, World)
-
-## Loading
-
-No build step. Open `index.html` directly or via static server. ES module loading from `src/main.js`.
