@@ -1,17 +1,10 @@
 /**
  * 2D Minecraft Clone Script (Inventory + Auto-Climb Edition)
- *
- * Architecture:
- * - Constants: Block definitions, Physics settings.
- * - Inventory: Manages item counts.
- * - TextureGen: Procedural texture generation.
- * - Game Engine: Loop, Physics, Collision, Input.
- *
- * Dependencies: utils.js, audio.js, constants.js, texture_gen.js
+ * Refactored Version
  */
 
 import {
-    clamp, smoothCamera, clampCamera,
+    clamp, smoothCamera,
     screenToWorld,
     rectsIntersect, isWithinReach,
     isBlockSolid, isBlockTransparent, isBlockBreakable, getBlockMaterialType,
@@ -39,13 +32,17 @@ import { drawJackpotParticles, handleJackpotOverlap, updateJackpots } from './ja
 import { handleAcceleratorOverlap, updateAccelerators } from './accelerator.js';
 import { createSaveManager, loadGameState } from './save.js';
 import { createTNTManager } from './tnt.js';
-import { exportWorldToImage, importWorldFromImage, downloadBlob, findSpawnPosition } from './world_share.js';
+import { findSpawnPosition } from './world_share.js';
 import { drawGame } from './renderer.js';
+
+// --- New Modules ---
+import { createSaplingManager } from './sapling_manager.js';
+import { initUI } from './ui_manager.js';
 
 // --- Texture Generator ---
 let textures = {};
 
-// --- Main Loop ---
+// --- Main Loop Variables ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let world, player;
@@ -54,31 +51,28 @@ let cameraX = 0, cameraY = 0;
 let input;
 let actions;
 let tntManager = null;
-const saplingTimers = [];
-const SAPLING_GROWTH_TIME = 6000;
+let saplingManager = null;
 let saveManager = null;
 
 // Day/Night Cycle Settings
-const DAY_DURATION_MS = 360000; // 6 minutes per day
+const DAY_DURATION_MS = 360000;
 
-// Logical (CSS) canvas dimensions for coordinate calculations
+// Logical (CSS) canvas dimensions
 let logicalWidth = window.innerWidth;
 let logicalHeight = window.innerHeight;
 
+// --- Initialization ---
 function resize() {
     const dpr = window.devicePixelRatio || 1;
     logicalWidth = window.innerWidth;
     logicalHeight = window.innerHeight;
 
-    // Set canvas resolution to match physical pixels
     canvas.width = logicalWidth * dpr;
     canvas.height = logicalHeight * dpr;
 
-    // Set CSS size to match logical pixels
     canvas.style.width = logicalWidth + 'px';
     canvas.style.height = logicalHeight + 'px';
 
-    // Scale context so drawing uses logical coordinates
     ctx.scale(dpr, dpr);
     ctx.imageSmoothingEnabled = false;
 
@@ -92,15 +86,20 @@ window.addEventListener('resize', resize);
 function init(savedState = null) {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
     player = new Player(world, addToInventory);
-    textures = generateTextures(); // Initialize textures here
+    textures = generateTextures();
 
-    // Initialize TNT Manager
+    // Initialize Managers
     tntManager = createTNTManager({
         world,
         player,
         sounds,
         addToInventory,
         createExplosionParticles
+    });
+
+    saplingManager = createSaplingManager({
+        world,
+        player
     });
 
     // Initialize Actions
@@ -137,7 +136,7 @@ function init(savedState = null) {
             if (type === BLOCKS.TNT) {
                 tntManager.onBlockPlaced(x, y);
             } else if (type === BLOCKS.SAPLING) {
-                saplingTimers.push({ x, y, timer: SAPLING_GROWTH_TIME });
+                saplingManager.addSapling(x, y);
             }
         }
     });
@@ -156,60 +155,65 @@ function init(savedState = null) {
         player,
         timers: {
             tnt: tntManager.getTimers(),
-            saplings: saplingTimers
+            saplings: saplingManager.getTimers()
         },
         inventory: {
             getInventoryState,
             loadInventoryState
         },
-        utils: {
-            clamp
-        },
-        constants: {
-            TILE_SIZE
-        }
+        utils: { clamp },
+        constants: { TILE_SIZE }
     });
 
+    // Restore state if provided
     if (savedState) {
         saveManager.applySavedState(savedState);
+        // Sapling timers are reference based in getTimers, 
+        // but if save structure differs, explicit restore might be needed.
+        // Assuming applySavedState handles restoring the array content linked via getTimers.
+        if (savedState.timers && savedState.timers.saplings) {
+            saplingManager.restoreTimers(savedState.timers.saplings);
+        }
     } else {
         updateInventoryUI();
     }
     resize();
 
-    // Initialize camera to center on player immediately
+    // Center camera
     cameraX = player.getCenterX() - logicalWidth / 2;
     cameraY = player.getCenterY() - logicalHeight / 2;
 
     saveManager.startAutosave();
     saveManager.saveGameState();
-    requestAnimationFrame(loop);
+    
+    // Ensure loop is only running once
+    // (If init is called multiple times, we rely on requestAnimationFrame mechanism)
+    if (lastTime === 0) {
+        requestAnimationFrame(loop);
+    }
 }
 
+// --- Update Loop ---
 function update(dt) {
     if (!player) return;
     player.update(input, dt);
 
-    // Camera with smooth following
+    // Camera Logic
     const targetCamX = player.getCenterX() - logicalWidth / 2;
     const targetCamY = player.getCenterY() - logicalHeight / 2;
 
-    // Handle horizontal wrapping: if player wrapped around, adjust camera to follow smoothly
+    // Horizontal Wrapping
     const worldWidthPixels = world.width * TILE_SIZE;
     const cameraDiff = targetCamX - cameraX;
     if (Math.abs(cameraDiff) > worldWidthPixels / 2) {
-        // Player wrapped, adjust camera to maintain continuity
-        if (cameraDiff > 0) {
-            cameraX += worldWidthPixels;
-        } else {
-            cameraX -= worldWidthPixels;
-        }
+        if (cameraDiff > 0) cameraX += worldWidthPixels;
+        else cameraX -= worldWidthPixels;
     }
 
     cameraX = smoothCamera(cameraX, targetCamX, CAMERA_SMOOTHING);
     cameraY = targetCamY;
 
-    // Interaction
+    // Input Handling
     if (input.mouse.leftDown) {
         if (!isCraftingOpen) {
             actions.handlePointer(input.mouse.x, input.mouse.y);
@@ -217,108 +221,22 @@ function update(dt) {
         input.mouse.leftDown = false;
     }
 
-    // --- Check Crafting ---
+    // System Updates
     updateCrafting(player, world, textures);
-
-    // --- Jackpot Blocks ---
+    
     handleJackpotOverlap(player, world, sounds);
     updateJackpots(dt);
 
-    // --- Accelerator Blocks ---
     handleAcceleratorOverlap(player, world);
     updateAccelerators(dt);
 
-    // --- Update Fireworks ---
     updateFireworks(dt, world, cameraX, cameraY, { width: logicalWidth, height: logicalHeight });
-
-    // --- Update TNT ---
+    
     tntManager.update(dt);
-
-    // --- Update Sapling Growth ---
-    for (let i = saplingTimers.length - 1; i >= 0; i--) {
-        const sapling = saplingTimers[i];
-        if (world.getBlock(sapling.x, sapling.y) !== BLOCKS.SAPLING) {
-            saplingTimers.splice(i, 1);
-            continue;
-        }
-        sapling.timer -= dt;
-        if (sapling.timer <= 0) {
-            growSapling(sapling.x, sapling.y);
-            saplingTimers.splice(i, 1);
-        }
-    }
+    saplingManager.update(dt);
 }
 
-function liftPlayerAbove(blockRect) {
-    const targetY = blockRect.y - player.height - 0.1;
-    if (player.y > targetY) {
-        player.y = targetY;
-    }
-    player.vy = 0;
-    player.grounded = true;
-
-    const startX = Math.floor(player.x / TILE_SIZE);
-    const endX = Math.floor((player.x + player.width) / TILE_SIZE);
-    const startY = Math.floor(player.y / TILE_SIZE);
-    const endY = Math.floor((player.y + player.height) / TILE_SIZE);
-
-    let adjustedTop = null;
-
-    for (let y = startY; y <= endY; y++) {
-        for (let x = startX; x <= endX; x++) {
-            const block = world.getBlock(x, y);
-            if (!isBlockSolid(block, BLOCK_PROPS)) continue;
-
-            if (isBlockBreakable(block, BLOCK_PROPS)) {
-                world.setBlock(x, y, BLOCKS.AIR);
-            } else {
-                const candidateTop = y * TILE_SIZE;
-                adjustedTop = adjustedTop === null ? candidateTop : Math.min(adjustedTop, candidateTop);
-            }
-        }
-    }
-
-    if (adjustedTop !== null) {
-        player.y = adjustedTop - player.height - 0.1;
-    }
-}
-
-function placeGrowthBlock(x, y, type) {
-    if (x < 0 || x >= world.width || y < 0 || y >= world.height) return;
-
-    const existing = world.getBlock(x, y);
-    if (BLOCK_PROPS[existing] && BLOCK_PROPS[existing].unbreakable) return;
-
-    if (existing !== BLOCKS.AIR && existing !== BLOCKS.SAPLING) {
-        world.setBlock(x, y, BLOCKS.AIR);
-    }
-
-    const blockRect = { x: x * TILE_SIZE, y: y * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
-    if (rectsIntersect(player.getRect(), blockRect)) {
-        liftPlayerAbove(blockRect);
-    }
-
-    world.setBlock(x, y, type);
-}
-
-function growSapling(x, y) {
-    const height = 4;
-    const placements = [];
-    for (let i = 0; i < height; i++) {
-        placements.push({ x, y: y - i, type: BLOCKS.WOOD });
-    }
-
-    const topY = y - (height - 1);
-    for (let lx = x - 2; lx <= x + 2; lx++) {
-        for (let ly = topY - 2; ly <= topY; ly++) {
-            if (Math.abs(lx - x) === 2 && Math.abs(ly - topY) === 2) continue;
-            placements.push({ x: lx, y: ly, type: BLOCKS.LEAVES });
-        }
-    }
-
-    placements.forEach(({ x: px, y: py, type }) => placeGrowthBlock(px, py, type));
-}
-
+// --- Draw Loop ---
 function draw() {
     drawGame(ctx, {
         world,
@@ -334,130 +252,51 @@ function draw() {
 }
 
 function loop(timestamp) {
-  let dt = timestamp - lastTime;
-  lastTime = timestamp;
+    let dt = timestamp - lastTime;
+    lastTime = timestamp;
+    dt = Math.min(dt, 50); // Cap delta time
 
-  // Clamp dt to avoid huge physics jumps after tab switching
-  dt = Math.min(dt, 50); // 50ms ~= 3 frames at 60fps
-
-  update(dt);
-  draw();
-  requestAnimationFrame(loop);
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
 }
 
-function hideStartScreen() {
-    const screen = document.getElementById('start-screen');
-    if (screen) screen.style.display = 'none';
-}
-
-function refreshContinueButton() {
-    const savedState = loadGameState();
-    const continueBtn = document.getElementById('continue-btn');
-    if (!continueBtn) return;
-    continueBtn.style.display = savedState ? 'inline-block' : 'none';
-}
-
-refreshContinueButton();
-
-// Start Screen Buttons
-document.getElementById('start-btn').addEventListener('click', () => {
-    hideStartScreen();
-    sounds.init();
-    init();
-});
-
-const continueButton = document.getElementById('continue-btn');
-if (continueButton) {
-    continueButton.addEventListener('click', () => {
-        const savedState = loadGameState();
-        if (!savedState) return;
-        hideStartScreen();
+// --- Initialize UI & Event Listeners ---
+initUI({
+    onStartGame: () => {
+        sounds.init();
+        init();
+    },
+    onLoadGame: (savedState) => {
         sounds.init();
         init(savedState);
-    });
-}
-
-// World Share Modal
-const worldModal = document.getElementById('world-modal');
-const worldBtn = document.getElementById('world-btn');
-const worldCloseBtn = document.getElementById('world-close-btn');
-const exportBtn = document.getElementById('export-btn');
-const importBtn = document.getElementById('import-btn');
-const importFile = document.getElementById('import-file');
-
-function showWorldModal() {
-    worldModal.style.display = 'block';
-}
-
-function hideWorldModal() {
-    worldModal.style.display = 'none';
-}
-
-worldBtn.addEventListener('click', showWorldModal);
-worldCloseBtn.addEventListener('click', hideWorldModal);
-
-// Export world to image
-exportBtn.addEventListener('click', async () => {
-    const savedState = loadGameState();
-    if (!savedState || !savedState.world || !savedState.world.map) {
-        alert('セーブデータがありません');
-        return;
-    }
-
-    // Decode base64 to Uint8Array
-    const binary = atob(savedState.world.map);
-    const worldMap = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-        worldMap[i] = binary.charCodeAt(i);
-    }
-
-    const blob = await exportWorldToImage(worldMap, savedState.world.width, savedState.world.height);
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-    downloadBlob(blob, `world_${timestamp}.png`);
-});
-
-// Import world from image
-importBtn.addEventListener('click', async () => {
-    const file = importFile.files[0];
-    if (!file) {
-        alert('えを えらんでね');
-        return;
-    }
-
-    try {
-        const worldMap = await importWorldFromImage(file);
-
-        // Load inventory from existing save if available
+    },
+    onImportWorld: (worldMap) => {
+        sounds.init();
+        
+        // Load existing inventory state to preserve it
         const savedState = loadGameState();
         const inventoryState = savedState?.inventory || null;
 
-        hideWorldModal();
-        hideStartScreen();
-        sounds.init();
-
-        // Initialize game
+        // Reset game
         init();
 
-        // Replace world map
+        // Override map
         world.map = worldMap;
 
-        // Restore inventory if available
+        // Restore inventory
         if (inventoryState) {
             loadInventoryState(inventoryState);
         }
 
-        // Find spawn position and teleport player
+        // Find spawn and teleport
         const spawn = findSpawnPosition(worldMap, WORLD_WIDTH, WORLD_HEIGHT);
         player.x = spawn.x * TILE_SIZE;
         player.y = spawn.y * TILE_SIZE;
         player.vx = 0;
         player.vy = 0;
 
-        // Update camera
         cameraX = player.getCenterX() - logicalWidth / 2;
         cameraY = player.getCenterY() - logicalHeight / 2;
-
-    } catch (err) {
-        alert('この えでは ワールドを つくれないよ' + err.message);
     }
 });
