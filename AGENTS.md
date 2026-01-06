@@ -22,6 +22,7 @@ mine/
     ├── main.js         # Game loop, initialization, day/night cycle, camera
     ├── constants.js    # Block IDs, physics values, block metadata (BLOCKS, BLOCK_PROPS)
     ├── utils.js        # Pure helpers: collision, coordinates, visibility, reach checks
+    ├── renderer.js     # Rendering logic: sky, world, entities, and particles
     ├── world.js        # World class: terrain generation, block get/set, adjacency
     ├── player.js       # Player class: movement, physics, collision, rendering
     ├── input.js        # Keyboard, mouse, touch input bindings
@@ -51,7 +52,7 @@ main.js
 ├── actions.js
 ├── world.js
 ├── player.js (imports: utils, audio, constants)
-├── sky.js (imports: utils)
+├── renderer.js (imports: utils, constants, sky, jackpot, fireworks)
 ├── jackpot.js (imports: constants)
 ├── fireworks.js
 ├── save.js
@@ -89,6 +90,13 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - Procedural terrain generation with biomes
 - Ore distribution at depth layers
 - Block get/set with bounds checking
+
+### Renderer (renderer.js)
+- Handles all canvas drawing operations
+- **Sky**: Draws gradients, stars, sun, and moon based on time/altitude
+- **World**: Renders visible tiles with optimization (clipping)
+- **Entities**: Draws player, particles (fireworks, jackpots)
+- **UI**: Renders cursor highlight and overlays
 
 ### Actions (actions.js)
 - Block breaking: reach check, breakability check, inventory add
@@ -156,11 +164,8 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
    - Fireworks updates
    - TNT timers and Sapling growth
 2. `draw()`:
-   - Day/Night cycle calculation (15s duration)
-   - Sky gradient rendering (time-based)
-   - Stars, Sun, and Moon rendering
-   - Visible tiles and Player
-   - Particles and Cursor highlight
+   - Delegates to `renderer.drawGame()`
+   - Passes world state, camera, and input to renderer
 
 ## Input Handling (input.js)
 

@@ -16,8 +16,7 @@ import {
     rectsIntersect, isWithinReach,
     isBlockSolid, isBlockTransparent, isBlockBreakable, getBlockMaterialType,
     worldToTile,
-    hasAdjacentBlock,
-    calculateVisibleTileRange
+    hasAdjacentBlock
 } from './utils.js';
 import { sounds } from './audio.js';
 import {
@@ -32,21 +31,16 @@ import {
     getInventoryState, loadInventoryState
 } from './inventory.js';
 import { isCraftingOpen, updateCrafting } from './crafting.js';
-import { update as updateFireworks, draw as drawFireworks, createExplosionParticles } from './fireworks.js';
+import { update as updateFireworks, createExplosionParticles } from './fireworks.js';
 import { createActions } from './actions.js';
 import { World } from './world.js';
 import { Player } from './player.js';
-import { 
-    getSkyGradientColors, 
-    getSunRenderData, 
-    getMoonRenderData,
-    getStarRenderData
-} from './sky.js';
 import { drawJackpotParticles, handleJackpotOverlap, updateJackpots } from './jackpot.js';
 import { handleAcceleratorOverlap, updateAccelerators } from './accelerator.js';
 import { createSaveManager, loadGameState } from './save.js';
 import { createTNTManager } from './tnt.js';
 import { exportWorldToImage, importWorldFromImage, downloadBlob, findSpawnPosition } from './world_share.js';
+import { drawGame } from './renderer.js';
 
 // --- Texture Generator ---
 let textures = {};
@@ -325,133 +319,18 @@ function growSapling(x, y) {
     placements.forEach(({ x: px, y: py, type }) => placeGrowthBlock(px, py, type));
 }
 
-// main.js の draw() 関数を以下のように修正
-
 function draw() {
-    if (!world) return;
-    
-    // --- 1. Calculate Time & Altitude ---
-    const normalizedTime = (Date.now() % DAY_DURATION_MS) / DAY_DURATION_MS;
-    
-    // Altitude: 0.0 (Top) to 1.0 (Bottom)
-    // Player Y is in pixels, divide by total world height in pixels
-    let altitude = 0.5; // Default if player not ready
-    if (player) {
-        altitude = player.getCenterY() / (world.height * TILE_SIZE);
-    }
-    // Clamp altitude to 0-1 just in case
-    altitude = Math.max(0, Math.min(1, altitude));
-
-
-    // --- 2. Sky Gradient ---
-    // Pass both time and altitude
-    const { top: skyTop, bottom: skyBottom } = getSkyGradientColors(normalizedTime, altitude);
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, logicalHeight);
-    gradient.addColorStop(0, skyTop);
-    gradient.addColorStop(1, skyBottom);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, logicalWidth, logicalHeight);
-
-
-    // --- 3. Stars ---
-    const stars = getStarRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
-    ctx.fillStyle = '#FFFFFF';
-    stars.forEach(star => {
-        ctx.globalAlpha = star.opacity;
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        ctx.fill();
+    drawGame(ctx, {
+        world,
+        player,
+        cameraX,
+        cameraY,
+        logicalWidth,
+        logicalHeight,
+        textures,
+        input,
+        dayDuration: DAY_DURATION_MS
     });
-    ctx.globalAlpha = 1.0; // Reset alpha
-
-
-    // --- 4. Celestial Bodies (Sun & Moon) ---
-    const sun = getSunRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
-    const moon = getMoonRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
-    
-    const bodies = [sun, moon];
-
-    bodies.forEach(body => {
-        if (body.isVisible) {
-            // Apply opacity based on altitude (fade out underground)
-            ctx.globalAlpha = body.opacity !== undefined ? body.opacity : 1.0;
-
-            ctx.beginPath();
-            ctx.arc(body.x, body.y, body.radius, 0, Math.PI * 2);
-            ctx.fillStyle = body.color;
-            ctx.shadowColor = body.shadow.color;
-            ctx.shadowBlur = body.shadow.blur;
-            ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.closePath();
-
-            // Simple Moon Craters
-            if (body.type === 'moon') {
-                ctx.fillStyle = 'rgba(0,0,0,0.1)';
-                ctx.beginPath();
-                ctx.arc(body.x - 8, body.y - 5, 6, 0, Math.PI * 2);
-                ctx.arc(body.x + 10, body.y + 8, 4, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            
-            ctx.globalAlpha = 1.0; // Reset alpha
-        }
-    });
-
-    ctx.save();
-    ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
-
-    const { startX, endX, startY, endY } = calculateVisibleTileRange(
-        cameraX, cameraY, logicalWidth, logicalHeight, TILE_SIZE
-    );
-
-    const NO_SHADOW_BLOCKS = new Set([
-        BLOCKS.CLOUD,
-        BLOCKS.FIREWORK,
-        BLOCKS.JUMP_PAD,
-        BLOCKS.TNT,
-        BLOCKS.SAPLING,
-        BLOCKS.JACKPOT,
-        BLOCKS.ACCELERATOR_LEFT,
-        BLOCKS.ACCELERATOR_RIGHT
-    ]);
-
-    for (let y = startY; y < endY; y++) {
-        for (let x = startX; x < endX; x++) {
-            // Handle vertical wrapping for block rendering
-            const normalizedY = (y % world.height + world.height) % world.height;
-            const block = world.getBlock(x, normalizedY);
-
-            if (block !== BLOCKS.AIR && textures[block]) {
-                ctx.drawImage(textures[block], x * TILE_SIZE, y * TILE_SIZE);
-                
-                if (!NO_SHADOW_BLOCKS.has(block)) {
-                    const aboveY = (normalizedY - 1 + world.height) % world.height;
-                    const neighborAbove = world.getBlock(x, aboveY);
-                    if (neighborAbove !== BLOCKS.AIR && !isBlockTransparent(neighborAbove, BLOCK_PROPS)) {
-                        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    }
-                }
-            }
-        }
-    }
-
-    player.draw(ctx);
-
-    drawJackpotParticles(ctx);
-    drawFireworks(ctx);
-
-    // Highlight cursor
-    const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY);
-    const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
-    if (isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-    }
-    ctx.restore();
 }
 
 function loop(timestamp) {
