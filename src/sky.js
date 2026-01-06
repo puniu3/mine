@@ -30,7 +30,6 @@ function lerpColor(c1, c2, t) {
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-// 元のロジックを内部関数として定義（端の処理なし）
 function getRawSkyGradientColors(altitude) {
     // altitude: 0 = top of world (high sky), 1 = bottom (deep underground)
     const surfaceLower = 0.45;
@@ -55,19 +54,16 @@ function getRawSkyGradientColors(altitude) {
     return SKY_BANDS.surface;
 }
 
-// 公開する関数：端の処理を追加
 export function getSkyGradientColors(altitude) {
-    // 端からどれくらいの範囲でブレンドするか (0.0〜0.15, 0.85〜1.0 の範囲で補間)
+    // Smooth blending at the edges of the world (looping)
     const LOOP_SMOOTH_MARGIN = 0.15; 
     
     const baseColor = getRawSkyGradientColors(altitude);
 
-    // 上端付近 (0.0): 下端 (1.0) の色を混ぜる
+    // Blend bottom color at top edge
     if (altitude < LOOP_SMOOTH_MARGIN) {
         const otherColor = getRawSkyGradientColors(1.0);
-        // t は端(0)で0、範囲終了(margin)で1
         const t = altitude / LOOP_SMOOTH_MARGIN;
-        // 端で50%ブレンド、範囲終了で0%ブレンド（元の色に戻る）
         const blendFactor = 0.5 * (1 - t);
         
         return {
@@ -76,12 +72,10 @@ export function getSkyGradientColors(altitude) {
         };
     }
 
-    // 下端付近 (1.0): 上端 (0.0) の色を混ぜる
+    // Blend top color at bottom edge
     if (altitude > 1.0 - LOOP_SMOOTH_MARGIN) {
         const otherColor = getRawSkyGradientColors(0.0);
-        // t は端(1)で0、範囲終了(1-margin)で1
         const t = (1.0 - altitude) / LOOP_SMOOTH_MARGIN;
-        // 端で50%ブレンド、範囲終了で0%ブレンド
         const blendFactor = 0.5 * (1 - t);
 
         return {
@@ -90,6 +84,62 @@ export function getSkyGradientColors(altitude) {
         };
     }
 
-    // それ以外の範囲は元の色をそのまま返す
     return baseColor;
+}
+
+/**
+ * Calculates the sun's Y position on screen based on player altitude.
+ * Assumes a looped world where top (0.0) connects to bottom (1.0).
+ * * @param {number} altitude - Normalized altitude (0.0 to 1.0).
+ * @param {number} viewHeight - The logical height of the viewport.
+ * @returns {number} The Y coordinate for the sun center.
+ */
+export function getSunViewPosition(altitude, viewHeight) {
+    // Adjusted Sun Position:
+    // Placed at 0.25 (Mid-Sky) instead of 0.0.
+    // Since the world wraps (0.0 connects to 1.0), placing it at 0.25 keeps it
+    // visible from the Surface (0.5) but maximizes distance from Deep Underground (0.75-1.0).
+    const SUN_ALTITUDE = 0.25;
+
+    // Adjusted Scale:
+    // Reduced from 4.0 to 1.6. 
+    // This wider FOV allows the sun to be seen from the surface (distance 0.25),
+    // but ensures it goes off-screen when the player moves underground (distance > 0.35).
+    const PARALLAX_SCALE = 1.6;
+
+    // Ensure altitude is within 0-1
+    let normAlt = ((altitude % 1) + 1) % 1;
+
+    let diff = SUN_ALTITUDE - normAlt;
+
+    // Shortest path on the torus (wrap around 0.5)
+    if (diff > 0.5) diff -= 1.0;
+    if (diff < -0.5) diff += 1.0;
+
+    const offset = diff * viewHeight * PARALLAX_SCALE;
+    return (viewHeight / 2) + offset;
+}
+
+/**
+ * Calculates all rendering data for the sun.
+ * Returns a data object to keep the display logic pure.
+ */
+export function getSunRenderData(altitude, screenWidth, screenHeight) {
+    // Calculate vertical position
+    const sunY = getSunViewPosition(altitude, screenHeight);
+    
+    const SUN_RADIUS = 60;
+    const isVisible = sunY > -SUN_RADIUS * 2 && sunY < screenHeight + SUN_RADIUS * 2;
+
+    return {
+        isVisible,
+        x: screenWidth * 0.8,
+        y: sunY,
+        radius: SUN_RADIUS,
+        color: '#FFFFA0',
+        shadow: {
+            color: '#FFFFFF',
+            blur: 40
+        }
+    };
 }

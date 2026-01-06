@@ -32,7 +32,7 @@ mine/
     ├── audio.js        # Web Audio API sound effects (jump, mining, UI, coin, explosion)
     ├── fireworks.js    # Firework particle effects for celebrations
     ├── jackpot.js      # Jackpot block: coin burst particles on player overlap
-    ├── sky.js          # Dynamic sky gradient based on altitude (surface/underground/stratosphere)
+    ├── sky.js          # Dynamic sky gradient and sun rendering data based on altitude (pure calculations)
     ├── save.js         # Save/load system using localStorage with autosave functionality
     ├── tnt.js          # TNT explosion logic, timers, knockback, and block destruction
     └── world_share.js  # World export/import as PNG images (1 tile = 1 pixel)
@@ -151,7 +151,13 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 ## Game Loop (main.js)
 
 1. `update(dt)`: player physics, camera, input handling, crafting check, jackpot check, fireworks, TNT timers, sapling growth
-2. `draw()`: sky gradient, visible tiles, player, particles, cursor highlight
+2. `draw()`:
+   - Sky gradient rendering
+   - Sun rendering (using render data from sky.js)
+   - Visible tiles
+   - Player
+   - Particles
+   - Cursor highlight
 
 ## Input Handling (input.js)
 

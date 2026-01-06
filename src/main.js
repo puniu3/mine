@@ -36,7 +36,7 @@ import { update as updateFireworks, draw as drawFireworks, createExplosionPartic
 import { createActions } from './actions.js';
 import { World } from './world.js';
 import { Player } from './player.js';
-import { getSkyGradientColors } from './sky.js';
+import { getSkyGradientColors, getSunViewPosition, getSunRenderData } from './sky.js';
 import { drawJackpotParticles, handleJackpotOverlap, updateJackpots } from './jackpot.js';
 import { handleAcceleratorOverlap, updateAccelerators } from './accelerator.js';
 import { createSaveManager, loadGameState } from './save.js';
@@ -319,7 +319,11 @@ function growSapling(x, y) {
 
 function draw() {
     if (!world) return;
-    const altitude = player ? clamp(player.getCenterY() / (world.height * TILE_SIZE), 0, 1) : 0.5;
+    
+    // Calculate altitude normalized to 0-1 range for looping world
+    let altitude = player ? (player.getCenterY() / (world.height * TILE_SIZE)) : 0.5;
+    altitude = ((altitude % 1) + 1) % 1;
+
     const { top: skyTop, bottom: skyBottom } = getSkyGradientColors(altitude);
 
     const gradient = ctx.createLinearGradient(0, 0, 0, logicalHeight);
@@ -328,15 +332,27 @@ function draw() {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
+    // Sun rendering
+    const sun = getSunRenderData(altitude, logicalWidth, logicalHeight);
+
+    if (sun.isVisible) {
+        ctx.beginPath();
+        ctx.arc(sun.x, sun.y, sun.radius, 0, Math.PI * 2);
+        ctx.fillStyle = sun.color;
+        ctx.shadowColor = sun.shadow.color;
+        ctx.shadowBlur = sun.shadow.blur;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.closePath();
+    }
+
     ctx.save();
     ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
 
-    // Calculate visible range (used by fireworks update too, but we recalculate here for drawing)
     const { startX, endX, startY, endY } = calculateVisibleTileRange(
         cameraX, cameraY, logicalWidth, logicalHeight, TILE_SIZE
     );
 
-    // Blocks that should not be darkened when under other blocks
     const NO_SHADOW_BLOCKS = new Set([
         BLOCKS.CLOUD,
         BLOCKS.FIREWORK,
@@ -350,12 +366,16 @@ function draw() {
 
     for (let y = startY; y < endY; y++) {
         for (let x = startX; x < endX; x++) {
-            const block = world.getBlock(x, y);
+            // Handle vertical wrapping for block rendering
+            const normalizedY = (y % world.height + world.height) % world.height;
+            const block = world.getBlock(x, normalizedY);
+
             if (block !== BLOCKS.AIR && textures[block]) {
                 ctx.drawImage(textures[block], x * TILE_SIZE, y * TILE_SIZE);
-                // Shadow (skip for certain blocks)
+                
                 if (!NO_SHADOW_BLOCKS.has(block)) {
-                    const neighborAbove = world.getBlock(x, y - 1);
+                    const aboveY = (normalizedY - 1 + world.height) % world.height;
+                    const neighborAbove = world.getBlock(x, aboveY);
                     if (neighborAbove !== BLOCKS.AIR && !isBlockTransparent(neighborAbove, BLOCK_PROPS)) {
                         ctx.fillStyle = 'rgba(0,0,0,0.3)';
                         ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -367,13 +387,10 @@ function draw() {
 
     player.draw(ctx);
 
-    // Jackpot Particles
     drawJackpotParticles(ctx);
-
-    // Particles
     drawFireworks(ctx);
 
-    // Highlight
+    // Highlight cursor
     const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY);
     const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
     if (isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
@@ -382,7 +399,6 @@ function draw() {
         ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
     ctx.restore();
-
 }
 
 function loop(timestamp) {
