@@ -250,9 +250,13 @@ export function getBlockMaterialType(blockType, blockProps) {
  * Check if a block is a natural block (spawned naturally, not craftable)
  * @param {number} blockType - Block type ID
  * @param {number} maxNaturalBlockId - Maximum block ID for natural blocks
+ * @param {number} [waterBlockId] - Optional water block ID (considered natural despite higher ID)
  * @returns {boolean} True if natural block
  */
-export function isNaturalBlock(blockType, maxNaturalBlockId) {
+export function isNaturalBlock(blockType, maxNaturalBlockId, waterBlockId) {
+    if (waterBlockId !== undefined && blockType === waterBlockId) {
+        return true;
+    }
     return blockType >= 0 && blockType <= maxNaturalBlockId;
 }
 

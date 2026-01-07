@@ -115,7 +115,8 @@ export function drawGame(ctx, {
         BLOCKS.SAPLING,
         BLOCKS.JACKPOT,
         BLOCKS.ACCELERATOR_LEFT,
-        BLOCKS.ACCELERATOR_RIGHT
+        BLOCKS.ACCELERATOR_RIGHT,
+        BLOCKS.WATER
     ]);
 
     for (let y = startY; y < endY; y++) {
