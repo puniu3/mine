@@ -80,10 +80,15 @@ export class World {
 
     generate() {
         const biomeConfigs = this.getBiomeConfigs();
+        // Generate base noise heights
         const { heights, biomeByColumn } = generateBiomeHeights(this.width, biomeConfigs, 96, 192);
+
+        // Apply deep valleys and steep cliffs
+        this.createExtremeTerrain(heights);
 
         this.ensureAllBiomesPresent(biomeByColumn);
 
+        // Main block placement loop
         for (let x = 0; x < this.width; x++) {
             const h = heights[x];
             const biome = biomeByColumn[x];
@@ -91,6 +96,7 @@ export class World {
 
             for (let y = 0; y < this.height; y++) {
                 if (y > h) {
+                    // Underground generation
                     if (y > h + 5) {
                         const r = Math.random();
                         if (r > 0.985 && y > h + 15) this.setBlock(x, y, BLOCKS.GOLD);
@@ -98,9 +104,11 @@ export class World {
                         else if (Math.random() > 0.95) this.setBlock(x, y, BLOCKS.DIRT);
                         else this.setBlock(x, y, BLOCKS.STONE);
                     } else {
+                        // Sub-surface (dirt layer)
                         this.setBlock(x, y, this.getSubSurfaceBlock(biome, y, h));
                     }
                 } else if (y === h) {
+                    // Surface block
                     this.setBlock(x, y, surfaceBlock);
 
                     const isVegetationGround =
@@ -118,10 +126,13 @@ export class World {
             }
         }
 
+        // Post-processing to make cliffs look rocky
+        this.paintCliffFaces(heights);
+
         this.generateGeology(heights);
         this.generateCaves(heights);
         this.generateStructures(heights, biomeByColumn);
-        this.generateHiddenFeatures(heights, biomeByColumn); // Added hidden features generation
+        this.generateHiddenFeatures(heights, biomeByColumn);
 
         for (let x = 10; x < this.width - 10; x += 50 + Math.floor(Math.random() * 20)) {
             const h = heights[x];
@@ -131,6 +142,109 @@ export class World {
         }
 
         this.generateClouds(heights);
+    }
+
+    /**
+     * Modifies the heightmap to create deep gorges and steep plateaus.
+     * This runs before blocks are placed.
+     */
+    createExtremeTerrain(heights) {
+        const minGap = 100; // Minimum distance between features
+        let lastFeatureX = -minGap;
+
+        for (let x = 20; x < this.width - 20; x++) {
+            if (x - lastFeatureX < minGap) continue;
+
+            const rand = Math.random();
+
+            // Create a Rift (Deep Valley) - 0.3% chance per column
+            if (rand < 0.003) {
+                const width = 12 + Math.floor(Math.random() * 16); // 12-28 wide
+                const depth = 25 + Math.floor(Math.random() * 35); // 25-60 deep
+                
+                // Don't go too deep into void
+                if (heights[x] + depth >= this.height - 10) continue;
+
+                for (let dx = -Math.floor(width / 2); dx <= Math.floor(width / 2); dx++) {
+                    const tx = x + dx;
+                    if (tx >= 0 && tx < this.width) {
+                        // Create a U-shape or V-shape
+                        const dist = Math.abs(dx) / (width / 2);
+                        const shapeFactor = Math.pow(Math.cos(dist * Math.PI / 2), 0.5); 
+                        heights[tx] += Math.floor(depth * shapeFactor);
+                        
+                        // Clamp
+                        heights[tx] = Math.min(this.height - 5, heights[tx]);
+                    }
+                }
+                lastFeatureX = x + width;
+            }
+            // Create a Plateau (Steep Cliff Rise) - 0.3% chance per column
+            else if (rand > 0.997) {
+                const width = 20 + Math.floor(Math.random() * 30); // 20-50 wide
+                const heightRise = 20 + Math.floor(Math.random() * 25); // 20-45 blocks up
+
+                // Don't go too high into sky
+                if (heights[x] - heightRise <= 20) continue;
+
+                for (let dx = -Math.floor(width / 2); dx <= Math.floor(width / 2); dx++) {
+                    const tx = x + dx;
+                    if (tx >= 0 && tx < this.width) {
+                        // Create a steep, almost flat-topped plateau
+                        const dist = Math.abs(dx) / (width / 2);
+                        // Sharp drop-off at edges
+                        if (dist < 0.8) {
+                            heights[tx] -= heightRise;
+                        } else {
+                            // Small smoothing at very edge
+                            heights[tx] -= Math.floor(heightRise * (1 - dist) * 5);
+                        }
+                        
+                        // Clamp
+                        heights[tx] = Math.max(10, heights[tx]);
+                    }
+                }
+                lastFeatureX = x + width;
+            }
+        }
+    }
+
+    /**
+     * Converts the exposed side walls of steep cliffs from Dirt to Stone.
+     */
+    paintCliffFaces(heights) {
+        for (let x = 1; x < this.width - 1; x++) {
+            const h = heights[x];
+            const hLeft = heights[x - 1];
+            const hRight = heights[x + 1];
+
+            // Note: Larger 'h' means deeper/lower y-coordinate. Smaller 'h' means higher up.
+            
+            // Check Left Neighbor: If current column is significantly lower (larger y) than left
+            if (h > hLeft + 2) {
+                // We have a wall on the LEFT side (at x-1) exposed to this column
+                // But specifically, the current column 'x' has air where 'x-1' has blocks.
+                // Wait, logic is: We are at x. x is LOW (Deep). x-1 is HIGH (Peak).
+                // The blocks at x-1 from y=hLeft to y=h are exposed to the right.
+                // We should paint the blocks at x-1.
+                for (let y = hLeft + 1; y <= h; y++) {
+                   if (this.getBlock(x - 1, y) === BLOCKS.DIRT) {
+                       this.setBlock(x - 1, y, BLOCKS.STONE);
+                   }
+                }
+            }
+
+            // Check Right Neighbor: If current column is significantly lower than right
+            if (h > hRight + 2) {
+                // x is LOW. x+1 is HIGH.
+                // The blocks at x+1 from y=hRight to y=h are exposed to the left.
+                for (let y = hRight + 1; y <= h; y++) {
+                    if (this.getBlock(x + 1, y) === BLOCKS.DIRT) {
+                        this.setBlock(x + 1, y, BLOCKS.STONE);
+                    }
+                }
+            }
+        }
     }
 
     generateClouds(heights) {
