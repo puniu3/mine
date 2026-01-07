@@ -1,6 +1,8 @@
 /**
  * Player module
  * Refactored for Fixed Timestep Physics (720Hz)
+ * All physics calculations use Q20.12 fixed-point arithmetic.
+ * Floats appear only at rendering boundaries (getters/draw).
  */
 
 import { clamp, isBlockSolid, isBlockBreakable, getBlockMaterialType, isNaturalBlock } from './utils.js';
@@ -8,30 +10,58 @@ import { sounds } from './audio.js';
 import {
     TILE_SIZE, GRAVITY, JUMP_FORCE, BIG_JUMP_FORCE, BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY,
     UPWARD_COLLISION_VELOCITY_THRESHOLD, MAX_NATURAL_BLOCK_ID,
-    TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET
+    TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET,
+    PHYSICS_DT
 } from './constants.js';
+
+// --- Q20.12 Fixed-point arithmetic ---
+const FP_SHIFT = 12;
+const FP_ONE = 1 << FP_SHIFT; // 4096
+const toFP = (val) => Math.floor(val * FP_ONE);
+const toFloat = (val) => val / FP_ONE;
 
 // --- Physics Constants (720Hz Fixed Step) ---
 const PHYSICS_TPS = 720;
 const FIXED_DT_MS = 1000 / PHYSICS_TPS; // approx 1.38ms
 const BASE_FPS = 60;
 
-// The physics simulation runs at 720Hz, but values (Gravity, Speed) are tuned for 60Hz.
-// We scale the delta-time relative to a 60Hz frame.
-// TIME_SCALE ~= 0.08333
+// Time scale relative to 60Hz frame (~0.08333)
 const FIXED_TIME_SCALE = FIXED_DT_MS / (1000 / BASE_FPS);
 
-// Pre-calculated Physics Factors per Tick
-// Friction: 0.8 per 60Hz frame -> converted to per-tick factor
-const FRICTION_FACTOR = Math.pow(0.8, FIXED_TIME_SCALE);
-const GRAVITY_PER_TICK = GRAVITY * FIXED_TIME_SCALE;
-const BOARD_DECAY_PER_TICK = 15 * (FIXED_DT_MS / 1000);
+// --- Pre-calculated FP Physics Constants ---
+// All physics factors converted to Q20.12 for pure integer arithmetic
 
-// Q20.12 Fixed-point arithmetic constants
-const FP_SHIFT = 12;
-const FP_ONE = 1 << FP_SHIFT;
-const toFP = (val) => Math.floor(val * FP_ONE);
-const toFloat = (val) => val / FP_ONE;
+// Friction: 0.8^timeScale per tick (multiply then shift)
+const FRICTION_FACTOR_FP = Math.floor(Math.pow(0.8, FIXED_TIME_SCALE) * FP_ONE);
+
+// Gravity per tick in FP
+const GRAVITY_PER_TICK_FP = toFP(GRAVITY * FIXED_TIME_SCALE);
+
+// Board velocity decay per tick in FP
+const BOARD_DECAY_PER_TICK_FP = toFP(15 * (FIXED_DT_MS / 1000));
+
+// Time scale for position integration (velocity * timeScale)
+const FIXED_TIME_SCALE_FP = toFP(FIXED_TIME_SCALE);
+
+// Velocity constants in FP
+const WALK_SPEED_FP = toFP(5);
+const JUMP_FORCE_FP = toFP(JUMP_FORCE);
+const BIG_JUMP_FORCE_FP = toFP(BIG_JUMP_FORCE);
+const TERMINAL_VELOCITY_FP = toFP(TERMINAL_VELOCITY);
+const UPWARD_COLLISION_THRESHOLD_FP = toFP(UPWARD_COLLISION_VELOCITY_THRESHOLD);
+const VELOCITY_BOOST_ON_BREAK_FP = toFP(2);
+
+// Collision epsilon in FP (~0.01 pixels)
+const COLLISION_EPSILON_FP = 41; // 0.01 * 4096 ≈ 41
+
+// Tile size in FP
+const TILE_SIZE_FP = toFP(TILE_SIZE);
+
+// Small offset for feet detection (0.1 pixels in FP)
+const FEET_OFFSET_FP = toFP(0.1);
+
+// Animation velocity threshold in FP
+const ANIM_VX_THRESHOLD_FP = toFP(0.1);
 
 export class Player {
     constructor(world, addToInventory = null) {
@@ -45,13 +75,14 @@ export class Player {
         this._vy = 0;
         this._boardVx = 0;
 
-        this.width = 0.6 * TILE_SIZE;
-        this.height = 1.8 * TILE_SIZE;
-        
-        // Initialize position using setters
-        this.x = (world.width / 2) * TILE_SIZE;
-        this.y = 0;
-        
+        // Dimensions in FP (Q20.12)
+        this._width = toFP(0.6 * TILE_SIZE);   // 19.2 pixels
+        this._height = toFP(1.8 * TILE_SIZE);  // 57.6 pixels
+
+        // Initialize position in FP
+        this._x = toFP((world.width / 2) * TILE_SIZE);
+        this._y = 0;
+
         this.grounded = false;
         this.facingRight = true;
         this.animTimer = 0;
@@ -59,7 +90,8 @@ export class Player {
         this.findSpawnPoint();
     }
 
-    // Shadowing properties: Internal fixed-point storage with external floating-point interface
+    // --- Float interface for external use (rendering, save/load) ---
+    // Internal FP storage with external float getters/setters
 
     get x() { return toFloat(this._x); }
     set x(val) { this._x = toFP(val); }
@@ -76,18 +108,20 @@ export class Player {
     get boardVx() { return toFloat(this._boardVx); }
     set boardVx(val) { this._boardVx = toFP(val); }
 
+    get width() { return toFloat(this._width); }
+    get height() { return toFloat(this._height); }
+
     /**
-     * Returns the grid boundaries of the player using strict integer arithmetic on internal state.
-     * This avoids floating point errors when determining which blocks the player is touching.
-     * TILE_SIZE is 32.
+     * Returns the grid boundaries of the player using strict integer arithmetic.
+     * Pure FP calculation - no floats involved.
      */
     getGridRect() {
-        const divisor = TILE_SIZE * FP_ONE;
-        
+        const divisor = TILE_SIZE_FP;
+
         const startX = Math.floor(this._x / divisor);
         const startY = Math.floor(this._y / divisor);
-        const endX = Math.floor((this._x + this.width * FP_ONE) / divisor);
-        const endY = Math.floor((this._y + this.height * FP_ONE) / divisor);
+        const endX = Math.floor((this._x + this._width) / divisor);
+        const endY = Math.floor((this._y + this._height) / divisor);
 
         return { startX, endX, startY, endY };
     }
@@ -119,9 +153,9 @@ export class Player {
      * @param {number} sizeMultiplier_FP - Scaling factor based on cluster size (in fixed-point)
      */
     applyExplosionImpulse(originX_FP, originY_FP, radius_FP, sizeMultiplier_FP) {
-        // Calculate player center in FP
-        const myCenterX = this._x + toFP(this.width / 2);
-        const myCenterY = this._y + toFP(this.height / 2);
+        // Calculate player center in FP (pure integer arithmetic)
+        const myCenterX = this._x + (this._width >> 1);
+        const myCenterY = this._y + (this._height >> 1);
 
         const dx = myCenterX - originX_FP;
         const dy = myCenterY - originY_FP;
@@ -233,77 +267,81 @@ export class Player {
     }
 
     /**
-     * Physics Update Loop
-     * Now optimized for Fixed Timestep (ignores variable dt, assumes FIXED_DT_MS)
+     * Physics Tick - Pure FP arithmetic
+     * Fixed Timestep (720Hz) - one tick per physics step
+     * All calculations operate directly on _vx, _vy, _x, _y in Q20.12 format.
      * @param {Object} input - Input state
-     * @param {number} dt - (Unused in logic, assumed to be ~1.38ms)
      */
-    update(input, dt) {
-        // 1. Horizontal Movement & Friction
+    tick(input) {
+        // 1. Horizontal Movement & Friction (FP)
         if (input.keys.left) {
-            this.vx = -5;
+            this._vx = -WALK_SPEED_FP;
             this.facingRight = false;
         } else if (input.keys.right) {
-            this.vx = 5;
+            this._vx = WALK_SPEED_FP;
             this.facingRight = true;
         } else {
-            // Apply constant friction per tick
-            this.vx *= FRICTION_FACTOR;
+            // Apply friction: vx = vx * FRICTION_FACTOR_FP / FP_ONE
+            this._vx = (this._vx * FRICTION_FACTOR_FP) >> FP_SHIFT;
         }
 
         // 2. Check for interactions with the block below (Jump Pad)
-        const feetX = Math.floor(this.getCenterX() / TILE_SIZE);
-        const feetY = Math.floor((this.y + this.height + 0.1) / TILE_SIZE);
+        // Calculate feet position in FP, then convert to grid coordinates
+        const feetCenterX_FP = this._x + (this._width >> 1);
+        const feetY_FP = this._y + this._height + FEET_OFFSET_FP;
+        const feetX = Math.floor(feetCenterX_FP / TILE_SIZE_FP);
+        const feetY = Math.floor(feetY_FP / TILE_SIZE_FP);
         const blockBelow = this.world.getBlock(feetX, feetY);
 
         // Priority 1: Jump Pad Interaction
-        // If standing on a jump pad, it overrides normal jumping behavior
         if (blockBelow === BLOCKS.JUMP_PAD) {
             const stackCount = this.countVerticalJumpPads(feetX, feetY);
-            this.vy = -BIG_JUMP_FORCE * Math.pow(stackCount, 0.5);
+            // Jump force scales with sqrt(stackCount) - compute in float, convert to FP
+            const jumpMagnitude = BIG_JUMP_FORCE * Math.pow(stackCount, 0.5);
+            this._vy = -toFP(jumpMagnitude);
             this.grounded = false;
             sounds.playBigJump();
-        } 
+        }
         // Priority 2: Normal Jump
-        // Only trigger normal jump if NOT on a jump pad
         else if (input.keys.jump && this.grounded) {
-            this.vy = -JUMP_FORCE;
+            this._vy = -JUMP_FORCE_FP;
             this.grounded = false;
             sounds.playJump();
         }
 
-        // 3. Board velocity decay
+        // 3. Board velocity decay (FP)
         if (this._boardVx !== 0) {
-            let currentBoardVx = this.boardVx; // Convert to float for calculation
-            if (currentBoardVx > 0) {
-                this.boardVx = Math.max(0, currentBoardVx - BOARD_DECAY_PER_TICK);
+            if (this._boardVx > 0) {
+                this._boardVx = Math.max(0, this._boardVx - BOARD_DECAY_PER_TICK_FP);
             } else {
-                this.boardVx = Math.min(0, currentBoardVx + BOARD_DECAY_PER_TICK);
+                this._boardVx = Math.min(0, this._boardVx + BOARD_DECAY_PER_TICK_FP);
             }
         }
 
-        // 4. Gravity Application
-        // Clamp to terminal velocity
-        let nextVy = this.vy + GRAVITY_PER_TICK;
-        if (nextVy > TERMINAL_VELOCITY) nextVy = TERMINAL_VELOCITY;
-        this.vy = nextVy;
+        // 4. Gravity Application (FP)
+        this._vy += GRAVITY_PER_TICK_FP;
+        if (this._vy > TERMINAL_VELOCITY_FP) {
+            this._vy = TERMINAL_VELOCITY_FP;
+        }
 
-        const totalVx = this.vx + this.boardVx;
-        
-        // 5. Apply Movement (scaled by Time Scale)
-        this.x += totalVx * FIXED_TIME_SCALE;
-        this.handleCollisions(true, totalVx);
-        
-        this.y += this.vy * FIXED_TIME_SCALE;
-        this.handleCollisions(false);
+        // 5. Apply Movement (FP)
+        // Position += velocity * timeScale (all in FP)
+        const totalVx_FP = this._vx + this._boardVx;
 
-        // 6. World Wrapping
-        this.wrapHorizontally();
-        this.wrapVertically();
+        // Horizontal movement: x += totalVx * timeScale
+        this._x += (totalVx_FP * FIXED_TIME_SCALE_FP) >> FP_SHIFT;
+        this.handleCollisionsFP(true, totalVx_FP);
 
-        // 7. Animation Timer
-        // Use fixed time step for consistent animation speed regardless of framerate
-        if (Math.abs(totalVx) > 0.1) {
+        // Vertical movement: y += vy * timeScale
+        this._y += (this._vy * FIXED_TIME_SCALE_FP) >> FP_SHIFT;
+        this.handleCollisionsFP(false, this._vy);
+
+        // 6. World Wrapping (FP)
+        this.wrapHorizontallyFP();
+        this.wrapVerticallyFP();
+
+        // 7. Animation Timer (rendering only - float is acceptable)
+        if (this._vx > ANIM_VX_THRESHOLD_FP || this._vx < -ANIM_VX_THRESHOLD_FP) {
             this.animTimer += FIXED_DT_MS;
         }
     }
@@ -323,66 +361,86 @@ export class Player {
         return count;
     }
 
-    wrapHorizontally() {
-        const worldSpan = this.world.width * TILE_SIZE;
-        let currentX = this.x;
-        while (currentX >= worldSpan) {
-            currentX -= worldSpan;
+    /**
+     * World wrapping - Horizontal (FP)
+     * Operates directly on _x in Q20.12 format
+     */
+    wrapHorizontallyFP() {
+        const worldSpan_FP = this.world.width * TILE_SIZE_FP;
+        while (this._x >= worldSpan_FP) {
+            this._x -= worldSpan_FP;
         }
-        while (currentX + this.width <= 0) {
-            currentX += worldSpan;
+        while (this._x + this._width <= 0) {
+            this._x += worldSpan_FP;
         }
-        this.x = currentX;
     }
 
-    wrapVertically() {
-        const worldSpan = this.world.height * TILE_SIZE;
-        let currentY = this.y;
-        while (currentY >= worldSpan) {
-            currentY -= worldSpan;
+    /**
+     * World wrapping - Vertical (FP)
+     * Operates directly on _y in Q20.12 format
+     */
+    wrapVerticallyFP() {
+        const worldSpan_FP = this.world.height * TILE_SIZE_FP;
+        while (this._y >= worldSpan_FP) {
+            this._y -= worldSpan_FP;
         }
-        while (currentY + this.height <= 0) {
-            currentY += worldSpan;
+        while (this._y + this._height <= 0) {
+            this._y += worldSpan_FP;
         }
-        this.y = currentY;
     }
+
+    // Legacy wrappers for external callers (use float interface)
+    wrapHorizontally() { this.wrapHorizontallyFP(); }
+    wrapVertically() { this.wrapVerticallyFP(); }
 
     respawn() {
-        this.y = 0;
-        this.vy = 0;
-        this.vx = 0;
-        this.boardVx = 0;
-        this.x = (this.world.width / 2) * TILE_SIZE;
+        this._y = 0;
+        this._vy = 0;
+        this._vx = 0;
+        this._boardVx = 0;
+        this._x = toFP((this.world.width / 2) * TILE_SIZE);
         this.findSpawnPoint();
     }
 
-    handleCollisions(horizontal, vx = this.vx) {
-        const currX = this.x;
-        const currY = this.y;
-        
-        const startX = Math.floor(currX / TILE_SIZE);
-        const endX = Math.floor((currX + this.width) / TILE_SIZE);
-        const startY = Math.floor(currY / TILE_SIZE);
-        const endY = Math.floor((currY + this.height) / TILE_SIZE);
+    /**
+     * Collision handling - Pure FP arithmetic
+     * All position calculations use Q20.12 format
+     * @param {boolean} horizontal - True for horizontal collision, false for vertical
+     * @param {number} velocity_FP - Current velocity in FP format
+     */
+    handleCollisionsFP(horizontal, velocity_FP) {
+        // Calculate grid bounds from FP position
+        const startX = Math.floor(this._x / TILE_SIZE_FP);
+        const endX = Math.floor((this._x + this._width) / TILE_SIZE_FP);
+        const startY = Math.floor(this._y / TILE_SIZE_FP);
+        const endY = Math.floor((this._y + this._height) / TILE_SIZE_FP);
 
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
                 const block = this.world.getBlock(x, y);
                 if (isBlockSolid(block, BLOCK_PROPS)) {
                     if (horizontal) {
-                        if (vx > 0) this.x = x * TILE_SIZE - this.width - 0.01;
-                        else if (vx < 0) this.x = (x + 1) * TILE_SIZE + 0.01;
-                        this.vx = 0;
-                        this.boardVx = 0;
+                        if (velocity_FP > 0) {
+                            // Moving right - push left of block
+                            this._x = x * TILE_SIZE_FP - this._width - COLLISION_EPSILON_FP;
+                        } else if (velocity_FP < 0) {
+                            // Moving left - push right of block
+                            this._x = (x + 1) * TILE_SIZE_FP + COLLISION_EPSILON_FP;
+                        }
+                        this._vx = 0;
+                        this._boardVx = 0;
                     } else {
-                        if (this.vy > 0) {
-                            this.y = y * TILE_SIZE - this.height - 0.01;
+                        if (this._vy > 0) {
+                            // Moving down - land on block
+                            this._y = y * TILE_SIZE_FP - this._height - COLLISION_EPSILON_FP;
                             this.grounded = true;
-                            this.vy = 0;
-                        } else if (this.vy < 0) {
-                            this.y = (y + 1) * TILE_SIZE + 0.01;
+                            this._vy = 0;
+                        } else if (this._vy < 0) {
+                            // Moving up - hit ceiling
+                            this._y = (y + 1) * TILE_SIZE_FP + COLLISION_EPSILON_FP;
 
-                            if (this.vy < UPWARD_COLLISION_VELOCITY_THRESHOLD &&
+                            // Block breaking from below
+                            if (this._vy < UPWARD_COLLISION_THRESHOLD_FP &&
                                 isBlockBreakable(block, BLOCK_PROPS) &&
                                 isNaturalBlock(block, MAX_NATURAL_BLOCK_ID)) {
                                 if (this.addToInventory) {
@@ -390,16 +448,18 @@ export class Player {
                                 }
                                 sounds.playDig(getBlockMaterialType(block, BLOCK_PROPS));
                                 this.world.setBlock(x, y, BLOCKS.AIR);
-                                this.vy += 2;
+                                this._vy += VELOCITY_BOOST_ON_BREAK_FP;
                                 return;
                             }
 
+                            // Bounce off jump pad from below
                             if (block === BLOCKS.JUMP_PAD) {
                                 const stackCount = this.countVerticalJumpPads(x, y);
-                                this.vy = BIG_JUMP_FORCE * Math.pow(stackCount, 0.5);
+                                const bounceMagnitude = BIG_JUMP_FORCE * Math.pow(stackCount, 0.5);
+                                this._vy = toFP(bounceMagnitude);
                                 sounds.playBigJump();
                             } else {
-                                this.vy = 0;
+                                this._vy = 0;
                             }
                         }
                         return;
@@ -408,6 +468,11 @@ export class Player {
             }
         }
         if (!horizontal) this.grounded = false;
+    }
+
+    // Legacy wrapper for external callers
+    handleCollisions(horizontal, vx = this.vx) {
+        this.handleCollisionsFP(horizontal, toFP(vx));
     }
 
     draw(ctx) {

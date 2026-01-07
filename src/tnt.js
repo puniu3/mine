@@ -5,7 +5,8 @@
 
 import {
     TILE_SIZE, BLOCKS, BLOCK_PROPS,
-    TNT_FUSE_TIME, TNT_EXPLOSION_RADIUS
+    TNT_FUSE_TIME, TNT_EXPLOSION_RADIUS,
+    PHYSICS_DT
 } from './constants.js';
 import { isBlockBreakable } from './utils.js';
 
@@ -182,28 +183,28 @@ export function createTNTManager(context) {
 
     return {
         /**
-         * Update TNT timers and trigger explosions
-         * @param {number} dt - Delta time in milliseconds
+         * Tick TNT timers and trigger explosions
+         * Fixed timestep (720Hz) - one tick per physics step
          */
-        update(dt) {
+        tick() {
             for (let i = timers.length - 1; i >= 0; i--) {
                 const tnt = timers[i];
-                
+
                 // If the block is gone (e.g. part of a cluster that already exploded), remove timer
                 if (world.getBlock(tnt.x, tnt.y) !== BLOCKS.TNT) {
                     timers.splice(i, 1);
                     continue;
                 }
 
-                tnt.timer -= dt;
-                
+                tnt.timer -= PHYSICS_DT;
+
                 if (tnt.timer <= 0) {
                     // 1. Find the entire cluster of connected TNTs
                     const cluster = getConnectedTNTs(tnt.x, tnt.y, world);
-                    
+
                     // 2. Explode the whole cluster at once
                     explodeCluster(cluster, context);
-                    
+
                     // Remove the timer for the origin TNT
                     timers.splice(i, 1);
                 }

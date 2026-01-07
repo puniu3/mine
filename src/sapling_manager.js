@@ -1,4 +1,4 @@
-import { BLOCKS, TILE_SIZE, BLOCK_PROPS } from './constants.js';
+import { BLOCKS, TILE_SIZE, BLOCK_PROPS, PHYSICS_DT } from './constants.js';
 import { rectsIntersect, isBlockSolid, isBlockBreakable } from './utils.js';
 
 /**
@@ -295,25 +295,26 @@ export function createSaplingManager({ world, player }) {
     }
 
     /**
-     * Updates timers.
+     * Tick timers.
+     * Fixed timestep (720Hz) - one tick per physics step
      */
-    function update(dt) {
+    function tick() {
         for (let i = saplingTimers.length - 1; i >= 0; i--) {
             const sapling = saplingTimers[i];
-            
+
             if (world.getBlock(sapling.x, sapling.y) !== BLOCKS.SAPLING) {
                 saplingTimers.splice(i, 1);
                 continue;
             }
 
-            sapling.timer -= dt;
+            sapling.timer -= PHYSICS_DT;
             if (sapling.timer <= 0) {
                 const group = getConnectedSaplings(sapling.x, sapling.y);
                 growSaplingGroup(group);
                 // Saplings are removed by growSaplingGroup, logic below cleans up
             }
         }
-        
+
         // Clean up timers for saplings that no longer exist
         for (let i = saplingTimers.length - 1; i >= 0; i--) {
             if (world.getBlock(saplingTimers[i].x, saplingTimers[i].y) !== BLOCKS.SAPLING) {
@@ -324,7 +325,7 @@ export function createSaplingManager({ world, player }) {
 
     return {
         addSapling,
-        update,
+        tick,
         getTimers: () => saplingTimers,
         restoreTimers: (savedTimers) => {
             saplingTimers.length = 0;

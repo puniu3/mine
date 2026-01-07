@@ -1,15 +1,15 @@
-import { BLOCKS, TILE_SIZE } from './constants.js';
+import { BLOCKS, TILE_SIZE, PHYSICS_DT } from './constants.js';
 import { calculateVisibleTileRange } from './utils.js';
 
 const fireworkParticles = [];
 
-export function update(dt, world, cameraX, cameraY, canvas) {
+export function tick(world, cameraX, cameraY, canvas) {
     // Time Scale: normalize physics to 60 FPS target
-    const timeScale = dt / (1000 / 60);
+    const timeScale = PHYSICS_DT / (1000 / 60);
 
     // 1. Scan/Emit
     if (!world.fireworkTimer) world.fireworkTimer = 0;
-    world.fireworkTimer += dt;
+    world.fireworkTimer += PHYSICS_DT;
     if (world.fireworkTimer > 5000) { // 5 seconds
         world.fireworkTimer = 0;
         const range = calculateVisibleTileRange(cameraX, cameraY, canvas.width, canvas.height, TILE_SIZE);
@@ -38,7 +38,7 @@ export function update(dt, world, cameraX, cameraY, canvas) {
             // Normal particle with time scaling
             p.x += p.vx * timeScale;
             p.y += p.vy * timeScale;
-            p.life -= dt;
+            p.life -= PHYSICS_DT;
             p.vy += 0.05 * timeScale; // Apply gravity with time scaling
             if (p.life <= 0) {
                 fireworkParticles.splice(i, 1);

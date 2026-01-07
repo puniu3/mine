@@ -1,4 +1,4 @@
-import { BLOCKS, ACCELERATOR_COOLDOWN, ACCELERATOR_ACCELERATION_AMOUNT } from './constants.js';
+import { BLOCKS, ACCELERATOR_COOLDOWN, ACCELERATOR_ACCELERATION_AMOUNT, PHYSICS_DT } from './constants.js';
 
 const acceleratorCooldowns = new Map();
 
@@ -29,9 +29,9 @@ export function handleAcceleratorOverlap(player, world) {
     }
 }
 
-export function updateAccelerators(dt) {
+export function tick() {
     acceleratorCooldowns.forEach((time, key) => {
-        const next = time - dt;
+        const next = time - PHYSICS_DT;
         if (next <= 0) {
             acceleratorCooldowns.delete(key);
         } else {

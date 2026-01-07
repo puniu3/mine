@@ -2,6 +2,10 @@
  * 2D Minecraft Clone - Constants
  */
 
+// Physics Settings (720Hz Fixed Timestep)
+export const PHYSICS_TPS = 720;
+export const PHYSICS_DT = 1000 / PHYSICS_TPS; // approx 1.38ms
+
 export const TILE_SIZE = 32;
 export const WORLD_WIDTH = 512 * 8;
 export const WORLD_HEIGHT = 256;
