@@ -4,6 +4,8 @@ export function createInput(canvas, { onHotbarSelect, onTouch }) {
         mouse: { x: 0, y: 0, leftDown: false, active: false }
     };
 
+    let lastTouchTime = 0;
+
     window.addEventListener('keydown', e => {
         switch (e.code) {
             case 'KeyA': case 'ArrowLeft': input.keys.left = true; e.preventDefault(); break;
@@ -33,23 +35,24 @@ export function createInput(canvas, { onHotbarSelect, onTouch }) {
         const rect = canvas.getBoundingClientRect();
         input.mouse.x = e.clientX - rect.left;
         input.mouse.y = e.clientY - rect.top;
-        // Enable cursor highlight on mouse movement
-        input.mouse.active = true;
+        
+        if (Date.now() - lastTouchTime > 500) {
+            input.mouse.active = true;
+        }
     });
 
     window.addEventListener('mousedown', e => {
         if (e.target !== canvas) return;
         input.mouse.leftDown = true;
-        input.mouse.active = true;
     });
 
     window.addEventListener('mouseup', () => {
         input.mouse.leftDown = false;
     });
 
-    // Global touch listener to disable mouse highlight when using touch
     window.addEventListener('touchstart', () => {
         input.mouse.active = false;
+        lastTouchTime = Date.now();
     }, { passive: true });
 
     const setupTouch = (id, key) => {
@@ -59,6 +62,7 @@ export function createInput(canvas, { onHotbarSelect, onTouch }) {
             e.preventDefault();
             input.keys[key] = true;
             input.mouse.active = false;
+            lastTouchTime = Date.now();
         });
         el.addEventListener('touchend', (e) => {
             e.preventDefault();
@@ -73,6 +77,7 @@ export function createInput(canvas, { onHotbarSelect, onTouch }) {
         const t = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         input.mouse.active = false;
+        lastTouchTime = Date.now();
         if (onTouch) onTouch(t.clientX - rect.left, t.clientY - rect.top);
     }, { passive: false });
 
