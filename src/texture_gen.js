@@ -376,36 +376,5 @@ export function generateTextures() {
         addNoise(ctx, 0.05);
     });
 
-    createTexture(BLOCKS.WATER, (ctx, s) => {
-        // Semi-transparent blue water with wave effect
-        ctx.fillStyle = 'rgba(41, 121, 255, 0.5)';
-        ctx.fillRect(0, 0, s, s);
-
-        // Add subtle wave highlights
-        ctx.fillStyle = 'rgba(100, 180, 255, 0.3)';
-        for (let i = 0; i < 3; i++) {
-            const y = (i + 1) * s / 4;
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.quadraticCurveTo(s * 0.25, y - 3, s * 0.5, y);
-            ctx.quadraticCurveTo(s * 0.75, y + 3, s, y);
-            ctx.lineTo(s, y + 4);
-            ctx.quadraticCurveTo(s * 0.75, y + 7, s * 0.5, y + 4);
-            ctx.quadraticCurveTo(s * 0.25, y + 1, 0, y + 4);
-            ctx.closePath();
-            ctx.fill();
-        }
-
-        // Add subtle shimmer/sparkle effect
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-        for (let i = 0; i < 6; i++) {
-            const x = Math.random() * s;
-            const y = Math.random() * s;
-            ctx.fillRect(x, y, 2, 2);
-        }
-
-        addNoise(ctx, 0.03);
-    });
-
     return textures;
 }
