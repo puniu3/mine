@@ -1,4 +1,4 @@
-import { BLOCKS, TILE_SIZE } from './constants.js';
+import { BLOCKS, TILE_SIZE, PHYSICS_DT } from './constants.js';
 
 const jackpotParticles = [];
 const jackpotCooldowns = new Map();
@@ -25,12 +25,12 @@ export function handleJackpotOverlap(player, world, sounds) {
     }
 }
 
-export function updateJackpots(dt) {
+export function tick() {
     // Time Scale: normalize physics to 60 FPS target
-    const timeScale = dt / (1000 / 60);
+    const timeScale = PHYSICS_DT / (1000 / 60);
 
     jackpotCooldowns.forEach((time, key) => {
-        const next = time - dt;
+        const next = time - PHYSICS_DT;
         if (next <= 0) {
             jackpotCooldowns.delete(key);
         } else {
@@ -47,7 +47,7 @@ export function updateJackpots(dt) {
         // Apply velocity to position with time scaling
         p.x += p.vx * timeScale;
         p.y += p.vy * timeScale;
-        p.life -= dt;
+        p.life -= PHYSICS_DT;
         if (p.life <= 0) {
             jackpotParticles.splice(i, 1);
         }

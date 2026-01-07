@@ -233,12 +233,11 @@ export class Player {
     }
 
     /**
-     * Physics Update Loop
-     * Now optimized for Fixed Timestep (ignores variable dt, assumes FIXED_DT_MS)
+     * Physics Tick
+     * Fixed Timestep (720Hz) - one tick per physics step
      * @param {Object} input - Input state
-     * @param {number} dt - (Unused in logic, assumed to be ~1.38ms)
      */
-    update(input, dt) {
+    tick(input) {
         // 1. Horizontal Movement & Friction
         if (input.keys.left) {
             this.vx = -5;

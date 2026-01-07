@@ -14,7 +14,8 @@ import {
 import { sounds } from './audio.js';
 import {
     TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH,
-    BLOCKS, BLOCK_PROPS
+    BLOCKS, BLOCK_PROPS,
+    PHYSICS_TPS, PHYSICS_DT
 } from './constants.js';
 import { generateTextures } from './texture_gen.js';
 import { createInput } from './input.js';
@@ -24,12 +25,12 @@ import {
     getInventoryState, loadInventoryState
 } from './inventory.js';
 import { isCraftingOpen, updateCrafting } from './crafting.js';
-import { update as updateFireworks, createExplosionParticles } from './fireworks.js';
+import { tick as tickFireworks, createExplosionParticles } from './fireworks.js';
 import { createActions } from './actions.js';
 import { World } from './world.js';
 import { Player } from './player.js';
-import { drawJackpotParticles, handleJackpotOverlap, updateJackpots } from './jackpot.js';
-import { handleAcceleratorOverlap, updateAccelerators } from './accelerator.js';
+import { drawJackpotParticles, handleJackpotOverlap, tick as tickJackpots } from './jackpot.js';
+import { handleAcceleratorOverlap, tick as tickAccelerators } from './accelerator.js';
 import { createSaveManager, loadGameState } from './save.js';
 import { createTNTManager } from './tnt.js';
 import { findSpawnPosition } from './world_share.js';
@@ -58,11 +59,10 @@ let saveManager = null;
 // Physics Settings (720Hz High-Frequency Step)
 // - Syncs perfectly with 144Hz monitors (5 steps per frame).
 // - Prevents "tunneling" (clipping through blocks) at high speeds.
-const PHYSICS_TPS = 720;
-const PHYSICS_DT = 1000 / PHYSICS_TPS; // approx 1.38ms
+// PHYSICS_TPS and PHYSICS_DT are now imported from constants.js
 // Allow a small epsilon to stabilize step counts on 60Hz monitors.
 // If accumulator is within 0.25ms of a full step, force the step.
-const PHYSICS_EPSILON = 0.25; 
+const PHYSICS_EPSILON = 0.25;
 let accumulator = 0;
 
 // Day/Night Cycle Settings
@@ -202,10 +202,10 @@ function init(savedState = null) {
     }
 }
 
-// --- Update Loop (Physics) ---
-function update(dt) {
+// --- Tick Loop (Physics) ---
+function tick() {
     if (!player) return;
-    player.update(input, dt);
+    player.tick(input);
 
     // Input Handling
     if (input.mouse.leftDown) {
@@ -217,17 +217,17 @@ function update(dt) {
 
     // System Updates
     updateCrafting(player, world, textures);
-    
+
     handleJackpotOverlap(player, world, sounds);
-    updateJackpots(dt);
+    tickJackpots();
 
     handleAcceleratorOverlap(player, world);
-    updateAccelerators(dt);
+    tickAccelerators();
 
-    updateFireworks(dt, world, camera.x, camera.y, { width: logicalWidth, height: logicalHeight });
-    
-    tntManager.update(dt);
-    saplingManager.update(dt);
+    tickFireworks(world, camera.x, camera.y, { width: logicalWidth, height: logicalHeight });
+
+    tntManager.tick();
+    saplingManager.tick();
 }
 
 // --- Camera Update (Per Frame) ---
@@ -274,7 +274,7 @@ function loop(timestamp) {
     // step count per frame (e.g. consistently 12 steps for 60Hz) 
     // and preventing jitter caused by 11/12 oscillation.
     while (accumulator >= PHYSICS_DT - PHYSICS_EPSILON) {
-        update(PHYSICS_DT);
+        tick();
         accumulator -= PHYSICS_DT;
     }
 
