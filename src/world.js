@@ -98,18 +98,21 @@ export class World {
                 } else if (y === h) {
                     this.setBlock(x, y, surfaceBlock);
 
-                    const isTreeGround =
+                    const isVegetationGround =
                         surfaceBlock === BLOCKS.GRASS ||
-                        (biome === BIOMES.SNOWFIELD && surfaceBlock === BLOCKS.SNOW);
+                        (biome === BIOMES.SNOWFIELD && surfaceBlock === BLOCKS.SNOW) ||
+                        (biome === BIOMES.DESERT && surfaceBlock === BLOCKS.SAND);
 
-                    if (isTreeGround && x > 5 && x < this.width - 5 && Math.random() < 0.05) {
-                        this.generateTree(x, y - 1);
+                    if (isVegetationGround && x > 5 && x < this.width - 5) {
+                        this.generateVegetation(x, y - 1, biome);
                     }
                 }
             }
         }
 
+        this.generateGeology(heights);
         this.generateCaves(heights);
+        this.generateStructures(heights, biomeByColumn);
 
         // Scatter Workbenches on the surface
         for (let x = 10; x < this.width - 10; x += 50 + Math.floor(Math.random() * 20)) {
@@ -296,6 +299,207 @@ export class World {
         return BLOCKS.DIRT;
     }
 
+    generateGeology(heights) {
+        // Create dirt pockets underground
+        const dirtPocketCount = Math.floor(this.width * this.height / 1500);
+        for (let i = 0; i < dirtPocketCount; i++) {
+            const x = Math.floor(Math.random() * this.width);
+            const y = Math.floor(Math.random() * this.height);
+            const surface = heights[x];
+            
+            // Only generate below surface layer
+            if (y > surface + 8) {
+                const radius = 2 + Math.random() * 2.5;
+                this.createBlob(x, y, BLOCKS.DIRT, radius);
+            }
+        }
+
+        // Create sand/gravel pockets underground
+        const sandPocketCount = Math.floor(this.width * this.height / 2500);
+        for (let i = 0; i < sandPocketCount; i++) {
+            const x = Math.floor(Math.random() * this.width);
+            const y = Math.floor(Math.random() * this.height);
+            const surface = heights[x];
+
+            if (y > surface + 10) {
+                const radius = 1.5 + Math.random() * 2;
+                this.createBlob(x, y, BLOCKS.SAND, radius);
+            }
+        }
+    }
+
+    createBlob(cx, cy, blockType, radius) {
+        const rSq = radius * radius;
+        const ceilR = Math.ceil(radius);
+
+        for (let dx = -ceilR; dx <= ceilR; dx++) {
+            for (let dy = -ceilR; dy <= ceilR; dy++) {
+                if (dx * dx + dy * dy <= rSq) {
+                    const x = cx + dx;
+                    const y = cy + dy;
+                    
+                    // Only replace stone, not ores or air
+                    if (this.getBlock(x, y) === BLOCKS.STONE) {
+                        this.setBlock(x, y, blockType);
+                    }
+                }
+            }
+        }
+    }
+
+    generateStructures(heights, biomeByColumn) {
+        // 1. Floating Islands (Sky)
+        const islandCount = Math.floor(this.width / 80);
+        for (let i = 0; i < islandCount; i++) {
+            const x = 20 + Math.floor(Math.random() * (this.width - 40));
+            const surface = heights[x];
+            // Must be high enough
+            if (surface > 50) {
+                const y = 15 + Math.floor(Math.random() * (surface - 40));
+                this.generateFloatingIsland(x, y);
+            }
+        }
+
+        // 2. Desert Ruins (Surface)
+        for (let x = 0; x < this.width; x += 1) {
+            if (biomeByColumn[x] === BIOMES.DESERT) {
+                if (Math.random() < 0.015) { // Increased chance slightly due to variety
+                    const y = heights[x];
+                    // Check if area is relatively flat
+                    if (Math.abs(heights[x + 2] - y) < 2) {
+                        this.generateDesertRuin(x, y);
+                        x += 15; // Avoid overlapping
+                    }
+                }
+            }
+        }
+
+        // 3. Abandoned Mineshafts (Underground)
+        const mineshaftCount = Math.floor(this.width / 50);
+        for (let i = 0; i < mineshaftCount; i++) {
+            const x = 10 + Math.floor(Math.random() * (this.width - 20));
+            const surface = heights[x];
+            const y = surface + 15 + Math.floor(Math.random() * (this.height - surface - 20));
+            this.generateMineshaft(x, y);
+        }
+    }
+
+    generateFloatingIsland(cx, cy) {
+        const radius = 3 + Math.floor(Math.random() * 3);
+        // Inverted cone shape
+        for (let dy = 0; dy <= radius * 1.5; dy++) {
+            const currentRadius = Math.max(0, radius - (dy * 0.7));
+            for (let dx = -Math.ceil(currentRadius); dx <= Math.ceil(currentRadius); dx++) {
+                const x = cx + dx;
+                const y = cy + dy;
+                
+                // Top layer is grass, middle dirt, bottom stone
+                if (dy === 0) {
+                    this.setBlock(x, y, BLOCKS.GRASS);
+                    // Chance for a tree
+                    if (dx === 0 && Math.random() < 0.3) {
+                        this.generateTreeOak(x, y - 1);
+                    }
+                } else if (dy < 2) {
+                    this.setBlock(x, y, BLOCKS.DIRT);
+                } else {
+                    // Heavily rich with gold in the core
+                    if (Math.random() < 0.4 || (dx === 0 && dy > 2)) {
+                        this.setBlock(x, y, BLOCKS.GOLD);
+                    } else {
+                        this.setBlock(x, y, BLOCKS.STONE);
+                    }
+                }
+            }
+        }
+    }
+
+    generateDesertRuin(x, y) {
+        const type = Math.floor(Math.random() * 4);
+        
+        if (type === 0) {
+            // Pillar
+            const height = 3 + Math.floor(Math.random() * 4);
+            for (let i = 0; i < height; i++) {
+                this.setBlock(x, y - 1 - i, BLOCKS.STONE);
+            }
+            if (Math.random() < 0.5) this.setBlock(x, y - 1 - height, BLOCKS.STONE); // Cap
+            // Weathered effect
+            if (Math.random() < 0.4) this.setBlock(x + 1, y - 1, BLOCKS.STONE);
+        } else if (type === 1) {
+            // Mini Pyramid
+            const size = 3 + Math.floor(Math.random() * 2);
+            for (let dy = 0; dy < size; dy++) {
+                const width = size - dy - 1;
+                for (let dx = -width; dx <= width; dx++) {
+                    // Worn down
+                    if (Math.random() > 0.1) {
+                        this.setBlock(x + dx, y - 1 - dy, BLOCKS.STONE);
+                    }
+                }
+            }
+        } else if (type === 2) {
+            // Archway
+            const height = 4;
+            const width = 3;
+            // Top beam
+            for (let dx = -1; dx <= 1; dx++) {
+                this.setBlock(x + dx, y - height, BLOCKS.STONE);
+            }
+            // Legs
+            for (let i = 1; i < height; i++) {
+                this.setBlock(x - 1, y - i, BLOCKS.STONE);
+                this.setBlock(x + 1, y - i, BLOCKS.STONE);
+            }
+        } else if (type === 3) {
+            // Buried Wall
+            const length = 4 + Math.floor(Math.random() * 3);
+            for (let dx = 0; dx < length; dx++) {
+                const h = 1 + Math.floor(Math.random() * 2);
+                for (let i = 0; i < h; i++) {
+                    this.setBlock(x + dx, y - 1 - i, BLOCKS.STONE);
+                }
+            }
+        }
+    }
+
+    generateMineshaft(startX, startY) {
+        const length = 10 + Math.floor(Math.random() * 15);
+        let x = startX;
+        let y = startY;
+        
+        // Horizontal tunnel
+        for (let i = 0; i < length; i++) {
+            if (x >= this.width - 2) break;
+            
+            // Clear tunnel space (3 high)
+            this.setBlock(x, y, BLOCKS.AIR);
+            this.setBlock(x, y - 1, BLOCKS.AIR);
+            this.setBlock(x, y - 2, BLOCKS.AIR);
+
+            // Floor (planks/wood)
+            this.setBlock(x, y + 1, BLOCKS.WOOD);
+
+            // Supports every 4 blocks
+            if (i % 4 === 0) {
+                // Posts
+                if (this.getBlock(x, y + 1) !== BLOCKS.AIR) this.setBlock(x, y, BLOCKS.WOOD);
+                if (this.getBlock(x, y - 2) !== BLOCKS.AIR) this.setBlock(x, y - 1, BLOCKS.WOOD);
+                
+                // Top Beam
+                this.setBlock(x, y - 2, BLOCKS.WOOD);
+            }
+
+            x++;
+            // Small chance to change depth
+            if (Math.random() < 0.1) y += (Math.random() < 0.5 ? -1 : 1);
+            
+            // Clamp Y
+            if (y > this.height - 5) y = this.height - 5;
+            if (y < 50) y = 50;
+        }
+    }
+
     generateCaves(heights) {
         const caveWalkers = Math.max(3, Math.floor(this.width / 35));
         for (let i = 0; i < caveWalkers; i++) {
@@ -339,7 +543,28 @@ export class World {
         }
     }
 
-    generateTree(x, y) {
+    generateVegetation(x, y, biome) {
+        const r = Math.random();
+
+        switch (biome) {
+            case BIOMES.PLAINS:
+                if (r < 0.05) this.generateTreeOak(x, y);
+                else if (r < 0.08) this.generateBush(x, y);
+                break;
+            case BIOMES.SNOWFIELD:
+                if (r < 0.06) this.generateTreePine(x, y);
+                break;
+            case BIOMES.DESERT:
+                if (r < 0.02) this.generateCactus(x, y);
+                break;
+            case BIOMES.MOUNTAIN:
+                if (r < 0.015) this.generateTreeDead(x, y);
+                else if (r < 0.025) this.generateBoulder(x, y);
+                break;
+        }
+    }
+
+    generateTreeOak(x, y) {
         const height = 3 + Math.floor(Math.random() * 3);
         for (let i = 0; i < height; i++) this.setBlock(x, y - i, BLOCKS.WOOD);
         for (let lx = x - 2; lx <= x + 2; lx++) {
@@ -348,5 +573,101 @@ export class World {
                 if (this.getBlock(lx, ly) === BLOCKS.AIR) this.setBlock(lx, ly, BLOCKS.LEAVES);
             }
         }
+    }
+
+    generateTreePine(x, y) {
+        const height = 5 + Math.floor(Math.random() * 4);
+        
+        // Trunk
+        for (let i = 0; i < height; i++) {
+            this.setBlock(x, y - i, BLOCKS.WOOD);
+        }
+
+        // Leaves (Conical shape)
+        let radius = 1;
+        // Start leaves from near the bottom of the canopy up to the top
+        for (let dy = height; dy > 1; dy--) {
+            const worldY = y - dy;
+            
+            // Periodically widen the cone as we go down
+            if ((height - dy) % 2 === 0) radius = Math.min(3, radius + 1);
+            if (dy === height) radius = 1; // Top tip
+
+            for (let lx = x - radius; lx <= x + radius; lx++) {
+                // Skip the trunk position itself except at the very top tip
+                if (lx === x && dy !== height) continue;
+                
+                if (this.getBlock(lx, worldY) === BLOCKS.AIR) {
+                    this.setBlock(lx, worldY, BLOCKS.LEAVES);
+                }
+            }
+        }
+        // Top tip leaf
+        this.setBlock(x, y - height, BLOCKS.LEAVES);
+    }
+
+    generateCactus(x, y) {
+        const height = 2 + Math.floor(Math.random() * 3);
+        
+        // Main stem
+        for (let i = 0; i < height; i++) {
+            this.setBlock(x, y - i, BLOCKS.LEAVES); // Using leaves as green cactus blocks
+        }
+
+        // Optional arms
+        if (height >= 3 && Math.random() < 0.5) {
+            // Pick a side
+            const side = Math.random() < 0.5 ? -1 : 1;
+            const armHeight = 1 + Math.floor(Math.random() * (height - 2));
+            
+            if (this.getBlock(x + side, y - armHeight) === BLOCKS.AIR) {
+                this.setBlock(x + side, y - armHeight, BLOCKS.LEAVES);
+                // Vertical part of arm
+                if (this.getBlock(x + side, y - armHeight - 1) === BLOCKS.AIR) {
+                    this.setBlock(x + side, y - armHeight - 1, BLOCKS.LEAVES);
+                }
+            }
+        }
+    }
+
+    generateTreeDead(x, y) {
+        const height = 3 + Math.floor(Math.random() * 3);
+        
+        // Crooked trunk
+        let cx = x;
+        for (let i = 0; i < height; i++) {
+            this.setBlock(cx, y - i, BLOCKS.WOOD);
+            
+            // Chance to shift slightly
+            if (i > 1 && Math.random() < 0.3) {
+                cx += (Math.random() < 0.5 ? -1 : 1);
+            }
+        }
+
+        // Branch
+        if (Math.random() < 0.5) {
+             const branchY = y - Math.floor(height / 2);
+             const dir = Math.random() < 0.5 ? -1 : 1;
+             if (this.getBlock(cx + dir, branchY) === BLOCKS.AIR) {
+                 this.setBlock(cx + dir, branchY, BLOCKS.WOOD);
+             }
+        }
+    }
+
+    generateBush(x, y) {
+        // Simple cluster on the ground
+        this.setBlock(x, y, BLOCKS.LEAVES);
+        if (Math.random() < 0.5 && this.getBlock(x + 1, y) === BLOCKS.AIR) {
+            this.setBlock(x + 1, y, BLOCKS.LEAVES);
+        }
+        if (Math.random() < 0.3 && this.getBlock(x, y - 1) === BLOCKS.AIR) {
+            this.setBlock(x, y - 1, BLOCKS.LEAVES);
+        }
+    }
+
+    generateBoulder(x, y) {
+        this.setBlock(x, y, BLOCKS.STONE);
+        if (Math.random() < 0.7) this.setBlock(x + 1, y, BLOCKS.STONE);
+        if (Math.random() < 0.5) this.setBlock(x, y - 1, BLOCKS.STONE);
     }
 }
