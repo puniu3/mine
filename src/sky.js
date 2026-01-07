@@ -199,32 +199,46 @@ export function getMoonRenderData(time, altitude, screenWidth, screenHeight) {
  * Returns star data.
  */
 export function getStarRenderData(time, altitude, screenWidth, screenHeight) {
-    // Stars visible at night OR in space
-    let opacity = 0;
-
+    // Separate opacity calculation into two sources: Time (Night) and Altitude (Space)
+    
     // 1. Time based opacity (Night time)
+    // Visible only if NOT underground
+    let timeOpacity = 0;
     if (time > 0.4 && time < 0.6) {
-        if (time < 0.5) opacity = (time - 0.4) * 10;
-        else opacity = (0.6 - time) * 10;
+        if (time < 0.5) timeOpacity = (time - 0.4) * 10;
+        else timeOpacity = (0.6 - time) * 10;
     }
+    
+    // Apply underground mask to time-based opacity
+    // (If you are in a cave, you don't see the night sky)
+    const altVis = getAltitudeVisibility(altitude);
+    timeOpacity *= altVis;
 
     // 2. Altitude based opacity (Space)
-    // If high up, stars appear even during day
+    // Visible regardless of time, and overrides underground darkness when wrapping
+    let spaceOpacity = 0;
+
+    // Top Space (< 0.2)
     if (altitude < ALTITUDE_SPACE_START) {
-        const spaceOpacity = clamp((ALTITUDE_SPACE_START - altitude) * 5, 0, 1);
-        opacity = Math.max(opacity, spaceOpacity);
+        spaceOpacity = clamp((ALTITUDE_SPACE_START - altitude) * 5, 0, 1);
+    }
+    
+    // Bottom Space / Wrap (> 0.8)
+    // Transitions from underground back to space to match the top
+    const ALTITUDE_WRAP_START = 1.0 - ALTITUDE_SPACE_START; // 0.8
+    if (altitude > ALTITUDE_WRAP_START) {
+        spaceOpacity = clamp((altitude - ALTITUDE_WRAP_START) * 5, 0, 1);
     }
 
-    // 3. Underground check (Hide stars underground)
-    const altVis = getAltitudeVisibility(altitude);
-    opacity *= altVis;
+    // Combine: Use the strongest source of visibility
+    let finalOpacity = Math.max(timeOpacity, spaceOpacity);
 
-    if (opacity <= 0.01) return [];
+    if (finalOpacity <= 0.01) return [];
 
     return stars.map(star => ({
         x: star.x * screenWidth,
         y: star.y * screenHeight,
         size: star.size,
-        opacity: opacity * (0.7 + Math.sin(Date.now() * star.twinkleSpeed) * 0.3)
+        opacity: finalOpacity * (0.7 + Math.sin(Date.now() * star.twinkleSpeed) * 0.3)
     }));
 }
