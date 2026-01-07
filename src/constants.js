@@ -8,6 +8,7 @@ export const WORLD_HEIGHT = 256;
 export const GRAVITY = 0.5;
 export const TERMINAL_VELOCITY = 20.0;
 export const JUMP_FORCE = 10;
+export const BIG_JUMP_FORCE = 18;
 export const REACH = 5 * TILE_SIZE;
 export const CAMERA_SMOOTHING = 0.1;
 export const TNT_FUSE_TIME = 3000; // milliseconds

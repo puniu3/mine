@@ -5,7 +5,7 @@
 import { clamp, isBlockSolid, isBlockBreakable, getBlockMaterialType, isNaturalBlock } from './utils.js';
 import { sounds } from './audio.js';
 import {
-    TILE_SIZE, GRAVITY, JUMP_FORCE, BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY,
+    TILE_SIZE, GRAVITY, JUMP_FORCE, BIG_JUMP_FORCE, BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY,
     UPWARD_COLLISION_VELOCITY_THRESHOLD, MAX_NATURAL_BLOCK_ID,
     TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET
 } from './constants.js';
@@ -228,20 +228,25 @@ export class Player {
             this.vx *= Math.pow(0.8, timeScale);
         }
 
-        if (input.keys.jump && this.grounded) {
+        // Check for interactions with the block below (Jump Pad)
+        const feetX = Math.floor(this.getCenterX() / TILE_SIZE);
+        const feetY = Math.floor((this.y + this.height + 0.1) / TILE_SIZE);
+        const blockBelow = this.world.getBlock(feetX, feetY);
+
+        // Priority 1: Jump Pad Interaction
+        // If standing on a jump pad, it overrides normal jumping behavior
+        if (blockBelow === BLOCKS.JUMP_PAD) {
+            const stackCount = this.countVerticalJumpPads(feetX, feetY);
+            this.vy = -BIG_JUMP_FORCE * Math.pow(stackCount, 0.5);
+            this.grounded = false;
+            sounds.playBigJump();
+        } 
+        // Priority 2: Normal Jump
+        // Only trigger normal jump if NOT on a jump pad
+        else if (input.keys.jump && this.grounded) {
             this.vy = -JUMP_FORCE;
             this.grounded = false;
             sounds.playJump();
-        }
-
-        // Jump Pad Check
-        const feetX = Math.floor(this.getCenterX() / TILE_SIZE);
-        const feetY = Math.floor((this.y + this.height + 0.1) / TILE_SIZE);
-        if (this.world.getBlock(feetX, feetY) === BLOCKS.JUMP_PAD) {
-             const stackCount = this.countVerticalJumpPads(feetX, feetY);
-             this.vy = -JUMP_FORCE * 1.8 * Math.pow(stackCount, 0.5);
-             this.grounded = false;
-             sounds.playBigJump();
         }
 
         // Board velocity decay
@@ -359,7 +364,7 @@ export class Player {
 
                             if (block === BLOCKS.JUMP_PAD) {
                                 const stackCount = this.countVerticalJumpPads(x, y);
-                                this.vy = JUMP_FORCE * 1.8 * Math.pow(stackCount, 0.5);
+                                this.vy = BIG_JUMP_FORCE * Math.pow(stackCount, 0.5);
                                 sounds.playBigJump();
                             } else {
                                 this.vy = 0;
