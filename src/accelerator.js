@@ -1,4 +1,4 @@
-import { BLOCKS, ACCELERATOR_COOLDOWN, ACCELERATOR_ACCELERATION_AMOUNT, PHYSICS_DT } from './constants.js';
+import { BLOCKS, ACCELERATOR_COOLDOWN, PHYSICS_DT } from './constants.js';
 
 const acceleratorCooldowns = new Map();
 
@@ -18,7 +18,7 @@ export function handleAcceleratorOverlap(player, world) {
                 
                 // Command the player to apply force.
                 // The physics calculation happens deterministically inside the Player class.
-                player.applyAcceleratorForce(direction, ACCELERATOR_ACCELERATION_AMOUNT);
+                player.applyAcceleratorForce(direction);
                 
                 acceleratorCooldowns.set(key, ACCELERATOR_COOLDOWN);
                 

@@ -11,7 +11,7 @@ import {
     TILE_SIZE, GRAVITY, JUMP_FORCE, BIG_JUMP_FORCE, BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY,
     UPWARD_COLLISION_VELOCITY_THRESHOLD, MAX_NATURAL_BLOCK_ID,
     TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET,
-    PHYSICS_DT
+    PHYSICS_DT, ACCELERATOR_ACCELERATION_AMOUNT
 } from './constants.js';
 
 // --- Q20.12 Fixed-point arithmetic ---
@@ -62,6 +62,21 @@ const FEET_OFFSET_FP = toFP(0.1);
 
 // Animation velocity threshold in FP
 const ANIM_VX_THRESHOLD_FP = toFP(0.1);
+
+// Accelerator force in FP
+const ACCELERATOR_AMOUNT_FP = toFP(ACCELERATOR_ACCELERATION_AMOUNT);
+
+// Jump pad force lookup table: BIG_JUMP_FORCE * sqrt(stackCount) in FP
+// Pre-computed to eliminate runtime float calculations
+const JUMP_PAD_FORCE_TABLE_FP = [];
+for (let i = 0; i <= 16; i++) {
+    JUMP_PAD_FORCE_TABLE_FP[i] = toFP(BIG_JUMP_FORCE * Math.sqrt(i));
+}
+
+// TNT explosion constants in FP
+const KNOCKBACK_STRENGTH_FP = toFP(TNT_KNOCKBACK_STRENGTH);
+const KNOCKBACK_OFFSET_FP = toFP(TNT_KNOCKBACK_DISTANCE_OFFSET * TILE_SIZE);
+const TILE_SIZE_SQ = TILE_SIZE * TILE_SIZE;
 
 export class Player {
     constructor(world, addToInventory = null) {
@@ -128,16 +143,15 @@ export class Player {
 
     /**
      * Applies acceleration force deterministically within the fixed-point domain.
-     * Calculates sqrt(current_velocity^2 + added_acceleration^2).
+     * Calculates sqrt(current_velocity^2 + ACCELERATOR_AMOUNT^2).
+     * Uses pre-calculated FP constant for acceleration amount.
      * @param {number} direction - 1 for right, -1 for left
-     * @param {number} amount - Acceleration amount (float)
      */
-    applyAcceleratorForce(direction, amount) {
-        const fpAmount = toFP(amount);
-        
+    applyAcceleratorForce(direction) {
         const currentMagSq = this._boardVx * this._boardVx;
-        const addMagSq = fpAmount * fpAmount;
-        
+        const addMagSq = ACCELERATOR_AMOUNT_FP * ACCELERATOR_AMOUNT_FP;
+
+        // sqrt is unavoidable, but inputs/outputs are deterministic FP values
         const newMag = Math.floor(Math.sqrt(currentMagSq + addMagSq));
 
         this._boardVx = (direction > 0) ? newMag : -newMag;
@@ -146,7 +160,8 @@ export class Player {
 
     /**
      * Applies explosion knockback deterministically.
-     * All inputs are expected to be in Fixed-Point format (Q20.12).
+     * All inputs and calculations are in Fixed-Point format (Q20.12).
+     * sqrt is unavoidable but all intermediate values remain in FP domain.
      * @param {number} originX_FP - Explosion center X in fixed-point
      * @param {number} originY_FP - Explosion center Y in fixed-point
      * @param {number} radius_FP - Explosion radius in fixed-point
@@ -159,58 +174,63 @@ export class Player {
 
         const dx = myCenterX - originX_FP;
         const dy = myCenterY - originY_FP;
-        
-        // Squared distance in FP domain (conceptually Dist^2 * FP_ONE^2)
-        // We use floating point Math.sqrt here but floor the result immediately 
-        // to stay within integer domain for the final physics application.
-        // Javascript Numbers are 53-bit integers, so dx*dx is safe for typical map sizes.
+
+        // Squared distance in FP^2 domain
+        // JS Numbers are 53-bit integers, safe for typical map sizes
         const distSq = dx * dx + dy * dy;
         const radiusSq = radius_FP * radius_FP;
-        const knockbackRangeSq = radiusSq * (TILE_SIZE * TILE_SIZE); // radius is in blocks, TILE_SIZE scales it
+        const knockbackRangeSq = radiusSq * TILE_SIZE_SQ;
 
         if (distSq < knockbackRangeSq && distSq > 0) {
+            // sqrt unavoidable, floor to maintain FP integer domain
             const dist = Math.floor(Math.sqrt(distSq));
-            
-            // Normalized direction * FP_ONE
+
+            // Normalized direction in FP
             const dirX = Math.floor((dx * FP_ONE) / dist);
             const dirY = Math.floor((dy * FP_ONE) / dist);
 
-            // Clamped distance for attenuation calc
-            const minDist = TILE_SIZE * FP_ONE;
-            const clampedDist = Math.max(dist, minDist);
+            // Clamp distance for attenuation (all FP)
+            const clampedDist = Math.max(dist, TILE_SIZE_FP);
 
-            // Calculate Energy/Strength
-            // Formula: Strength scales with sqrt(count) which is sizeMultiplier.
-            // We do the heavy math in float for precision but snap to FP.
-            
-            // Convert back to float temporarily for the complex kinetic formula, 
-            // but ensure inputs are the deterministic FP values we calculated.
-            const f_totalStrength = TNT_KNOCKBACK_STRENGTH * (sizeMultiplier_FP / FP_ONE);
-            const f_knockbackRange = (radius_FP / FP_ONE) * TILE_SIZE;
-            const f_clampedDist = clampedDist / FP_ONE;
-            const f_offset = TNT_KNOCKBACK_DISTANCE_OFFSET * TILE_SIZE;
-            
-            const explosionEnergy = (f_totalStrength ** 2 * f_knockbackRange) / (f_clampedDist + f_offset);
+            // === Energy calculation in FP ===
+            // totalStrength = KNOCKBACK_STRENGTH * sizeMultiplier
+            const totalStrength_FP = (KNOCKBACK_STRENGTH_FP * sizeMultiplier_FP) >> FP_SHIFT;
 
-            // Current velocity projected onto explosion normal
-            const vDotN = (this._vx * dirX + this._vy * dirY) / (FP_ONE * FP_ONE); // Result is float
-            
-            // Kinetic Energy Formula: deltaV = -vDotN + sqrt(vDotN^2 + 2 * Energy)
-            const deltaV_Float = -vDotN + Math.sqrt(Math.max(0, vDotN * vDotN + 2 * explosionEnergy));
-            
-            // Apply impulse in fixed-point
-            const deltaV_FP = toFP(deltaV_Float);
-            
-            this._vx += Math.floor((dirX * deltaV_FP) / FP_ONE);
-            this._vy += Math.floor((dirY * deltaV_FP) / FP_ONE);
-            
+            // knockbackRange = radius * TILE_SIZE (in pixel space, FP)
+            const knockbackRange_FP = (radius_FP * TILE_SIZE_FP) >> FP_SHIFT;
+
+            // Energy = (strength^2 * range) / (clampedDist + offset)
+            const strengthSq_FP = (totalStrength_FP * totalStrength_FP) >> FP_SHIFT;
+            const energyNumerator = strengthSq_FP * knockbackRange_FP;
+            const energyDenom = clampedDist + KNOCKBACK_OFFSET_FP;
+            const energy_FP = Math.floor(energyNumerator / energyDenom);
+
+            // === vDotN calculation in FP ===
+            // vDotN = (vx * dirX + vy * dirY) in FP scale
+            const vDotN_FP = ((this._vx * dirX) + (this._vy * dirY)) >> FP_SHIFT;
+
+            // === deltaV calculation ===
+            // deltaV = -vDotN + sqrt(vDotN^2 + 2*energy)
+            const vDotNSq_FP = (vDotN_FP * vDotN_FP) >> FP_SHIFT;
+            const twoEnergy_FP = energy_FP << 1;
+            const discriminant_FP = vDotNSq_FP + twoEnergy_FP;
+
+            // sqrt(discriminant * FP_ONE) gives result in FP scale
+            const sqrtTerm_FP = Math.floor(Math.sqrt(Math.max(0, discriminant_FP) * FP_ONE));
+            const deltaV_FP = -vDotN_FP + sqrtTerm_FP;
+
+            // Apply impulse (all FP)
+            this._vx += (dirX * deltaV_FP) >> FP_SHIFT;
+            this._vy += (dirY * deltaV_FP) >> FP_SHIFT;
+
             this.grounded = false;
         }
     }
 
     findSpawnPoint() {
-        const sx = Math.floor(this.x / TILE_SIZE);
-        
+        // Use FP position directly divided by FP tile size to get grid coordinate
+        const sx = Math.floor(this._x / TILE_SIZE_FP);
+
         // Start searching from the middle of the world height instead of the top.
         // This helps avoid spawning on floating islands which are typically generated in the sky.
         const searchStartY = Math.floor(this.world.height / 2);
@@ -227,7 +247,7 @@ export class Player {
                     // Found air above ground.
                     // y is the first air block, so y+1 is the ground.
                     // We position the player slightly above the ground (y - 1).
-                    this.y = (y - 1) * TILE_SIZE; 
+                    this._y = (y - 1) * TILE_SIZE_FP;
                     return;
                 }
             }
@@ -238,7 +258,7 @@ export class Player {
                 const block = this.world.getBlock(sx, y);
                 if (block !== BLOCKS.AIR && block !== BLOCKS.CLOUD) {
                     // Found ground. Spawn above it.
-                    this.y = (y - 2) * TILE_SIZE;
+                    this._y = (y - 2) * TILE_SIZE_FP;
                     return;
                 }
             }
@@ -248,7 +268,7 @@ export class Player {
         for (let y = 0; y < this.world.height; y++) {
              const block = this.world.getBlock(sx, y);
              if (block !== BLOCKS.AIR && block !== BLOCKS.CLOUD) {
-                 this.y = (y - 2) * TILE_SIZE;
+                 this._y = (y - 2) * TILE_SIZE_FP;
                  break;
              }
         }
@@ -296,9 +316,9 @@ export class Player {
         // Priority 1: Jump Pad Interaction
         if (blockBelow === BLOCKS.JUMP_PAD) {
             const stackCount = this.countVerticalJumpPads(feetX, feetY);
-            // Jump force scales with sqrt(stackCount) - compute in float, convert to FP
-            const jumpMagnitude = BIG_JUMP_FORCE * Math.pow(stackCount, 0.5);
-            this._vy = -toFP(jumpMagnitude);
+            // Jump force from pre-computed lookup table (pure FP)
+            const clampedCount = Math.min(stackCount, 16);
+            this._vy = -JUMP_PAD_FORCE_TABLE_FP[clampedCount];
             this.grounded = false;
             sounds.playBigJump();
         }
@@ -455,8 +475,9 @@ export class Player {
                             // Bounce off jump pad from below
                             if (block === BLOCKS.JUMP_PAD) {
                                 const stackCount = this.countVerticalJumpPads(x, y);
-                                const bounceMagnitude = BIG_JUMP_FORCE * Math.pow(stackCount, 0.5);
-                                this._vy = toFP(bounceMagnitude);
+                                // Bounce force from pre-computed lookup table (pure FP)
+                                const clampedCount = Math.min(stackCount, 16);
+                                this._vy = JUMP_PAD_FORCE_TABLE_FP[clampedCount];
                                 sounds.playBigJump();
                             } else {
                                 this._vy = 0;
