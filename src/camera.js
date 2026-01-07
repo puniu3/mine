@@ -37,12 +37,22 @@ export function createCamera() {
 
             // Horizontal Wrapping Logic
             const worldWidthPixels = world.width * TILE_SIZE;
-            const cameraDiff = targetCamX - x;
-            
+            const cameraDiffX = targetCamX - x;
+
             // Adjust current x to minimize distance to target across world boundaries
-            if (Math.abs(cameraDiff) > worldWidthPixels / 2) {
-                if (cameraDiff > 0) x += worldWidthPixels;
+            if (Math.abs(cameraDiffX) > worldWidthPixels / 2) {
+                if (cameraDiffX > 0) x += worldWidthPixels;
                 else x -= worldWidthPixels;
+            }
+
+            // Vertical Wrapping Logic
+            const worldHeightPixels = world.height * TILE_SIZE;
+            const cameraDiffY = targetCamY - y;
+
+            // Adjust current y to minimize distance to target across world boundaries
+            if (Math.abs(cameraDiffY) > worldHeightPixels / 2) {
+                if (cameraDiffY > 0) y += worldHeightPixels;
+                else y -= worldHeightPixels;
             }
 
             // Apply smoothing to both axes

@@ -110,11 +110,19 @@ export function getSkyGradientColors(time, altitude) {
     }
     
     // Case B: Underground (Go Down)
-    if (altitude > ALTITUDE_UNDERGROUND_START) {
+    if (altitude > ALTITUDE_UNDERGROUND_START && altitude <= 0.8) {
         // Blend towards total darkness (0.5 -> 0.8)
-        const caveFactor = clamp((altitude - ALTITUDE_UNDERGROUND_START) * 3, 0, 1);
+        const caveFactor = clamp((altitude - ALTITUDE_UNDERGROUND_START) * 3.33, 0, 1);
         top = lerpColor(top, UNDERGROUND_COLOR, caveFactor);
         bottom = lerpColor(bottom, UNDERGROUND_COLOR, caveFactor);
+    }
+
+    // Case C: World wrap transition (0.8 -> 1.0 blends back towards space)
+    if (altitude > 0.8) {
+        // From deep underground, transition towards space for smooth world wrap
+        const wrapFactor = (altitude - 0.8) / 0.2; // 0.8->1.0 maps to 0->1
+        top = lerpColor(UNDERGROUND_COLOR, SPACE_COLOR, wrapFactor);
+        bottom = lerpColor(UNDERGROUND_COLOR, SPACE_COLOR, wrapFactor);
     }
 
     return { top, bottom };

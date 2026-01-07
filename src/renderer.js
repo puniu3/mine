@@ -42,11 +42,11 @@ export function drawGame(ctx, {
     const normalizedTime = (Date.now() % dayDuration) / dayDuration;
 
     // Altitude: 0.0 (Top) to 1.0 (Bottom)
-    let altitude = 0.5;
-    if (player) {
-        altitude = player.getCenterY() / (world.height * TILE_SIZE);
-    }
-    altitude = Math.max(0, Math.min(1, altitude));
+    // Use camera center position for smooth altitude transitions during world wrap
+    const worldHeightPixels = world.height * TILE_SIZE;
+    const cameraCenterY = cameraY + logicalHeight / 2;
+    // Normalize to 0-1 range, handling negative values and values > worldHeight
+    let altitude = ((cameraCenterY % worldHeightPixels) + worldHeightPixels) % worldHeightPixels / worldHeightPixels;
 
     // --- 2. Sky Gradient ---
     const { top: skyTop, bottom: skyBottom } = getSkyGradientColors(normalizedTime, altitude);
