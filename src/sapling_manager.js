@@ -21,30 +21,54 @@ export function createSaplingManager({ world, player }) {
 
     /**
      * Helper: Lifts the player up if a block grows into their collision box.
+     * Handles vertical wrapping smoothly.
      */
     function liftPlayerAbove(blockRect) {
+        // 1. Calculate ideal target position based on the block that hit the player.
+        // Even if blockRect.y is 0 (top of map), targetY becoming negative is mathematically correct
+        // for the displacement before we wrap it.
         const targetY = blockRect.y - player.height - 0.1;
-        if (player.y > targetY) {
-            player.y = targetY;
-        }
+        
+        // Update player position
+        player.y = targetY;
+
+        // 2. Normalize player Y immediately to handle the "warp".
+        // This ensures the player stays within world bounds [0, worldPixelHeight).
+        const worldPixelHeight = world.height * TILE_SIZE;
+        player.y = ((player.y % worldPixelHeight) + worldPixelHeight) % worldPixelHeight;
+
         player.vy = 0;
         player.grounded = true;
 
+        // 3. Check for suffocation (blocks inside player's new body position)
+        // We use the new normalized coordinates.
         const startX = Math.floor(player.x / TILE_SIZE);
         const endX = Math.floor((player.x + player.width) / TILE_SIZE);
+        
         const startY = Math.floor(player.y / TILE_SIZE);
+        // Determine endY based on player height. 
+        // Note: We intentionally allow the loop to go beyond world.height in 'y' index
+        // to correctly calculate 'adjustedTop' using Math.min in a linear space.
         const endY = Math.floor((player.y + player.height) / TILE_SIZE);
 
         let adjustedTop = null;
 
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
-                const block = world.getBlock(x, y);
+                // Ensure we check the wrapped coordinate for data access
+                const wrappedY = ((y % world.height) + world.height) % world.height;
+                const wrappedX = ((x % world.width) + world.width) % world.width; // Safety check
+                
+                const block = world.getBlock(wrappedX, wrappedY);
                 if (!isBlockSolid(block, BLOCK_PROPS)) continue;
 
                 if (isBlockBreakable(block, BLOCK_PROPS)) {
-                    world.setBlock(x, y, BLOCKS.AIR);
+                    // Break leaves/blocks stuck inside player
+                    world.setBlock(wrappedX, wrappedY, BLOCKS.AIR);
                 } else {
+                    // For solid unbreakable blocks, we need to push the player further up.
+                    // We use 'y' (linear index) instead of 'wrappedY' for position calculation
+                    // to ensure Math.min works correctly if the player is straddling the world seam.
                     const candidateTop = y * TILE_SIZE;
                     adjustedTop = adjustedTop === null ? candidateTop : Math.min(adjustedTop, candidateTop);
                 }
@@ -52,34 +76,48 @@ export function createSaplingManager({ world, player }) {
         }
 
         if (adjustedTop !== null) {
+            // adjustedTop is in linear space relative to startY.
             player.y = adjustedTop - player.height - 0.1;
+            
+            // Normalize again in case the adjustment pushed them across the boundary again
+            player.y = ((player.y % worldPixelHeight) + worldPixelHeight) % worldPixelHeight;
         }
     }
 
     /**
      * Places a specific block for the tree and handles collision.
+     * Handles vertical wrapping for world connectivity.
      */
     function placeGrowthBlock(x, y, type) {
-        if (x < 0 || x >= world.width || y < 0 || y >= world.height) return;
+        // Only constrain X (unless horizontal wrapping is also desired, but strictly keeping vertical as requested)
+        if (x < 0 || x >= world.width) return;
 
-        const existing = world.getBlock(x, y);
+        // Wrap Y coordinate for vertical loop
+        const wrappedY = ((y % world.height) + world.height) % world.height;
+
+        const existing = world.getBlock(x, wrappedY);
         if (BLOCK_PROPS[existing] && BLOCK_PROPS[existing].unbreakable) return;
 
         if (existing !== BLOCKS.AIR && existing !== BLOCKS.SAPLING) {
-            world.setBlock(x, y, BLOCKS.AIR);
+            world.setBlock(x, wrappedY, BLOCKS.AIR);
         }
 
-        const blockRect = { x: x * TILE_SIZE, y: y * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
+        const blockRect = { x: x * TILE_SIZE, y: wrappedY * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
         
+        // Check intersection. 
+        // Note: This check works for standard overlap. If the player is wrapping exactly at the seam,
+        // standard AABB might miss if not normalized, but generally player physics keeps player normalized.
+        // If overlap is detected, liftPlayerAbove handles the complex wrapping math.
         if (rectsIntersect(player.getRect(), blockRect)) {
             liftPlayerAbove(blockRect);
         }
 
-        world.setBlock(x, y, type);
+        world.setBlock(x, wrappedY, type);
     }
 
     /**
      * Finds all connected saplings starting from a specific coordinate using Flood Fill (BFS).
+     * Handles vertical wrapping so saplings at the bottom connect to saplings at the top.
      */
     function getConnectedSaplings(startX, startY) {
         const group = [];
@@ -92,22 +130,31 @@ export function createSaplingManager({ world, player }) {
         while (queue.length > 0) {
             const current = queue.shift();
             
+            // Check current block with wrapping logic implicitly handled by start coordinates,
+            // but we must ensure we access the world correctly.
+            // Note: coordinates in the queue are already wrapped when added.
             if (world.getBlock(current.x, current.y) === BLOCKS.SAPLING) {
                 group.push(current);
 
-                const neighbors = [
-                    { x: current.x + 1, y: current.y },
-                    { x: current.x - 1, y: current.y },
-                    { x: current.x, y: current.y + 1 },
-                    { x: current.x, y: current.y - 1 }
+                const neighborsOffsets = [
+                    { dx: 1, dy: 0 },
+                    { dx: -1, dy: 0 },
+                    { dx: 0, dy: 1 },
+                    { dx: 0, dy: -1 }
                 ];
 
-                for (const n of neighbors) {
-                    const k = key(n.x, n.y);
-                    if (n.x >= 0 && n.x < world.width && n.y >= 0 && n.y < world.height) {
-                        if (!visited.has(k) && world.getBlock(n.x, n.y) === BLOCKS.SAPLING) {
+                for (const offset of neighborsOffsets) {
+                    const nx = current.x + offset.dx;
+                    const rawNy = current.y + offset.dy;
+                    
+                    // Wrap Y coordinate
+                    const ny = ((rawNy % world.height) + world.height) % world.height;
+
+                    if (nx >= 0 && nx < world.width) {
+                        const k = key(nx, ny);
+                        if (!visited.has(k) && world.getBlock(nx, ny) === BLOCKS.SAPLING) {
                             visited.add(k);
-                            queue.push(n);
+                            queue.push({ x: nx, y: ny });
                         }
                     }
                 }
@@ -129,6 +176,7 @@ export function createSaplingManager({ world, player }) {
 
         // 1. Calculate bounding box to determine shape
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        
         saplingGroup.forEach(s => {
             if (s.x < minX) minX = s.x;
             if (s.x > maxX) maxX = s.x;
@@ -156,24 +204,23 @@ export function createSaplingManager({ world, player }) {
         let widthVarianceChance = 0.0;
         let woodBonus = 1.0; // Multiplier for total wood
 
-        if (ratio >= 2.0) {
+        const likelyWrapped = height > world.height / 2;
+
+        if (!likelyWrapped && ratio >= 2.0) {
             // PATTERN: TALL (Vertical Stack)
-            // Goal: Very high, thin, straight.
             currentWidth = 1; 
-            woodBonus = 1.5; // Give extra height for satisfaction
-            driftChance = 0.02; // Very slight wobble
-        } else if (ratio <= 0.5) {
+            woodBonus = 1.5; 
+            driftChance = 0.02; 
+        } else if (!likelyWrapped && ratio <= 0.5) {
             // PATTERN: THICK (Horizontal Row)
-            // Goal: As wide as the saplings were, stout.
             currentWidth = width;
-            woodBonus = 0.8; // Slightly less efficient to prevent massive walls
+            woodBonus = 0.8; 
             driftChance = 0.05; 
         } else {
-            // PATTERN: BONSAI (Cluster/Blob)
-            // Goal: Twisty, organic look.
+            // PATTERN: BONSAI (Cluster/Blob) or Wrapped Group
             currentWidth = Math.ceil(Math.sqrt(count));
-            driftChance = 0.3; // High chance to drift left/right
-            widthVarianceChance = 0.3; // Trunk thickness changes
+            driftChance = 0.3; 
+            widthVarianceChance = 0.3; 
         }
 
         const targetWoodCount = Math.floor(count * blocksPerSapling * woodBonus);
@@ -188,28 +235,24 @@ export function createSaplingManager({ world, player }) {
             // Determine width for this row
             let rowWidth = currentWidth;
             
-            // Apply width variance (mainly for Bonsai look)
+            // Apply width variance
             if (widthVarianceChance > 0 && Math.random() < widthVarianceChance) {
                 rowWidth += (Math.random() < 0.5 ? -1 : 1);
             }
             if (rowWidth < 1) rowWidth = 1;
 
-            // Determine drift (Horizontal movement)
-            const isBase = (rootY - currentY) < 2; // Stable base
+            // Determine drift
+            const isBase = (rootY - currentY) < 2; 
             
             if (!isBase) {
                 if (Math.random() < driftChance) {
                     const driftDir = Math.random() < 0.5 ? -1 : 1;
                     currentX += driftDir;
                 }
-                
-                // Bias correction: If drifting too far from center, pull back slightly
-                // (Prevents trees from drifting off-screen)
                 if (currentX < rootX - 3 && Math.random() < 0.2) currentX++;
                 if (currentX > rootX + 3 && Math.random() < 0.2) currentX--;
             }
 
-            // Calculate start X for this row to center it on currentX
             const startX = currentX - Math.floor((rowWidth - 1) / 2);
 
             for (let w = 0; w < rowWidth; w++) {
@@ -219,19 +262,14 @@ export function createSaplingManager({ world, player }) {
             
             currentY--;
 
-            // Safety break (Max height limit)
             if (rootY - currentY > 100) break; 
         }
 
         // 5. Generate Leaves
-        // Adjust leaf size based on tree size
         const topY = currentY + 1; 
         const topX = currentX;
         
-        // Leaf radius scales slightly with trunk width
         let leafRadius = 2 + (currentWidth * 0.8);
-        
-        // Clamp leaf size to avoid massive lag on huge trees
         if (leafRadius > 6) leafRadius = 6;
 
         const rangeX = Math.ceil(leafRadius);
@@ -243,9 +281,7 @@ export function createSaplingManager({ world, player }) {
                 const yDist = (ly - topY) / rangeY;
                 const dist = Math.sqrt(xDist * xDist + yDist * yDist);
                 
-                // Randomize edges for organic look
                 if (dist < 1.0 - (Math.random() * 0.25)) {
-                    // Don't overwrite trunk
                     const isWood = placements.some(p => p.x === lx && p.y === ly && p.type === BLOCKS.WOOD);
                     if (!isWood) {
                         placements.push({ x: lx, y: ly, type: BLOCKS.LEAVES });
@@ -274,6 +310,13 @@ export function createSaplingManager({ world, player }) {
             if (sapling.timer <= 0) {
                 const group = getConnectedSaplings(sapling.x, sapling.y);
                 growSaplingGroup(group);
+                // Saplings are removed by growSaplingGroup, logic below cleans up
+            }
+        }
+        
+        // Clean up timers for saplings that no longer exist
+        for (let i = saplingTimers.length - 1; i >= 0; i--) {
+            if (world.getBlock(saplingTimers[i].x, saplingTimers[i].y) !== BLOCKS.SAPLING) {
                 saplingTimers.splice(i, 1);
             }
         }

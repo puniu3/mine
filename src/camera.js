@@ -47,7 +47,7 @@ export function createCamera() {
 
             // Apply smoothing to both axes
             x = smoothCamera(x, targetCamX, CAMERA_SMOOTHING);
-            y = smoothCamera(y, targetCamY, CAMERA_SMOOTHING);
+            y = targetCamY;
         }
     };
 }
