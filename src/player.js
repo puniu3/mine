@@ -1,5 +1,6 @@
 /**
  * Player module
+ * Refactored for Fixed Timestep Physics (720Hz)
  */
 
 import { clamp, isBlockSolid, isBlockBreakable, getBlockMaterialType, isNaturalBlock } from './utils.js';
@@ -9,6 +10,22 @@ import {
     UPWARD_COLLISION_VELOCITY_THRESHOLD, MAX_NATURAL_BLOCK_ID,
     TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET
 } from './constants.js';
+
+// --- Physics Constants (720Hz Fixed Step) ---
+const PHYSICS_TPS = 720;
+const FIXED_DT_MS = 1000 / PHYSICS_TPS; // approx 1.38ms
+const BASE_FPS = 60;
+
+// The physics simulation runs at 720Hz, but values (Gravity, Speed) are tuned for 60Hz.
+// We scale the delta-time relative to a 60Hz frame.
+// TIME_SCALE ~= 0.08333
+const FIXED_TIME_SCALE = FIXED_DT_MS / (1000 / BASE_FPS);
+
+// Pre-calculated Physics Factors per Tick
+// Friction: 0.8 per 60Hz frame -> converted to per-tick factor
+const FRICTION_FACTOR = Math.pow(0.8, FIXED_TIME_SCALE);
+const GRAVITY_PER_TICK = GRAVITY * FIXED_TIME_SCALE;
+const BOARD_DECAY_PER_TICK = 15 * (FIXED_DT_MS / 1000);
 
 // Q20.12 Fixed-point arithmetic constants
 const FP_SHIFT = 12;
@@ -215,9 +232,14 @@ export class Player {
         return { x: this.x, y: this.y, w: this.width, h: this.height };
     }
 
+    /**
+     * Physics Update Loop
+     * Now optimized for Fixed Timestep (ignores variable dt, assumes FIXED_DT_MS)
+     * @param {Object} input - Input state
+     * @param {number} dt - (Unused in logic, assumed to be ~1.38ms)
+     */
     update(input, dt) {
-        const timeScale = dt / (1000 / 60);
-
+        // 1. Horizontal Movement & Friction
         if (input.keys.left) {
             this.vx = -5;
             this.facingRight = false;
@@ -225,10 +247,11 @@ export class Player {
             this.vx = 5;
             this.facingRight = true;
         } else {
-            this.vx *= Math.pow(0.8, timeScale);
+            // Apply constant friction per tick
+            this.vx *= FRICTION_FACTOR;
         }
 
-        // Check for interactions with the block below (Jump Pad)
+        // 2. Check for interactions with the block below (Jump Pad)
         const feetX = Math.floor(this.getCenterX() / TILE_SIZE);
         const feetY = Math.floor((this.y + this.height + 0.1) / TILE_SIZE);
         const blockBelow = this.world.getBlock(feetX, feetY);
@@ -249,31 +272,40 @@ export class Player {
             sounds.playJump();
         }
 
-        // Board velocity decay
-        if (this.boardVx !== 0) {
-            const decayAmount = 15 * (dt / 1000);
-            let currentBoardVx = this.boardVx;
+        // 3. Board velocity decay
+        if (this._boardVx !== 0) {
+            let currentBoardVx = this.boardVx; // Convert to float for calculation
             if (currentBoardVx > 0) {
-                this.boardVx = Math.max(0, currentBoardVx - decayAmount);
+                this.boardVx = Math.max(0, currentBoardVx - BOARD_DECAY_PER_TICK);
             } else {
-                this.boardVx = Math.min(0, currentBoardVx + decayAmount);
+                this.boardVx = Math.min(0, currentBoardVx + BOARD_DECAY_PER_TICK);
             }
         }
 
-        this.vy = Math.max(this.vy, Math.min(this.vy + GRAVITY * timeScale, TERMINAL_VELOCITY));
+        // 4. Gravity Application
+        // Clamp to terminal velocity
+        let nextVy = this.vy + GRAVITY_PER_TICK;
+        if (nextVy > TERMINAL_VELOCITY) nextVy = TERMINAL_VELOCITY;
+        this.vy = nextVy;
 
         const totalVx = this.vx + this.boardVx;
         
-        this.x += totalVx * timeScale;
+        // 5. Apply Movement (scaled by Time Scale)
+        this.x += totalVx * FIXED_TIME_SCALE;
         this.handleCollisions(true, totalVx);
         
-        this.y += this.vy * timeScale;
+        this.y += this.vy * FIXED_TIME_SCALE;
         this.handleCollisions(false);
 
+        // 6. World Wrapping
         this.wrapHorizontally();
         this.wrapVertically();
 
-        if (Math.abs(totalVx) > 0.1) this.animTimer += dt;
+        // 7. Animation Timer
+        // Use fixed time step for consistent animation speed regardless of framerate
+        if (Math.abs(totalVx) > 0.1) {
+            this.animTimer += FIXED_DT_MS;
+        }
     }
 
     countVerticalJumpPads(x, y) {
