@@ -5,7 +5,7 @@
  * Floats appear only at rendering boundaries (getters/draw).
  */
 
-import { clamp, isBlockSolid, isBlockBreakable, getBlockMaterialType, isNaturalBlock } from './utils.js';
+import { isBlockSolid, isBlockBreakable, getBlockMaterialType, isNaturalBlock } from './utils.js';
 import { sounds } from './audio.js';
 import {
     TILE_SIZE, GRAVITY, JUMP_FORCE, BIG_JUMP_FORCE, BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY,
@@ -21,27 +21,23 @@ const toFP = (val) => Math.floor(val * FP_ONE);
 const toFloat = (val) => val / FP_ONE;
 
 // --- Physics Constants (720Hz Fixed Step) ---
-const PHYSICS_TPS = 720;
-const FIXED_DT_MS = 1000 / PHYSICS_TPS; // approx 1.38ms
-const BASE_FPS = 60;
-
-// Time scale relative to 60Hz frame (~0.08333)
-const FIXED_TIME_SCALE = FIXED_DT_MS / (1000 / BASE_FPS);
+// Time scale per tick: PHYSICS_DT / 16.667ms = 60 / 720 = 1/12
+const TICK_TIME_SCALE = PHYSICS_DT * 0.06;
 
 // --- Pre-calculated FP Physics Constants ---
 // All physics factors converted to Q20.12 for pure integer arithmetic
 
 // Friction: 0.8^timeScale per tick (multiply then shift)
-const FRICTION_FACTOR_FP = Math.floor(Math.pow(0.8, FIXED_TIME_SCALE) * FP_ONE);
+const FRICTION_FACTOR_FP = Math.floor(Math.pow(0.8, TICK_TIME_SCALE) * FP_ONE);
 
 // Gravity per tick in FP
-const GRAVITY_PER_TICK_FP = toFP(GRAVITY * FIXED_TIME_SCALE);
+const GRAVITY_PER_TICK_FP = toFP(GRAVITY * TICK_TIME_SCALE);
 
 // Board velocity decay per tick in FP
-const BOARD_DECAY_PER_TICK_FP = toFP(15 * (FIXED_DT_MS / 1000));
+const BOARD_DECAY_PER_TICK_FP = toFP(15 * (PHYSICS_DT / 1000));
 
 // Time scale for position integration (velocity * timeScale)
-const FIXED_TIME_SCALE_FP = toFP(FIXED_TIME_SCALE);
+const TICK_TIME_SCALE_FP = toFP(TICK_TIME_SCALE);
 
 // Velocity constants in FP
 const WALK_SPEED_FP = toFP(5);
@@ -351,20 +347,20 @@ export class Player {
         const totalVx_FP = this._vx + this._boardVx;
 
         // Horizontal movement: x += totalVx * timeScale
-        this._x += (totalVx_FP * FIXED_TIME_SCALE_FP) >> FP_SHIFT;
-        this.handleCollisionsFP(true, totalVx_FP);
+        this._x += (totalVx_FP * TICK_TIME_SCALE_FP) >> FP_SHIFT;
+        this.handleCollisions(true, totalVx_FP);
 
         // Vertical movement: y += vy * timeScale
-        this._y += (this._vy * FIXED_TIME_SCALE_FP) >> FP_SHIFT;
-        this.handleCollisionsFP(false, this._vy);
+        this._y += (this._vy * TICK_TIME_SCALE_FP) >> FP_SHIFT;
+        this.handleCollisions(false, this._vy);
 
-        // 6. World Wrapping (FP)
-        this.wrapHorizontallyFP();
-        this.wrapVerticallyFP();
+        // 6. World Wrapping
+        this.wrapHorizontally();
+        this.wrapVertically();
 
         // 7. Animation Timer (rendering only - float is acceptable)
         if (this._vx > ANIM_VX_THRESHOLD_FP || this._vx < -ANIM_VX_THRESHOLD_FP) {
-            this.animTimer += FIXED_DT_MS;
+            this.animTimer += PHYSICS_DT;
         }
     }
 
@@ -384,10 +380,10 @@ export class Player {
     }
 
     /**
-     * World wrapping - Horizontal (FP)
+     * World wrapping - Horizontal
      * Operates directly on _x in Q20.12 format
      */
-    wrapHorizontallyFP() {
+    wrapHorizontally() {
         const worldSpan_FP = this.world.width * TILE_SIZE_FP;
         while (this._x >= worldSpan_FP) {
             this._x -= worldSpan_FP;
@@ -398,10 +394,10 @@ export class Player {
     }
 
     /**
-     * World wrapping - Vertical (FP)
+     * World wrapping - Vertical
      * Operates directly on _y in Q20.12 format
      */
-    wrapVerticallyFP() {
+    wrapVertically() {
         const worldSpan_FP = this.world.height * TILE_SIZE_FP;
         while (this._y >= worldSpan_FP) {
             this._y -= worldSpan_FP;
@@ -410,10 +406,6 @@ export class Player {
             this._y += worldSpan_FP;
         }
     }
-
-    // Legacy wrappers for external callers (use float interface)
-    wrapHorizontally() { this.wrapHorizontallyFP(); }
-    wrapVertically() { this.wrapVerticallyFP(); }
 
     respawn() {
         this._y = 0;
@@ -430,7 +422,7 @@ export class Player {
      * @param {boolean} horizontal - True for horizontal collision, false for vertical
      * @param {number} velocity_FP - Current velocity in FP format
      */
-    handleCollisionsFP(horizontal, velocity_FP) {
+    handleCollisions(horizontal, velocity_FP) {
         // Calculate grid bounds from FP position
         const startX = Math.floor(this._x / TILE_SIZE_FP);
         const endX = Math.floor((this._x + this._width) / TILE_SIZE_FP);
@@ -491,11 +483,6 @@ export class Player {
             }
         }
         if (!horizontal) this.grounded = false;
-    }
-
-    // Legacy wrapper for external callers
-    handleCollisions(horizontal, vx = this.vx) {
-        this.handleCollisionsFP(horizontal, toFP(vx));
     }
 
     draw(ctx) {
