@@ -59,6 +59,9 @@ let saveManager = null;
 // - Prevents "tunneling" (clipping through blocks) at high speeds.
 const PHYSICS_TPS = 720;
 const PHYSICS_DT = 1000 / PHYSICS_TPS; // approx 1.38ms
+// Allow a small epsilon to stabilize step counts on 60Hz monitors.
+// If accumulator is within 0.25ms of a full step, force the step.
+const PHYSICS_EPSILON = 0.25; 
 let accumulator = 0;
 
 // Day/Night Cycle Settings
@@ -239,12 +242,8 @@ function updateCamera(frameTime) {
         else cameraX -= worldWidthPixels;
     }
 
-    // Adapt smoothing to the variable frame time
-    // This ensures consistent camera speed regardless of FPS or physics steps
-    const timeRatio = frameTime / PHYSICS_DT; 
-    const adjustedSmoothing = 1 - Math.pow(1 - CAMERA_SMOOTHING, timeRatio);
-
-    cameraX = smoothCamera(cameraX, targetCamX, adjustedSmoothing);
+    // Standard smoothing is sufficient now that physics steps are stable
+    cameraX = smoothCamera(cameraX, targetCamX, CAMERA_SMOOTHING);
     cameraY = targetCamY;
 }
 
@@ -279,12 +278,17 @@ function loop(timestamp) {
 
     accumulator += frameTime;
 
-    while (accumulator >= PHYSICS_DT) {
+    // Modified Logic: Use EPSILON to allow "rounding up" the step count.
+    // If we are very close to a full step (within PHYSICS_EPSILON), execute it.
+    // This allows accumulator to dip slightly below zero, stabilizing the 
+    // step count per frame (e.g. consistently 12 steps for 60Hz) 
+    // and preventing jitter caused by 11/12 oscillation.
+    while (accumulator >= PHYSICS_DT - PHYSICS_EPSILON) {
         update(PHYSICS_DT);
         accumulator -= PHYSICS_DT;
     }
 
-    // Update camera once per frame based on actual frame time
+    // Camera update is still separated, but now benefits from stable physics steps
     updateCamera(frameTime);
 
     draw();
