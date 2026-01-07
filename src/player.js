@@ -64,7 +64,7 @@ const ACCELERATOR_AMOUNT_FP = toFP(ACCELERATOR_ACCELERATION_AMOUNT);
 // Jump pad force lookup table: BIG_JUMP_FORCE * sqrt(stackCount) in FP
 // Pre-computed to eliminate runtime float calculations
 const JUMP_PAD_FORCE_TABLE_FP = [];
-for (let i = 0; i <= 16; i++) {
+for (let i = 0; i <= 128; i++) {
     JUMP_PAD_FORCE_TABLE_FP[i] = toFP(BIG_JUMP_FORCE * Math.sqrt(i));
 }
 
@@ -314,7 +314,7 @@ export class Player {
         if (blockBelow === BLOCKS.JUMP_PAD) {
             const stackCount = this.countVerticalJumpPads(feetX, feetY);
             // Jump force from pre-computed lookup table (pure FP)
-            const clampedCount = Math.min(stackCount, 16);
+            const clampedCount = Math.min(stackCount, 128);
             this._vy = -JUMP_PAD_FORCE_TABLE_FP[clampedCount];
             this.grounded = false;
             sounds.playBigJump();
@@ -468,7 +468,7 @@ export class Player {
                             if (block === BLOCKS.JUMP_PAD) {
                                 const stackCount = this.countVerticalJumpPads(x, y);
                                 // Bounce force from pre-computed lookup table (pure FP)
-                                const clampedCount = Math.min(stackCount, 16);
+                                const clampedCount = Math.min(stackCount, 128);
                                 this._vy = JUMP_PAD_FORCE_TABLE_FP[clampedCount];
                                 sounds.playBigJump();
                             } else {
