@@ -104,8 +104,16 @@ export function createActions({
                     // Calculate where the player needs to move (on top of the new block)
                     const targetPlayerY = (by * TILE_SIZE) - player.height;
 
-                    // Check if the area above the new block position is free
-                    if (world.checkAreaFree(player.x, targetPlayerY, player.width, player.height)) {
+                    // UPDATED LOGIC:
+                    // 1. Check if the block at the NEW target (feet) is actually replaceable (Air or Transparent)
+                    const blockAtFeet = world.getBlock(bx, by);
+                    const isFeetBlockReplaceable = blockAtFeet === BLOCKS.AIR || isBlockTransparent(blockAtFeet, BLOCK_PROPS);
+                    
+                    // 2. Check if the area above the new block position is free
+                    const isAreaAboveFree = world.checkAreaFree(player.x, targetPlayerY, player.width, player.height);
+
+                    // Only allow placement/climb if both the feet tile is valid AND the space above is free
+                    if (isFeetBlockReplaceable && isAreaAboveFree) {
                         canPlace = true;
                         shouldClimb = true;
                     }
@@ -128,8 +136,10 @@ export function createActions({
                 const selectedBlock = inventory.getSelectedBlockId();
                 // Cloud blocks can be placed in mid-air without adjacent support
                 const isCloud = selectedBlock === BLOCKS.CLOUD;
-                // Check neighbors (allow placement if climbing OR has neighbor OR is cloud)
-                const hasNeighbor = isCloud || shouldClimb || hasAdjacentBlock(bx, by, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
+                
+                // UPDATED LOGIC: Removed 'shouldClimb' from the OR condition.
+                // Even if climbing, we now require a valid neighbor (or cloud) to respect "Normal Rules".
+                const hasNeighbor = isCloud || hasAdjacentBlock(bx, by, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
 
                 if (hasNeighbor) {
                     if (inventory.consumeFromInventory(selectedBlock)) {
