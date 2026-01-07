@@ -228,7 +228,7 @@ function tick() {
 }
 
 // --- Camera Update (Per Frame) ---
-function updateCamera(frameTime) {
+function updateCamera() {
     if (!player) return;
 
     camera.update(player, world, logicalWidth, logicalHeight);
@@ -275,7 +275,7 @@ function loop(timestamp) {
     }
 
     // Camera update is still separated, but now benefits from stable physics steps
-    updateCamera(frameTime);
+    updateCamera();
 
     draw();
     
