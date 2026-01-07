@@ -162,6 +162,7 @@ export class Player {
      * Applies explosion knockback deterministically.
      * All inputs and calculations are in Fixed-Point format (Q20.12).
      * sqrt is unavoidable but all intermediate values remain in FP domain.
+     * NOTE: Uses Math.floor division instead of >> to avoid 32-bit overflow.
      * @param {number} originX_FP - Explosion center X in fixed-point
      * @param {number} originY_FP - Explosion center Y in fixed-point
      * @param {number} radius_FP - Explosion radius in fixed-point
@@ -193,26 +194,27 @@ export class Player {
             const clampedDist = Math.max(dist, TILE_SIZE_FP);
 
             // === Energy calculation in FP ===
+            // NOTE: Use Math.floor division to avoid 32-bit overflow from >> operator
             // totalStrength = KNOCKBACK_STRENGTH * sizeMultiplier
-            const totalStrength_FP = (KNOCKBACK_STRENGTH_FP * sizeMultiplier_FP) >> FP_SHIFT;
+            const totalStrength_FP = Math.floor((KNOCKBACK_STRENGTH_FP * sizeMultiplier_FP) / FP_ONE);
 
             // knockbackRange = radius * TILE_SIZE (in pixel space, FP)
-            const knockbackRange_FP = (radius_FP * TILE_SIZE_FP) >> FP_SHIFT;
+            const knockbackRange_FP = Math.floor((radius_FP * TILE_SIZE_FP) / FP_ONE);
 
             // Energy = (strength^2 * range) / (clampedDist + offset)
-            const strengthSq_FP = (totalStrength_FP * totalStrength_FP) >> FP_SHIFT;
+            const strengthSq_FP = Math.floor((totalStrength_FP * totalStrength_FP) / FP_ONE);
             const energyNumerator = strengthSq_FP * knockbackRange_FP;
             const energyDenom = clampedDist + KNOCKBACK_OFFSET_FP;
             const energy_FP = Math.floor(energyNumerator / energyDenom);
 
             // === vDotN calculation in FP ===
             // vDotN = (vx * dirX + vy * dirY) in FP scale
-            const vDotN_FP = ((this._vx * dirX) + (this._vy * dirY)) >> FP_SHIFT;
+            const vDotN_FP = Math.floor(((this._vx * dirX) + (this._vy * dirY)) / FP_ONE);
 
             // === deltaV calculation ===
             // deltaV = -vDotN + sqrt(vDotN^2 + 2*energy)
-            const vDotNSq_FP = (vDotN_FP * vDotN_FP) >> FP_SHIFT;
-            const twoEnergy_FP = energy_FP << 1;
+            const vDotNSq_FP = Math.floor((vDotN_FP * vDotN_FP) / FP_ONE);
+            const twoEnergy_FP = energy_FP * 2;
             const discriminant_FP = vDotNSq_FP + twoEnergy_FP;
 
             // sqrt(discriminant * FP_ONE) gives result in FP scale
@@ -220,8 +222,8 @@ export class Player {
             const deltaV_FP = -vDotN_FP + sqrtTerm_FP;
 
             // Apply impulse (all FP)
-            this._vx += (dirX * deltaV_FP) >> FP_SHIFT;
-            this._vy += (dirY * deltaV_FP) >> FP_SHIFT;
+            this._vx += Math.floor((dirX * deltaV_FP) / FP_ONE);
+            this._vy += Math.floor((dirY * deltaV_FP) / FP_ONE);
 
             this.grounded = false;
         }
