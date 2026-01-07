@@ -117,36 +117,67 @@ export function createSaplingManager({ world, player }) {
     }
 
     /**
-     * Generates a tree structure scaling wood count to sapling count.
-     * Modified to be straighter (less bonsai-like).
+     * Generates a tree structure based on the shape of the sapling group.
+     * Logic:
+     * - Vertical stack -> Tall, thin, straight tree (Sequoia-like).
+     * - Horizontal row -> Thick, stout trunk (Baobab-like).
+     * - Irregular cluster -> Twisty, random width (Bonsai-like).
      */
     function growSaplingGroup(saplingGroup) {
         const count = saplingGroup.length;
         if (count === 0) return;
 
-        // 1. Calculate bounding box
-        let minX = Infinity, maxX = -Infinity, maxY = -Infinity;
+        // 1. Calculate bounding box to determine shape
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         saplingGroup.forEach(s => {
             if (s.x < minX) minX = s.x;
             if (s.x > maxX) maxX = s.x;
+            if (s.y < minY) minY = s.y;
             if (s.y > maxY) maxY = s.y;
         });
 
+        const width = maxX - minX + 1;
+        const height = maxY - minY + 1;
+        const ratio = height / width; // > 1 is tall, < 1 is wide
+
+        // Root position (bottom center of the group)
         const rootX = Math.floor((minX + maxX) / 2);
         const rootY = maxY;
 
-        // 2. Resource configuration
-        const blocksPerSapling = 4;
-        const targetWoodCount = count * blocksPerSapling;
-
-        // Base width calculation
-        const baseWidth = Math.ceil(Math.sqrt(count));
-        
-        // 3. Clear existing saplings
+        // 2. Clear existing saplings
         saplingGroup.forEach(s => {
             world.setBlock(s.x, s.y, BLOCKS.AIR);
         });
 
+        // 3. Determine Growth Parameters based on shape
+        let blocksPerSapling = 5; // Base efficiency
+        let currentWidth = 1;
+        let driftChance = 0.0;
+        let widthVarianceChance = 0.0;
+        let woodBonus = 1.0; // Multiplier for total wood
+
+        if (ratio >= 2.0) {
+            // PATTERN: TALL (Vertical Stack)
+            // Goal: Very high, thin, straight.
+            currentWidth = 1; 
+            woodBonus = 1.5; // Give extra height for satisfaction
+            driftChance = 0.02; // Very slight wobble
+        } else if (ratio <= 0.5) {
+            // PATTERN: THICK (Horizontal Row)
+            // Goal: As wide as the saplings were, stout.
+            currentWidth = width;
+            woodBonus = 0.8; // Slightly less efficient to prevent massive walls
+            driftChance = 0.05; 
+        } else {
+            // PATTERN: BONSAI (Cluster/Blob)
+            // Goal: Twisty, organic look.
+            currentWidth = Math.ceil(Math.sqrt(count));
+            driftChance = 0.3; // High chance to drift left/right
+            widthVarianceChance = 0.3; // Trunk thickness changes
+        }
+
+        const targetWoodCount = Math.floor(count * blocksPerSapling * woodBonus);
+        
         const placements = [];
         let placedWood = 0;
         let currentY = rootY;
@@ -154,35 +185,31 @@ export function createSaplingManager({ world, player }) {
 
         // 4. Generate Trunk
         while (placedWood < targetWoodCount) {
-            // Determine width for this row.
-            // Reduced randomness here too: mostly consistent width.
-            let rowWidth = baseWidth;
-            if (baseWidth > 1 && Math.random() < 0.2) { // Only 20% chance to vary thickness
+            // Determine width for this row
+            let rowWidth = currentWidth;
+            
+            // Apply width variance (mainly for Bonsai look)
+            if (widthVarianceChance > 0 && Math.random() < widthVarianceChance) {
                 rowWidth += (Math.random() < 0.5 ? -1 : 1);
             }
             if (rowWidth < 1) rowWidth = 1;
 
             // Determine drift (Horizontal movement)
-            // Drastically reduced drift chance to prevent "Bonsai" look.
-            // Keep the first 3 blocks straight for stability.
-            const isBase = (rootY - currentY) < 3;
+            const isBase = (rootY - currentY) < 2; // Stable base
             
             if (!isBase) {
-                const roll = Math.random();
-                let drift = 0;
+                if (Math.random() < driftChance) {
+                    const driftDir = Math.random() < 0.5 ? -1 : 1;
+                    currentX += driftDir;
+                }
                 
-                // Only 5% chance to drift left or right (was 20%)
-                if (roll < 0.05) drift = -1;
-                else if (roll > 0.95) drift = 1;
-                
-                // Bias correction: If we are too far from rootX, force a return drift sometimes
-                if (currentX < rootX - 1 && Math.random() < 0.3) drift = 1;
-                if (currentX > rootX + 1 && Math.random() < 0.3) drift = -1;
-
-                currentX += drift;
+                // Bias correction: If drifting too far from center, pull back slightly
+                // (Prevents trees from drifting off-screen)
+                if (currentX < rootX - 3 && Math.random() < 0.2) currentX++;
+                if (currentX > rootX + 3 && Math.random() < 0.2) currentX--;
             }
 
-            // Calculate start X for this row
+            // Calculate start X for this row to center it on currentX
             const startX = currentX - Math.floor((rowWidth - 1) / 2);
 
             for (let w = 0; w < rowWidth; w++) {
@@ -192,16 +219,21 @@ export function createSaplingManager({ world, player }) {
             
             currentY--;
 
-            // Safety break
-            if (rootY - currentY > 50) break; 
+            // Safety break (Max height limit)
+            if (rootY - currentY > 100) break; 
         }
 
         // 5. Generate Leaves
+        // Adjust leaf size based on tree size
         const topY = currentY + 1; 
         const topX = currentX;
         
-        // Leaf radius
-        const leafRadius = 2 + (baseWidth * 1.5);
+        // Leaf radius scales slightly with trunk width
+        let leafRadius = 2 + (currentWidth * 0.8);
+        
+        // Clamp leaf size to avoid massive lag on huge trees
+        if (leafRadius > 6) leafRadius = 6;
+
         const rangeX = Math.ceil(leafRadius);
         const rangeY = Math.ceil(leafRadius * 0.8);
 
@@ -211,7 +243,9 @@ export function createSaplingManager({ world, player }) {
                 const yDist = (ly - topY) / rangeY;
                 const dist = Math.sqrt(xDist * xDist + yDist * yDist);
                 
+                // Randomize edges for organic look
                 if (dist < 1.0 - (Math.random() * 0.25)) {
+                    // Don't overwrite trunk
                     const isWood = placements.some(p => p.x === lx && p.y === ly && p.type === BLOCKS.WOOD);
                     if (!isWood) {
                         placements.push({ x: lx, y: ly, type: BLOCKS.LEAVES });
