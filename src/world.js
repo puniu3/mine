@@ -479,7 +479,7 @@ export class World {
     }
 
     generateStructures(heights, biomeByColumn) {
-        const islandCount = Math.floor(this.width / 80);
+        const islandCount = Math.floor(this.width / 160);
         for (let i = 0; i < islandCount; i++) {
             const x = 20 + Math.floor(Math.random() * (this.width - 40));
             const surface = heights[x];
@@ -516,14 +516,14 @@ export class World {
             const surfaceY = heights[x];
 
             // 1. Ancient Monolith (Rare in Plains/Wasteland)
-            if ((biome === BIOMES.PLAINS || biome === BIOMES.WASTELAND) && Math.random() < 0.003) {
+            if ((biome === BIOMES.PLAINS || biome === BIOMES.WASTELAND) && Math.random() < 0.002) {
                 this.generateMonolith(x, surfaceY);
                 x += 10; 
                 continue;
             }
 
             // 2. Buried Bunker (Rare in Forest/Savanna)
-            if ((biome === BIOMES.FOREST || biome === BIOMES.SAVANNA) && Math.random() < 0.004) {
+            if ((biome === BIOMES.FOREST || biome === BIOMES.SAVANNA) && Math.random() < 0.002) {
                 // Ensure deep enough soil
                 if (surfaceY < this.height - 20) {
                     this.generateBuriedBunker(x, surfaceY + 8);
@@ -533,7 +533,7 @@ export class World {
             }
 
             // 3. World Tree (Very Rare in Deep Forest)
-            if (biome === BIOMES.DEEP_FOREST && Math.random() < 0.005) {
+            if (biome === BIOMES.DEEP_FOREST && Math.random() < 0.01) {
                 this.generateWorldTree(x, surfaceY);
                 x += 15;
                 continue;
