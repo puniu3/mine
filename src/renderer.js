@@ -39,13 +39,13 @@ export function drawGame(ctx, {
     if (!world) return;
 
     // --- 1. Calculate Time & Altitude ---
-    const normalizedTime = (Date.now() % DAY_DURATION_MS) / DAY_DURATION_MS;
+    const now = Date.now();
+    const normalizedTime = (now % DAY_DURATION_MS) / DAY_DURATION_MS;
+    const currentDay = Math.floor(now / DAY_DURATION_MS);
 
     // Altitude: 0.0 (Top) to 1.0 (Bottom)
-    // Use camera center position for smooth altitude transitions during world wrap
     const worldHeightPixels = world.height * TILE_SIZE;
     const cameraCenterY = cameraY + logicalHeight / 2;
-    // Normalize to 0-1 range, handling negative values and values > worldHeight
     let altitude = ((cameraCenterY % worldHeightPixels) + worldHeightPixels) % worldHeightPixels / worldHeightPixels;
 
     // --- 2. Sky Gradient ---
@@ -70,13 +70,16 @@ export function drawGame(ctx, {
 
     // --- 4. Celestial Bodies (Sun & Moon) ---
     const sun = getSunRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
-    const moon = getMoonRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
+    const moon = getMoonRenderData(normalizedTime, altitude, logicalWidth, logicalHeight, currentDay);
     const bodies = [sun, moon];
 
     bodies.forEach(body => {
-        if (body.isVisible) {
-            ctx.globalAlpha = body.opacity !== undefined ? body.opacity : 1.0;
+        if (!body.isVisible) return;
+        
+        ctx.globalAlpha = body.opacity !== undefined ? body.opacity : 1.0;
 
+        if (body.type === 'sun') {
+            // --- Sun Rendering (Simple Circle) ---
             ctx.beginPath();
             ctx.arc(body.x, body.y, body.radius, 0, Math.PI * 2);
             ctx.fillStyle = body.color;
@@ -84,19 +87,96 @@ export function drawGame(ctx, {
             ctx.shadowBlur = body.shadow.blur;
             ctx.fill();
             ctx.shadowBlur = 0;
-            ctx.closePath();
+        } else if (body.type === 'moon') {
+            // --- Moon Rendering (Realistic Phases with Tilt) ---
+            const r = body.radius;
+            const phase = body.phase; // 0.0 ~ 1.0
+            
+            // Save context to apply rotation
+            ctx.save();
+            
+            // 1. Move origin to the moon's center
+            ctx.translate(body.x, body.y);
+            
+            // 2. Rotate 45 degrees (PI/4) Clockwise
+            // Northern Hemisphere: Waxing crescent is on the Right (Rotated -> Bottom-Right)
+            // Waning crescent is on the Left (Rotated -> Top-Left)
+            const MOON_TILT = Math.PI / 4; 
+            ctx.rotate(MOON_TILT);
 
-            // Simple Moon Craters
-            if (body.type === 'moon') {
-                ctx.fillStyle = 'rgba(0,0,0,0.1)';
-                ctx.beginPath();
-                ctx.arc(body.x - 8, body.y - 5, 6, 0, Math.PI * 2);
-                ctx.arc(body.x + 10, body.y + 8, 4, 0, Math.PI * 2);
-                ctx.fill();
+            // Draw Shadow/Glow
+            ctx.shadowColor = body.shadow.color;
+            ctx.shadowBlur = body.shadow.blur;
+            
+            ctx.fillStyle = body.color;
+            ctx.beginPath();
+
+            // Geometric Phase Logic (Drawing at 0,0 relative to translated origin)
+            
+            if (phase <= 0.5) {
+                // === Waxing (New -> Full) ===
+                // Right side is the "Limb" (Arc).
+                // 1. Draw Right Semi-Circle from Top(-PI/2) to Bottom(PI/2)
+                ctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false);
+
+                // 2. Draw Terminator (Ellipse curve) from Bottom back to Top
+                // xp goes from r (New) -> 0 (Half) -> -r (Full)
+                const xp = r * Math.cos(phase * 2 * Math.PI); 
+                const w = Math.abs(xp);
+                
+                // Ellipse connecting (0, r) to (0, -r).
+                // If xp > 0 (Crescent), we want the curve to bow Right (inner curve).
+                //   -> Anticlockwise = true (PI/2 -> 0 -> 3PI/2)
+                // If xp < 0 (Gibbous), we want the curve to bow Left (outer curve).
+                //   -> Anticlockwise = false (PI/2 -> PI -> 3PI/2)
+                ctx.ellipse(0, 0, w, r, 0, Math.PI / 2, 3 * Math.PI / 2, xp > 0);
+
+            } else {
+                // === Waning (Full -> New) ===
+                // Left side is the "Limb" (Arc).
+                // 1. Draw Left Semi-Circle from Bottom(PI/2) to Top(-PI/2)
+                ctx.arc(0, 0, r, Math.PI / 2, -Math.PI / 2, false);
+
+                // 2. Draw Terminator from Top back to Bottom
+                // xp goes from r (Full) -> 0 (Half) -> -r (New)
+                const xp = -r * Math.cos(phase * 2 * Math.PI);
+                const w = Math.abs(xp);
+
+                // Ellipse connecting (0, -r) to (0, r).
+                // If xp > 0 (Gibbous), we want curve to bow Right (outer curve).
+                //   -> Clockwise = false (-PI/2 -> 0 -> PI/2)
+                // If xp < 0 (Crescent), we want curve to bow Left (inner curve).
+                //   -> Anticlockwise = true (-PI/2 -> -PI -> PI/2)
+                ctx.ellipse(0, 0, w, r, 0, -Math.PI / 2, Math.PI / 2, xp < 0);
             }
 
-            ctx.globalAlpha = 1.0;
+            ctx.closePath();
+            ctx.fill();
+            ctx.shadowBlur = 0; // Reset shadow for craters
+
+            // --- Craters (Clipped to Lit Area) ---
+            ctx.save();
+            ctx.clip(); // Clip drawing to the moon shape we just defined
+            
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            // Crater positions relative to moon center (rotated with the context)
+            const craters = [
+                { dx: -8, dy: -5, r: 6 },
+                { dx: 10, dy: 8, r: 4 },
+                { dx: -5, dy: 10, r: 3 }
+            ];
+            
+            craters.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(c.dx, c.dy, c.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.restore(); // Restore clip
+            ctx.restore(); // Restore translation/rotation
         }
+
+        ctx.globalAlpha = 1.0;
     });
 
     ctx.save();
@@ -145,7 +225,6 @@ export function drawGame(ctx, {
     drawFireworks(ctx);
 
     // --- 7. Cursor Highlight ---
-    // Only draw the cursor highlight if the mouse is currently active
     if (input && input.mouse && input.mouse.active) {
         const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);

@@ -169,8 +169,9 @@ export function getSunRenderData(time, altitude, screenWidth, screenHeight) {
 
 /**
  * Returns rendering data for the Moon.
+ * Now accepts dayCount to calculate phases.
  */
-export function getMoonRenderData(time, altitude, screenWidth, screenHeight) {
+export function getMoonRenderData(time, altitude, screenWidth, screenHeight, dayCount = 0) {
     const angle = (time * Math.PI * 2) + (Math.PI / 2);
     const orbitRadius = screenHeight * 0.8; 
     const centerX = screenWidth / 2;
@@ -184,6 +185,11 @@ export function getMoonRenderData(time, altitude, screenWidth, screenHeight) {
     const altVis = getAltitudeVisibility(altitude);
     if (altVis <= 0) isVisible = false;
 
+    // Calculate Moon Phase (0.0 to 1.0)
+    // 0.0 = New Moon, 0.5 = Full Moon, 1.0 = New Moon
+    const MOON_CYCLE = 28;
+    const phase = (dayCount % MOON_CYCLE) / MOON_CYCLE;
+
     return {
         type: 'moon',
         isVisible,
@@ -191,7 +197,8 @@ export function getMoonRenderData(time, altitude, screenWidth, screenHeight) {
         radius: MOON_RADIUS,
         color: '#F4F6F0',
         shadow: { color: '#ffffff', blur: 10 },
-        opacity: altVis
+        opacity: altVis,
+        phase // Export phase for rendering logic
     };
 }
 
