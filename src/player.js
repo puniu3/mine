@@ -159,12 +159,47 @@ export class Player {
 
     findSpawnPoint() {
         const sx = Math.floor(this.x / TILE_SIZE);
-        for (let y = 0; y < this.world.height; y++) {
-            const block = this.world.getBlock(sx, y);
-            if (block !== BLOCKS.AIR && block !== BLOCKS.CLOUD) {
-                this.y = (y - 2) * TILE_SIZE;
-                break;
+        
+        // Start searching from the middle of the world height instead of the top.
+        // This helps avoid spawning on floating islands which are typically generated in the sky.
+        const searchStartY = Math.floor(this.world.height / 2);
+
+        // Check the block at the search start height
+        const startBlock = this.world.getBlock(sx, searchStartY);
+
+        if (startBlock !== BLOCKS.AIR && startBlock !== BLOCKS.CLOUD) {
+            // We started inside the terrain (mountain/ground).
+            // Search upwards to find the surface.
+            for (let y = searchStartY; y >= 0; y--) {
+                const block = this.world.getBlock(sx, y);
+                if (block === BLOCKS.AIR || block === BLOCKS.CLOUD) {
+                    // Found air above ground.
+                    // y is the first air block, so y+1 is the ground.
+                    // We position the player slightly above the ground (y - 1).
+                    this.y = (y - 1) * TILE_SIZE; 
+                    return;
+                }
             }
+        } else {
+            // We started in the air (valley/plain).
+            // Search downwards to find the ground.
+            for (let y = searchStartY; y < this.world.height; y++) {
+                const block = this.world.getBlock(sx, y);
+                if (block !== BLOCKS.AIR && block !== BLOCKS.CLOUD) {
+                    // Found ground. Spawn above it.
+                    this.y = (y - 2) * TILE_SIZE;
+                    return;
+                }
+            }
+        }
+
+        // Fallback: If no valid spot found, default to scanning from the top
+        for (let y = 0; y < this.world.height; y++) {
+             const block = this.world.getBlock(sx, y);
+             if (block !== BLOCKS.AIR && block !== BLOCKS.CLOUD) {
+                 this.y = (y - 2) * TILE_SIZE;
+                 break;
+             }
         }
     }
 
