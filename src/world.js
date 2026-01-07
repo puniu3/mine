@@ -7,7 +7,10 @@ const BIOMES = {
     SNOWFIELD: 'snowfield',
     MOUNTAIN: 'mountain',
     FOREST: 'forest',
-    WASTELAND: 'wasteland'
+    WASTELAND: 'wasteland',
+    DEEP_FOREST: 'deep_forest',
+    SAVANNA: 'savanna',
+    PLATEAU: 'plateau'
 };
 
 export class World {
@@ -84,7 +87,7 @@ export class World {
         for (let x = 0; x < this.width; x++) {
             const h = heights[x];
             const biome = biomeByColumn[x];
-            const surfaceBlock = this.getSurfaceBlock(biome, h);
+            const surfaceBlock = this.getSurfaceBlock(biome, h, x);
 
             for (let y = 0; y < this.height; y++) {
                 if (y > h) {
@@ -104,7 +107,9 @@ export class World {
                         surfaceBlock === BLOCKS.GRASS ||
                         (biome === BIOMES.SNOWFIELD && surfaceBlock === BLOCKS.SNOW) ||
                         (biome === BIOMES.DESERT && surfaceBlock === BLOCKS.SAND) ||
-                        (biome === BIOMES.WASTELAND && surfaceBlock === BLOCKS.STONE);
+                        (biome === BIOMES.WASTELAND && surfaceBlock === BLOCKS.STONE) ||
+                        (biome === BIOMES.SAVANNA && (surfaceBlock === BLOCKS.GRASS || surfaceBlock === BLOCKS.DIRT)) ||
+                        (biome === BIOMES.PLATEAU && surfaceBlock === BLOCKS.STONE);
 
                     if (isVegetationGround && x > 5 && x < this.width - 5) {
                         this.generateVegetation(x, y - 1, biome);
@@ -241,12 +246,12 @@ export class World {
 
         return {
             [BIOMES.PLAINS]: {
-                weight: 25,
+                weight: 20,
                 baseHeight: halfHeight,
                 terrain: { largeAmplitude: 10, smallAmplitude: 3, largeFrequency: 32, smallFrequency: 9 }
             },
             [BIOMES.FOREST]: {
-                weight: 25,
+                weight: 20,
                 baseHeight: halfHeight + 2,
                 terrain: { largeAmplitude: 12, smallAmplitude: 2, largeFrequency: 30, smallFrequency: 10 }
             },
@@ -261,7 +266,7 @@ export class World {
                 terrain: { largeAmplitude: 10, smallAmplitude: 4, largeFrequency: 28, smallFrequency: 10 }
             },
             [BIOMES.MOUNTAIN]: {
-                weight: 15,
+                weight: 10,
                 baseHeight: halfHeight - 18,
                 terrain: { largeAmplitude: 20, smallAmplitude: 6, largeFrequency: 35, smallFrequency: 9 }
             },
@@ -269,11 +274,26 @@ export class World {
                 weight: 5,
                 baseHeight: halfHeight - 5,
                 terrain: { largeAmplitude: 8, smallAmplitude: 5, largeFrequency: 40, smallFrequency: 5 }
+            },
+            [BIOMES.DEEP_FOREST]: {
+                weight: 10,
+                baseHeight: halfHeight + 5,
+                terrain: { largeAmplitude: 15, smallAmplitude: 4, largeFrequency: 25, smallFrequency: 8 }
+            },
+            [BIOMES.SAVANNA]: {
+                weight: 15,
+                baseHeight: halfHeight,
+                terrain: { largeAmplitude: 5, smallAmplitude: 1, largeFrequency: 50, smallFrequency: 15 }
+            },
+            [BIOMES.PLATEAU]: {
+                weight: 10,
+                baseHeight: halfHeight - 10,
+                terrain: { largeAmplitude: 25, smallAmplitude: 2, largeFrequency: 60, smallFrequency: 5 }
             }
         };
     }
 
-    getSurfaceBlock(biome, surfaceY) {
+    getSurfaceBlock(biome, surfaceY, x) {
         const snowLine = this.height / 2 - 14;
         if (biome === BIOMES.DESERT) return BLOCKS.SAND;
         if (biome === BIOMES.SNOWFIELD) return BLOCKS.SNOW;
@@ -283,13 +303,19 @@ export class World {
             if (surfaceY > this.height / 2 - 6) return BLOCKS.GRASS;
             return BLOCKS.STONE;
         }
+        if (biome === BIOMES.SAVANNA) {
+            return (x % 7 < 3 || Math.random() < 0.2) ? BLOCKS.DIRT : BLOCKS.GRASS;
+        }
+        if (biome === BIOMES.PLATEAU) {
+            return (surfaceY % 4 === 0) ? BLOCKS.SAND : BLOCKS.STONE;
+        }
         return BLOCKS.GRASS;
     }
 
     getSubSurfaceBlock(biome, y, surfaceY) {
         const shallow = y <= surfaceY + 4;
         if (biome === BIOMES.DESERT) return shallow ? BLOCKS.SAND : BLOCKS.STONE;
-        if (biome === BIOMES.MOUNTAIN || biome === BIOMES.WASTELAND) return BLOCKS.STONE;
+        if (biome === BIOMES.MOUNTAIN || biome === BIOMES.WASTELAND || biome === BIOMES.PLATEAU) return BLOCKS.STONE;
         return BLOCKS.DIRT;
     }
 
@@ -534,6 +560,17 @@ export class World {
                 if (r < 0.04) this.generateTreeDead(x, y);
                 else if (r < 0.1) this.generateBoulder(x, y);
                 break;
+            case BIOMES.DEEP_FOREST:
+                if (r < 0.25) this.generateTreeJungle(x, y);
+                else if (r < 0.6) this.generateBush(x, y);
+                break;
+            case BIOMES.SAVANNA:
+                if (r < 0.04) this.generateTreeAcacia(x, y);
+                else if (r < 0.1) this.generateBush(x, y); 
+                break;
+            case BIOMES.PLATEAU:
+                if (r < 0.02) this.generateTreeDead(x, y);
+                break;
         }
     }
 
@@ -611,6 +648,51 @@ export class World {
              if (this.getBlock(cx + dir, branchY) === BLOCKS.AIR) {
                  this.setBlock(cx + dir, branchY, BLOCKS.WOOD);
              }
+        }
+    }
+
+    generateTreeJungle(x, y) {
+        const height = 8 + Math.floor(Math.random() * 5);
+        
+        for (let i = 0; i < height; i++) {
+            this.setBlock(x, y - i, BLOCKS.WOOD);
+            if (Math.random() < 0.3) {
+                 const side = Math.random() < 0.5 ? -1 : 1;
+                 if (this.getBlock(x + side, y - i) === BLOCKS.AIR) {
+                     this.setBlock(x + side, y - i, BLOCKS.LEAVES);
+                 }
+            }
+        }
+
+        const radius = 3;
+        for (let dy = 0; dy < 3; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                if (Math.abs(dx) + dy < 4) {
+                    this.setBlock(x + dx, y - height + 1 - dy, BLOCKS.LEAVES);
+                }
+            }
+        }
+    }
+
+    generateTreeAcacia(x, y) {
+        const height = 4 + Math.floor(Math.random() * 2);
+        let cx = x;
+        
+        for (let i = 0; i < Math.floor(height / 2); i++) {
+            this.setBlock(cx, y - i, BLOCKS.WOOD);
+        }
+        
+        const direction = Math.random() < 0.5 ? 1 : -1;
+        for (let i = Math.floor(height / 2); i < height; i++) {
+            cx += direction;
+            this.setBlock(cx, y - i, BLOCKS.WOOD);
+        }
+
+        for (let dx = -2; dx <= 2; dx++) {
+            this.setBlock(cx + dx, y - height, BLOCKS.LEAVES);
+        }
+        for (let dx = -1; dx <= 1; dx++) {
+            this.setBlock(cx + dx, y - height - 1, BLOCKS.LEAVES);
         }
     }
 
