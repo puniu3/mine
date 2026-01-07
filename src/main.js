@@ -175,9 +175,6 @@ function init(savedState = null) {
     // Restore state if provided
     if (savedState) {
         saveManager.applySavedState(savedState);
-        // Sapling timers are reference based in getTimers, 
-        // but if save structure differs, explicit restore might be needed.
-        // Assuming applySavedState handles restoring the array content linked via getTimers.
         if (savedState.timers && savedState.timers.saplings) {
             saplingManager.restoreTimers(savedState.timers.saplings);
         }
@@ -194,31 +191,15 @@ function init(savedState = null) {
     saveManager.saveGameState();
     
     // Ensure loop is only running once
-    // (If init is called multiple times, we rely on requestAnimationFrame mechanism)
     if (lastTime === 0) {
         requestAnimationFrame(loop);
     }
 }
 
-// --- Update Loop ---
+// --- Update Loop (Physics) ---
 function update(dt) {
     if (!player) return;
     player.update(input, dt);
-
-    // Camera Logic
-    const targetCamX = player.getCenterX() - logicalWidth / 2;
-    const targetCamY = player.getCenterY() - logicalHeight / 2;
-
-    // Horizontal Wrapping
-    const worldWidthPixels = world.width * TILE_SIZE;
-    const cameraDiff = targetCamX - cameraX;
-    if (Math.abs(cameraDiff) > worldWidthPixels / 2) {
-        if (cameraDiff > 0) cameraX += worldWidthPixels;
-        else cameraX -= worldWidthPixels;
-    }
-
-    cameraX = smoothCamera(cameraX, targetCamX, CAMERA_SMOOTHING);
-    cameraY = targetCamY;
 
     // Input Handling
     if (input.mouse.leftDown) {
@@ -241,6 +222,30 @@ function update(dt) {
     
     tntManager.update(dt);
     saplingManager.update(dt);
+}
+
+// --- Camera Update (Per Frame) ---
+function updateCamera(frameTime) {
+    if (!player) return;
+
+    const targetCamX = player.getCenterX() - logicalWidth / 2;
+    const targetCamY = player.getCenterY() - logicalHeight / 2;
+
+    // Horizontal Wrapping
+    const worldWidthPixels = world.width * TILE_SIZE;
+    const cameraDiff = targetCamX - cameraX;
+    if (Math.abs(cameraDiff) > worldWidthPixels / 2) {
+        if (cameraDiff > 0) cameraX += worldWidthPixels;
+        else cameraX -= worldWidthPixels;
+    }
+
+    // Adapt smoothing to the variable frame time
+    // This ensures consistent camera speed regardless of FPS or physics steps
+    const timeRatio = frameTime / PHYSICS_DT; 
+    const adjustedSmoothing = 1 - Math.pow(1 - CAMERA_SMOOTHING, timeRatio);
+
+    cameraX = smoothCamera(cameraX, targetCamX, adjustedSmoothing);
+    cameraY = targetCamY;
 }
 
 // --- Draw Loop ---
@@ -278,6 +283,9 @@ function loop(timestamp) {
         update(PHYSICS_DT);
         accumulator -= PHYSICS_DT;
     }
+
+    // Update camera once per frame based on actual frame time
+    updateCamera(frameTime);
 
     draw();
     
