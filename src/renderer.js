@@ -145,7 +145,8 @@ export function drawGame(ctx, {
     drawFireworks(ctx);
 
     // --- 7. Cursor Highlight ---
-    if (input && input.mouse) {
+    // Only draw the cursor highlight if the mouse is currently active
+    if (input && input.mouse && input.mouse.active) {
         const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
         if (isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
