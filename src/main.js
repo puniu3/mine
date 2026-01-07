@@ -4,7 +4,7 @@
  */
 
 import {
-    clamp, smoothCamera,
+    clamp,
     screenToWorld,
     rectsIntersect, isWithinReach,
     isBlockSolid, isBlockTransparent, isBlockBreakable, getBlockMaterialType,
@@ -13,7 +13,7 @@ import {
 } from './utils.js';
 import { sounds } from './audio.js';
 import {
-    TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH, CAMERA_SMOOTHING,
+    TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH,
     BLOCKS, BLOCK_PROPS
 } from './constants.js';
 import { generateTextures } from './texture_gen.js';
@@ -38,6 +38,7 @@ import { drawGame } from './renderer.js';
 // --- New Modules ---
 import { createSaplingManager } from './sapling_manager.js';
 import { initUI } from './ui_manager.js';
+import { createCamera } from './camera.js';
 
 // --- Texture Generator ---
 let textures = {};
@@ -47,7 +48,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let world, player;
 let lastTime = 0;
-let cameraX = 0, cameraY = 0;
+let camera; // Camera instance
 let input;
 let actions;
 let tntManager = null;
@@ -98,6 +99,9 @@ function init(savedState = null) {
     player = new Player(world, addToInventory);
     textures = generateTextures();
 
+    // Initialize Camera
+    camera = createCamera();
+
     // Initialize Managers
     tntManager = createTNTManager({
         world,
@@ -121,10 +125,7 @@ function init(savedState = null) {
             consumeFromInventory,
             getSelectedBlockId
         },
-        camera: {
-            get x() { return cameraX; },
-            get y() { return cameraY; }
-        },
+        camera: camera, // Pass the camera instance directly
         sounds,
         constants: {
             TILE_SIZE,
@@ -187,8 +188,10 @@ function init(savedState = null) {
     resize();
 
     // Center camera
-    cameraX = player.getCenterX() - logicalWidth / 2;
-    cameraY = player.getCenterY() - logicalHeight / 2;
+    camera.setPosition(
+        player.getCenterX() - logicalWidth / 2,
+        player.getCenterY() - logicalHeight / 2
+    );
 
     saveManager.startAutosave();
     saveManager.saveGameState();
@@ -221,7 +224,7 @@ function update(dt) {
     handleAcceleratorOverlap(player, world);
     updateAccelerators(dt);
 
-    updateFireworks(dt, world, cameraX, cameraY, { width: logicalWidth, height: logicalHeight });
+    updateFireworks(dt, world, camera.x, camera.y, { width: logicalWidth, height: logicalHeight });
     
     tntManager.update(dt);
     saplingManager.update(dt);
@@ -231,20 +234,7 @@ function update(dt) {
 function updateCamera(frameTime) {
     if (!player) return;
 
-    const targetCamX = player.getCenterX() - logicalWidth / 2;
-    const targetCamY = player.getCenterY() - logicalHeight / 2;
-
-    // Horizontal Wrapping
-    const worldWidthPixels = world.width * TILE_SIZE;
-    const cameraDiff = targetCamX - cameraX;
-    if (Math.abs(cameraDiff) > worldWidthPixels / 2) {
-        if (cameraDiff > 0) cameraX += worldWidthPixels;
-        else cameraX -= worldWidthPixels;
-    }
-
-    // Standard smoothing is sufficient now that physics steps are stable
-    cameraX = smoothCamera(cameraX, targetCamX, CAMERA_SMOOTHING);
-    cameraY = targetCamY;
+    camera.update(player, world, logicalWidth, logicalHeight);
 }
 
 // --- Draw Loop ---
@@ -252,8 +242,8 @@ function draw() {
     drawGame(ctx, {
         world,
         player,
-        cameraX,
-        cameraY,
+        cameraX: camera.x,
+        cameraY: camera.y,
         logicalWidth,
         logicalHeight,
         textures,
@@ -331,7 +321,9 @@ initUI({
         player.vx = 0;
         player.vy = 0;
 
-        cameraX = player.getCenterX() - logicalWidth / 2;
-        cameraY = player.getCenterY() - logicalHeight / 2;
+        camera.setPosition(
+            player.getCenterX() - logicalWidth / 2,
+            player.getCenterY() - logicalHeight / 2
+        );
     }
 });

@@ -24,6 +24,7 @@ mine/
     ├── renderer.js     # Rendering logic: sky, world, entities, and particles
     ├── world.js        # World class: terrain generation, block get/set, adjacency
     ├── player.js       # Player class: movement, physics, collision, rendering
+    ├── camera.js       # Camera state, smoothing, and world wrapping logic
     ├── input.js        # Keyboard, mouse, touch input bindings
     ├── inventory.js    # Hotbar UI, item counts, crafting consumption
     ├── actions.js      # Block placement and destruction logic
@@ -52,6 +53,7 @@ main.js
 ├── actions.js
 ├── world.js
 ├── player.js
+├── camera.js (imports: utils, constants)
 ├── renderer.js
 ├── jackpot.js
 ├── fireworks.js
@@ -91,6 +93,11 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - Procedural terrain generation with biomes
 - Ore distribution at depth layers
 - Block get/set with bounds checking
+
+### Camera (camera.js)
+- Manages viewport position (x, y)
+- Handles smooth camera movement (lerp)
+- Implements intelligent horizontal wrapping logic (follows player across world edges)
 
 ### Renderer (renderer.js)
 - Handles all canvas drawing operations
@@ -132,10 +139,10 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - Used by `ui_manager.js`
 
 ### Game Loop (main.js)
-- **Orchestrator**: Initializes all subsystems (World, Player, Managers)
+- **Orchestrator**: Initializes all subsystems (World, Player, Camera, Managers)
 - **Update Loop**:
-  - Updates Physics, Camera, Input
-  - Delegates specific updates to `tntManager`, `saplingManager`, `jackpot`, `fireworks`
+  - Updates Physics, Input
+  - Delegates specific updates to `camera`, `tntManager`, `saplingManager`, `jackpot`, `fireworks`
 - **Draw Loop**: Calls `renderer.drawGame()`
 
 ## Input Handling (input.js)
@@ -155,4 +162,4 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - AI-readable: explicit, declarative, minimal ambiguity
 - ES modules, no bundler
 - Pure functions preferred in utils.js
-- Class-based for stateful entities (Player, World)
+- Class-based for stateful entities (Player, World, Camera)
