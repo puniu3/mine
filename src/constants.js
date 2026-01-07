@@ -46,8 +46,7 @@ export const BLOCKS = {
     SAPLING: 16,
     JACKPOT: 17,
     ACCELERATOR_LEFT: 18,
-    ACCELERATOR_RIGHT: 19,
-    WATER: 20
+    ACCELERATOR_RIGHT: 19
 };
 
 export const BLOCK_PROPS = {
@@ -71,8 +70,7 @@ export const BLOCK_PROPS = {
     [BLOCKS.SAPLING]: { name: 'Sapling', solid: false, transparent: true, color: '#6fa85b', type: 'plant', drop: BLOCKS.SAPLING },
     [BLOCKS.JACKPOT]: { name: 'Jackpot', solid: false, transparent: true, color: '#ffd54f', type: 'stone', drop: BLOCKS.JACKPOT },
     [BLOCKS.ACCELERATOR_LEFT]: { name: 'Accelerator Left', solid: false, transparent: true, color: '#42a5f5', type: 'stone', drop: BLOCKS.ACCELERATOR_LEFT },
-    [BLOCKS.ACCELERATOR_RIGHT]: { name: 'Accelerator Right', solid: false, transparent: true, color: '#66bb6a', type: 'stone', drop: BLOCKS.ACCELERATOR_RIGHT },
-    [BLOCKS.WATER]: { name: 'Water', solid: false, transparent: true, color: 'rgba(41, 121, 255, 0.5)', type: 'liquid' }
+    [BLOCKS.ACCELERATOR_RIGHT]: { name: 'Accelerator Right', solid: false, transparent: true, color: '#66bb6a', type: 'stone', drop: BLOCKS.ACCELERATOR_RIGHT }
 };
 
 export const HOTBAR_ITEMS = [
@@ -85,7 +83,6 @@ export const HOTBAR_ITEMS = [
     BLOCKS.SAND,
     BLOCKS.SNOW,
     BLOCKS.CLOUD,
-    BLOCKS.WATER,
     // Craftable blocks below
     BLOCKS.FIREWORK,
     BLOCKS.JUMP_PAD,
