@@ -5,7 +5,9 @@ const BIOMES = {
     PLAINS: 'plains',
     DESERT: 'desert',
     SNOWFIELD: 'snowfield',
-    MOUNTAIN: 'mountain'
+    MOUNTAIN: 'mountain',
+    FOREST: 'forest',
+    WASTELAND: 'wasteland'
 };
 
 export class World {
@@ -101,7 +103,8 @@ export class World {
                     const isVegetationGround =
                         surfaceBlock === BLOCKS.GRASS ||
                         (biome === BIOMES.SNOWFIELD && surfaceBlock === BLOCKS.SNOW) ||
-                        (biome === BIOMES.DESERT && surfaceBlock === BLOCKS.SAND);
+                        (biome === BIOMES.DESERT && surfaceBlock === BLOCKS.SAND) ||
+                        (biome === BIOMES.WASTELAND && surfaceBlock === BLOCKS.STONE);
 
                     if (isVegetationGround && x > 5 && x < this.width - 5) {
                         this.generateVegetation(x, y - 1, biome);
@@ -114,82 +117,69 @@ export class World {
         this.generateCaves(heights);
         this.generateStructures(heights, biomeByColumn);
 
-        // Scatter Workbenches on the surface
         for (let x = 10; x < this.width - 10; x += 50 + Math.floor(Math.random() * 20)) {
             const h = heights[x];
-            // Ensure space above is clear
             if (this.getBlock(x, h - 1) === BLOCKS.AIR) {
                 this.setBlock(x, h - 1, BLOCKS.WORKBENCH);
             }
         }
 
-        // Generate clouds in the sky
         this.generateClouds(heights);
     }
 
     generateClouds(heights) {
-        const minHeightAboveGround = 20; // Clouds must be at least 20 blocks above ground
-        const cloudCount = Math.floor(this.width / 25); // Roughly 1 cloud per 25 blocks (even denser)
+        const minHeightAboveGround = 20;
+        const cloudCount = Math.floor(this.width / 25);
 
         for (let i = 0; i < cloudCount; i++) {
             const startX = Math.floor(Math.random() * (this.width - 30));
-
-            // Get the ground height at this position
             const groundHeight = heights[Math.min(startX, this.width - 1)];
+            const maxCloudY = groundHeight - minHeightAboveGround;
+            const minCloudY = 5;
 
-            // Calculate valid cloud range: from top of world to 20 blocks above ground
-            const maxCloudY = groundHeight - minHeightAboveGround; // Highest Y value (lowest in sky)
-            const minCloudY = 5; // Don't spawn too close to top edge
+            if (maxCloudY <= minCloudY) continue;
 
-            if (maxCloudY <= minCloudY) continue; // Skip if not enough space
-
-            // Random Y position anywhere in the valid sky range
             const y = minCloudY + Math.floor(Math.random() * (maxCloudY - minCloudY));
-            const shape = Math.floor(Math.random() * 5); // 5 different cloud shapes
+            const shape = Math.floor(Math.random() * 5);
 
             this.generateCloudShape(startX, y, shape);
         }
     }
 
     generateCloudShape(startX, startY, shapeType) {
-        // Different cloud patterns
         switch (shapeType) {
-            case 0: // Small puffy cloud
+            case 0:
                 this.generatePuffyCloud(startX, startY, 4, 2);
                 break;
-            case 1: // Long thin cloud
+            case 1:
                 this.generateLongCloud(startX, startY, 12, 1);
                 break;
-            case 2: // Large fluffy cloud
+            case 2:
                 this.generatePuffyCloud(startX, startY, 8, 3);
                 break;
-            case 3: // Layered cloud
+            case 3:
                 this.generateLayeredCloud(startX, startY);
                 break;
-            case 4: // Scattered cloud cluster
+            case 4:
                 this.generateClusterCloud(startX, startY);
                 break;
         }
     }
 
     generatePuffyCloud(x, y, width, height) {
-        // Generate a puffy, rounded cloud
         for (let dx = 0; dx < width; dx++) {
             for (let dy = 0; dy < height; dy++) {
-                // Create rounded edges using distance from center
                 const centerX = width / 2;
                 const centerY = height / 2;
                 const distX = Math.abs(dx - centerX) / centerX;
                 const distY = Math.abs(dy - centerY) / centerY;
 
-                // Add some randomness to edges
                 const threshold = 0.7 + Math.random() * 0.3;
                 if (distX + distY < threshold) {
                     this.setBlock(x + dx, y + dy, BLOCKS.CLOUD);
                 }
             }
         }
-        // Add extra puffs on top
         const puffCount = Math.floor(width / 3);
         for (let i = 0; i < puffCount; i++) {
             const puffX = x + 1 + Math.floor(Math.random() * (width - 2));
@@ -200,16 +190,13 @@ export class World {
     }
 
     generateLongCloud(x, y, length, thickness) {
-        // Generate a long, stretched cloud
         for (let dx = 0; dx < length; dx++) {
             for (let dy = 0; dy < thickness; dy++) {
-                // Taper the ends
                 if ((dx < 2 || dx >= length - 2) && dy > 0) {
                     if (Math.random() > 0.5) continue;
                 }
                 this.setBlock(x + dx, y + dy, BLOCKS.CLOUD);
             }
-            // Occasional bumps on top
             if (Math.random() > 0.7 && dx > 0 && dx < length - 1) {
                 this.setBlock(x + dx, y - 1, BLOCKS.CLOUD);
             }
@@ -217,17 +204,14 @@ export class World {
     }
 
     generateLayeredCloud(x, y) {
-        // Top layer (smaller)
         for (let dx = 2; dx < 8; dx++) {
             if (Math.random() > 0.3) {
                 this.setBlock(x + dx, y, BLOCKS.CLOUD);
             }
         }
-        // Middle layer (wider)
         for (let dx = 0; dx < 12; dx++) {
             this.setBlock(x + dx, y + 1, BLOCKS.CLOUD);
         }
-        // Bottom layer (medium, with gaps)
         for (let dx = 1; dx < 10; dx++) {
             if (Math.random() > 0.2) {
                 this.setBlock(x + dx, y + 2, BLOCKS.CLOUD);
@@ -236,7 +220,6 @@ export class World {
     }
 
     generateClusterCloud(x, y) {
-        // Generate small scattered cloud puffs
         const clusterCount = 3 + Math.floor(Math.random() * 3);
         for (let i = 0; i < clusterCount; i++) {
             const offsetX = Math.floor(Math.random() * 15);
@@ -258,24 +241,34 @@ export class World {
 
         return {
             [BIOMES.PLAINS]: {
-                weight: 40, // 40%
+                weight: 25,
                 baseHeight: halfHeight,
                 terrain: { largeAmplitude: 10, smallAmplitude: 3, largeFrequency: 32, smallFrequency: 9 }
             },
+            [BIOMES.FOREST]: {
+                weight: 25,
+                baseHeight: halfHeight + 2,
+                terrain: { largeAmplitude: 12, smallAmplitude: 2, largeFrequency: 30, smallFrequency: 10 }
+            },
             [BIOMES.DESERT]: {
-                weight: 20, // 20%
+                weight: 15,
                 baseHeight: halfHeight + 8,
                 terrain: { largeAmplitude: 6, smallAmplitude: 2, largeFrequency: 36, smallFrequency: 12 }
             },
             [BIOMES.SNOWFIELD]: {
-                weight: 20, // 20%
+                weight: 15,
                 baseHeight: halfHeight - 4,
                 terrain: { largeAmplitude: 10, smallAmplitude: 4, largeFrequency: 28, smallFrequency: 10 }
             },
             [BIOMES.MOUNTAIN]: {
-                weight: 20, // 20%
+                weight: 15,
                 baseHeight: halfHeight - 18,
                 terrain: { largeAmplitude: 20, smallAmplitude: 6, largeFrequency: 35, smallFrequency: 9 }
+            },
+            [BIOMES.WASTELAND]: {
+                weight: 5,
+                baseHeight: halfHeight - 5,
+                terrain: { largeAmplitude: 8, smallAmplitude: 5, largeFrequency: 40, smallFrequency: 5 }
             }
         };
     }
@@ -284,6 +277,7 @@ export class World {
         const snowLine = this.height / 2 - 14;
         if (biome === BIOMES.DESERT) return BLOCKS.SAND;
         if (biome === BIOMES.SNOWFIELD) return BLOCKS.SNOW;
+        if (biome === BIOMES.WASTELAND) return BLOCKS.STONE;
         if (biome === BIOMES.MOUNTAIN) {
             if (surfaceY < snowLine) return BLOCKS.SNOW;
             if (surfaceY > this.height / 2 - 6) return BLOCKS.GRASS;
@@ -295,26 +289,23 @@ export class World {
     getSubSurfaceBlock(biome, y, surfaceY) {
         const shallow = y <= surfaceY + 4;
         if (biome === BIOMES.DESERT) return shallow ? BLOCKS.SAND : BLOCKS.STONE;
-        if (biome === BIOMES.MOUNTAIN) return BLOCKS.STONE;
+        if (biome === BIOMES.MOUNTAIN || biome === BIOMES.WASTELAND) return BLOCKS.STONE;
         return BLOCKS.DIRT;
     }
 
     generateGeology(heights) {
-        // Create dirt pockets underground
         const dirtPocketCount = Math.floor(this.width * this.height / 1500);
         for (let i = 0; i < dirtPocketCount; i++) {
             const x = Math.floor(Math.random() * this.width);
             const y = Math.floor(Math.random() * this.height);
             const surface = heights[x];
             
-            // Only generate below surface layer
             if (y > surface + 8) {
                 const radius = 2 + Math.random() * 2.5;
                 this.createBlob(x, y, BLOCKS.DIRT, radius);
             }
         }
 
-        // Create sand/gravel pockets underground
         const sandPocketCount = Math.floor(this.width * this.height / 2500);
         for (let i = 0; i < sandPocketCount; i++) {
             const x = Math.floor(Math.random() * this.width);
@@ -338,7 +329,6 @@ export class World {
                     const x = cx + dx;
                     const y = cy + dy;
                     
-                    // Only replace stone, not ores or air
                     if (this.getBlock(x, y) === BLOCKS.STONE) {
                         this.setBlock(x, y, blockType);
                     }
@@ -348,33 +338,28 @@ export class World {
     }
 
     generateStructures(heights, biomeByColumn) {
-        // 1. Floating Islands (Sky)
         const islandCount = Math.floor(this.width / 80);
         for (let i = 0; i < islandCount; i++) {
             const x = 20 + Math.floor(Math.random() * (this.width - 40));
             const surface = heights[x];
-            // Must be high enough
             if (surface > 50) {
                 const y = 15 + Math.floor(Math.random() * (surface - 40));
                 this.generateFloatingIsland(x, y);
             }
         }
 
-        // 2. Desert Ruins (Surface)
         for (let x = 0; x < this.width; x += 1) {
             if (biomeByColumn[x] === BIOMES.DESERT) {
-                if (Math.random() < 0.015) { // Increased chance slightly due to variety
+                if (Math.random() < 0.015) {
                     const y = heights[x];
-                    // Check if area is relatively flat
                     if (Math.abs(heights[x + 2] - y) < 2) {
                         this.generateDesertRuin(x, y);
-                        x += 15; // Avoid overlapping
+                        x += 15;
                     }
                 }
             }
         }
 
-        // 3. Abandoned Mineshafts (Underground)
         const mineshaftCount = Math.floor(this.width / 50);
         for (let i = 0; i < mineshaftCount; i++) {
             const x = 10 + Math.floor(Math.random() * (this.width - 20));
@@ -386,24 +371,20 @@ export class World {
 
     generateFloatingIsland(cx, cy) {
         const radius = 3 + Math.floor(Math.random() * 3);
-        // Inverted cone shape
         for (let dy = 0; dy <= radius * 1.5; dy++) {
             const currentRadius = Math.max(0, radius - (dy * 0.7));
             for (let dx = -Math.ceil(currentRadius); dx <= Math.ceil(currentRadius); dx++) {
                 const x = cx + dx;
                 const y = cy + dy;
                 
-                // Top layer is grass, middle dirt, bottom stone
                 if (dy === 0) {
                     this.setBlock(x, y, BLOCKS.GRASS);
-                    // Chance for a tree
                     if (dx === 0 && Math.random() < 0.3) {
                         this.generateTreeOak(x, y - 1);
                     }
                 } else if (dy < 2) {
                     this.setBlock(x, y, BLOCKS.DIRT);
                 } else {
-                    // Heavily rich with gold in the core
                     if (Math.random() < 0.4 || (dx === 0 && dy > 2)) {
                         this.setBlock(x, y, BLOCKS.GOLD);
                     } else {
@@ -418,41 +399,33 @@ export class World {
         const type = Math.floor(Math.random() * 4);
         
         if (type === 0) {
-            // Pillar
             const height = 3 + Math.floor(Math.random() * 4);
             for (let i = 0; i < height; i++) {
                 this.setBlock(x, y - 1 - i, BLOCKS.STONE);
             }
-            if (Math.random() < 0.5) this.setBlock(x, y - 1 - height, BLOCKS.STONE); // Cap
-            // Weathered effect
+            if (Math.random() < 0.5) this.setBlock(x, y - 1 - height, BLOCKS.STONE);
             if (Math.random() < 0.4) this.setBlock(x + 1, y - 1, BLOCKS.STONE);
         } else if (type === 1) {
-            // Mini Pyramid
             const size = 3 + Math.floor(Math.random() * 2);
             for (let dy = 0; dy < size; dy++) {
                 const width = size - dy - 1;
                 for (let dx = -width; dx <= width; dx++) {
-                    // Worn down
                     if (Math.random() > 0.1) {
                         this.setBlock(x + dx, y - 1 - dy, BLOCKS.STONE);
                     }
                 }
             }
         } else if (type === 2) {
-            // Archway
             const height = 4;
             const width = 3;
-            // Top beam
             for (let dx = -1; dx <= 1; dx++) {
                 this.setBlock(x + dx, y - height, BLOCKS.STONE);
             }
-            // Legs
             for (let i = 1; i < height; i++) {
                 this.setBlock(x - 1, y - i, BLOCKS.STONE);
                 this.setBlock(x + 1, y - i, BLOCKS.STONE);
             }
         } else if (type === 3) {
-            // Buried Wall
             const length = 4 + Math.floor(Math.random() * 3);
             for (let dx = 0; dx < length; dx++) {
                 const h = 1 + Math.floor(Math.random() * 2);
@@ -468,33 +441,25 @@ export class World {
         let x = startX;
         let y = startY;
         
-        // Horizontal tunnel
         for (let i = 0; i < length; i++) {
             if (x >= this.width - 2) break;
             
-            // Clear tunnel space (3 high)
             this.setBlock(x, y, BLOCKS.AIR);
             this.setBlock(x, y - 1, BLOCKS.AIR);
             this.setBlock(x, y - 2, BLOCKS.AIR);
 
-            // Floor (planks/wood)
             this.setBlock(x, y + 1, BLOCKS.WOOD);
 
-            // Supports every 4 blocks
             if (i % 4 === 0) {
-                // Posts
                 if (this.getBlock(x, y + 1) !== BLOCKS.AIR) this.setBlock(x, y, BLOCKS.WOOD);
                 if (this.getBlock(x, y - 2) !== BLOCKS.AIR) this.setBlock(x, y - 1, BLOCKS.WOOD);
                 
-                // Top Beam
                 this.setBlock(x, y - 2, BLOCKS.WOOD);
             }
 
             x++;
-            // Small chance to change depth
             if (Math.random() < 0.1) y += (Math.random() < 0.5 ? -1 : 1);
             
-            // Clamp Y
             if (y > this.height - 5) y = this.height - 5;
             if (y < 50) y = 50;
         }
@@ -551,6 +516,10 @@ export class World {
                 if (r < 0.05) this.generateTreeOak(x, y);
                 else if (r < 0.08) this.generateBush(x, y);
                 break;
+            case BIOMES.FOREST:
+                if (r < 0.15) this.generateTreeOak(x, y);
+                else if (r < 0.3) this.generateBush(x, y);
+                break;
             case BIOMES.SNOWFIELD:
                 if (r < 0.06) this.generateTreePine(x, y);
                 break;
@@ -560,6 +529,10 @@ export class World {
             case BIOMES.MOUNTAIN:
                 if (r < 0.015) this.generateTreeDead(x, y);
                 else if (r < 0.025) this.generateBoulder(x, y);
+                break;
+            case BIOMES.WASTELAND:
+                if (r < 0.04) this.generateTreeDead(x, y);
+                else if (r < 0.1) this.generateBoulder(x, y);
                 break;
         }
     }
@@ -578,23 +551,18 @@ export class World {
     generateTreePine(x, y) {
         const height = 5 + Math.floor(Math.random() * 4);
         
-        // Trunk
         for (let i = 0; i < height; i++) {
             this.setBlock(x, y - i, BLOCKS.WOOD);
         }
 
-        // Leaves (Conical shape)
         let radius = 1;
-        // Start leaves from near the bottom of the canopy up to the top
         for (let dy = height; dy > 1; dy--) {
             const worldY = y - dy;
             
-            // Periodically widen the cone as we go down
             if ((height - dy) % 2 === 0) radius = Math.min(3, radius + 1);
-            if (dy === height) radius = 1; // Top tip
+            if (dy === height) radius = 1;
 
             for (let lx = x - radius; lx <= x + radius; lx++) {
-                // Skip the trunk position itself except at the very top tip
                 if (lx === x && dy !== height) continue;
                 
                 if (this.getBlock(lx, worldY) === BLOCKS.AIR) {
@@ -602,27 +570,22 @@ export class World {
                 }
             }
         }
-        // Top tip leaf
         this.setBlock(x, y - height, BLOCKS.LEAVES);
     }
 
     generateCactus(x, y) {
         const height = 2 + Math.floor(Math.random() * 3);
         
-        // Main stem
         for (let i = 0; i < height; i++) {
-            this.setBlock(x, y - i, BLOCKS.LEAVES); // Using leaves as green cactus blocks
+            this.setBlock(x, y - i, BLOCKS.LEAVES);
         }
 
-        // Optional arms
         if (height >= 3 && Math.random() < 0.5) {
-            // Pick a side
             const side = Math.random() < 0.5 ? -1 : 1;
             const armHeight = 1 + Math.floor(Math.random() * (height - 2));
             
             if (this.getBlock(x + side, y - armHeight) === BLOCKS.AIR) {
                 this.setBlock(x + side, y - armHeight, BLOCKS.LEAVES);
-                // Vertical part of arm
                 if (this.getBlock(x + side, y - armHeight - 1) === BLOCKS.AIR) {
                     this.setBlock(x + side, y - armHeight - 1, BLOCKS.LEAVES);
                 }
@@ -633,18 +596,15 @@ export class World {
     generateTreeDead(x, y) {
         const height = 3 + Math.floor(Math.random() * 3);
         
-        // Crooked trunk
         let cx = x;
         for (let i = 0; i < height; i++) {
             this.setBlock(cx, y - i, BLOCKS.WOOD);
             
-            // Chance to shift slightly
             if (i > 1 && Math.random() < 0.3) {
                 cx += (Math.random() < 0.5 ? -1 : 1);
             }
         }
 
-        // Branch
         if (Math.random() < 0.5) {
              const branchY = y - Math.floor(height / 2);
              const dir = Math.random() < 0.5 ? -1 : 1;
@@ -655,7 +615,6 @@ export class World {
     }
 
     generateBush(x, y) {
-        // Simple cluster on the ground
         this.setBlock(x, y, BLOCKS.LEAVES);
         if (Math.random() < 0.5 && this.getBlock(x + 1, y) === BLOCKS.AIR) {
             this.setBlock(x + 1, y, BLOCKS.LEAVES);
