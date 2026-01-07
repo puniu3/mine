@@ -121,6 +121,7 @@ export class World {
         this.generateGeology(heights);
         this.generateCaves(heights);
         this.generateStructures(heights, biomeByColumn);
+        this.generateHiddenFeatures(heights, biomeByColumn); // Added hidden features generation
 
         for (let x = 10; x < this.width - 10; x += 50 + Math.floor(Math.random() * 20)) {
             const h = heights[x];
@@ -393,6 +394,110 @@ export class World {
             const y = surface + 15 + Math.floor(Math.random() * (this.height - surface - 20));
             this.generateMineshaft(x, y);
         }
+    }
+
+    generateHiddenFeatures(heights, biomeByColumn) {
+        for (let x = 10; x < this.width - 10; x++) {
+            const biome = biomeByColumn[x];
+            const surfaceY = heights[x];
+
+            // 1. Ancient Monolith (Rare in Plains/Wasteland)
+            if ((biome === BIOMES.PLAINS || biome === BIOMES.WASTELAND) && Math.random() < 0.003) {
+                this.generateMonolith(x, surfaceY);
+                x += 10; 
+                continue;
+            }
+
+            // 2. Buried Bunker (Rare in Forest/Savanna)
+            if ((biome === BIOMES.FOREST || biome === BIOMES.SAVANNA) && Math.random() < 0.004) {
+                // Ensure deep enough soil
+                if (surfaceY < this.height - 20) {
+                    this.generateBuriedBunker(x, surfaceY + 8);
+                    x += 15;
+                    continue;
+                }
+            }
+
+            // 3. World Tree (Very Rare in Deep Forest)
+            if (biome === BIOMES.DEEP_FOREST && Math.random() < 0.005) {
+                this.generateWorldTree(x, surfaceY);
+                x += 15;
+                continue;
+            }
+        }
+    }
+
+    generateMonolith(x, y) {
+        // A tall pillar of bedrock with gold on top
+        const height = 6 + Math.floor(Math.random() * 5);
+        for (let i = 0; i < height; i++) {
+            this.setBlock(x, y - i, BLOCKS.BEDROCK);
+            this.setBlock(x + 1, y - i, BLOCKS.BEDROCK);
+        }
+        // Top reward
+        this.setBlock(x, y - height, BLOCKS.GOLD);
+        this.setBlock(x + 1, y - height, BLOCKS.GOLD);
+        
+        // Base decoration
+        this.setBlock(x - 1, y, BLOCKS.STONE);
+        this.setBlock(x + 2, y, BLOCKS.STONE);
+    }
+
+    generateBuriedBunker(cx, cy) {
+        const width = 6;
+        const height = 5;
+        const x = cx - Math.floor(width / 2);
+        const y = cy;
+
+        // Clear room and build walls
+        for (let dx = -1; dx <= width; dx++) {
+            for (let dy = -1; dy <= height; dy++) {
+                const bx = x + dx;
+                const by = y + dy;
+                
+                if (dx === -1 || dx === width || dy === -1 || dy === height) {
+                    this.setBlock(bx, by, BLOCKS.STONE); // Walls
+                } else {
+                    this.setBlock(bx, by, BLOCKS.AIR); // Interior
+                }
+            }
+        }
+
+        // Loot
+        this.setBlock(x + 1, y + height - 1, BLOCKS.JACKPOT);
+        this.setBlock(x + width - 2, y + height - 1, BLOCKS.TNT);
+        this.setBlock(x + Math.floor(width/2), y + height - 1, BLOCKS.WORKBENCH);
+    }
+
+    generateWorldTree(x, y) {
+        const height = 15 + Math.floor(Math.random() * 10);
+        
+        // Trunk
+        for (let i = 0; i < height; i++) {
+            this.setBlock(x, y - i, BLOCKS.WOOD);
+            this.setBlock(x + 1, y - i, BLOCKS.WOOD);
+            // Roots
+            if (i < 3) {
+                this.setBlock(x - 1, y - i + 1, BLOCKS.WOOD);
+                this.setBlock(x + 2, y - i + 1, BLOCKS.WOOD);
+            }
+        }
+
+        // Crown
+        const radius = 6;
+        for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius + 1; dx++) {
+                if (dx * dx + dy * dy <= radius * radius + Math.random() * 5) {
+                    const by = y - height + dy;
+                    if (this.getBlock(x + dx, by) === BLOCKS.AIR) {
+                        this.setBlock(x + dx, by, BLOCKS.LEAVES);
+                    }
+                }
+            }
+        }
+        
+        // Hidden reward inside leaves
+        this.setBlock(x, y - height - 2, BLOCKS.GOLD);
     }
 
     generateFloatingIsland(cx, cy) {

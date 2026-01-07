@@ -189,13 +189,13 @@ export function drawGame(ctx, {
 
     const NO_SHADOW_BLOCKS = new Set([
         BLOCKS.CLOUD,
-        BLOCKS.FIREWORK,
+        // BLOCKS.FIREWORK,
         BLOCKS.JUMP_PAD,
-        BLOCKS.TNT,
-        BLOCKS.SAPLING,
+        // BLOCKS.TNT,
+        // BLOCKS.SAPLING,
         BLOCKS.JACKPOT,
         BLOCKS.ACCELERATOR_LEFT,
-        BLOCKS.ACCELERATOR_RIGHT
+        BLOCKS.ACCELERATOR_RIGHT,
     ]);
 
     for (let y = startY; y < endY; y++) {
