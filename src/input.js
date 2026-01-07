@@ -6,9 +6,9 @@ export function createInput(canvas, { onHotbarSelect, onTouch }) {
 
     window.addEventListener('keydown', e => {
         switch (e.code) {
-            case 'KeyA': case 'ArrowLeft': input.keys.left = true; break;
-            case 'KeyD': case 'ArrowRight': input.keys.right = true; break;
-            case 'KeyW': case 'ArrowUp': case 'Space': input.keys.jump = true; break;
+            case 'KeyA': case 'ArrowLeft': input.keys.left = true; e.preventDefault(); break;
+            case 'KeyD': case 'ArrowRight': input.keys.right = true; e.preventDefault(); break;
+            case 'KeyW': case 'ArrowUp': case 'Space': input.keys.jump = true; e.preventDefault(); break;
             case 'Digit1': if (onHotbarSelect) onHotbarSelect(0); break;
             case 'Digit2': if (onHotbarSelect) onHotbarSelect(1); break;
             case 'Digit3': if (onHotbarSelect) onHotbarSelect(2); break;

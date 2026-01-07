@@ -45,10 +45,9 @@ export function createCamera() {
                 else x -= worldWidthPixels;
             }
 
-            // Apply smoothing
+            // Apply smoothing to both axes
             x = smoothCamera(x, targetCamX, CAMERA_SMOOTHING);
-            // Vertical lock (no smoothing for Y currently, as per original logic)
-            y = targetCamY;
+            y = smoothCamera(y, targetCamY, CAMERA_SMOOTHING);
         }
     };
 }
