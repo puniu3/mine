@@ -8,10 +8,12 @@
 import { isBlockSolid, isBlockBreakable, getBlockMaterialType, isNaturalBlock } from './utils.js';
 import { sounds } from './audio.js';
 import {
-    TILE_SIZE, GRAVITY, JUMP_FORCE, BIG_JUMP_FORCE, BLOCKS, BLOCK_PROPS, TERMINAL_VELOCITY,
+    TILE_SIZE, BLOCKS, BLOCK_PROPS,
+    JUMP_FORCE, BIG_JUMP_FORCE, TERMINAL_VELOCITY,
     UPWARD_COLLISION_VELOCITY_THRESHOLD, MAX_NATURAL_BLOCK_ID,
     TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET,
-    PHYSICS_DT, ACCELERATOR_ACCELERATION_AMOUNT
+    ACCELERATOR_ACCELERATION_AMOUNT,
+    TICK_TIME_SCALE, GRAVITY_PER_TICK, PHYSICS_TPS, PHYSICS_DT
 } from './constants.js';
 
 // --- Q20.12 Fixed-point arithmetic ---
@@ -20,21 +22,18 @@ const FP_ONE = 1 << FP_SHIFT; // 4096
 const toFP = (val) => Math.floor(val * FP_ONE);
 const toFloat = (val) => val / FP_ONE;
 
-// --- Physics Constants (720Hz Fixed Step) ---
-// Time scale per tick: PHYSICS_DT / 16.667ms = 60 / 720 = 1/12
-const TICK_TIME_SCALE = PHYSICS_DT * 0.06;
-
-// --- Pre-calculated FP Physics Constants ---
+// --- Pre-calculated FP Physics Constants (720Hz native) ---
 // All physics factors converted to Q20.12 for pure integer arithmetic
+// Using TICK_TIME_SCALE from constants.js (60 / PHYSICS_TPS)
 
 // Friction: 0.8^timeScale per tick (multiply then shift)
 const FRICTION_FACTOR_FP = Math.floor(Math.pow(0.8, TICK_TIME_SCALE) * FP_ONE);
 
-// Gravity per tick in FP
-const GRAVITY_PER_TICK_FP = toFP(GRAVITY * TICK_TIME_SCALE);
+// Gravity per tick in FP - using pre-calculated constant from constants.js
+const GRAVITY_PER_TICK_FP = toFP(GRAVITY_PER_TICK);
 
-// Board velocity decay per tick in FP
-const BOARD_DECAY_PER_TICK_FP = toFP(15 * (PHYSICS_DT / 1000));
+// Board velocity decay per tick in FP (15 units per second / TPS)
+const BOARD_DECAY_PER_TICK_FP = toFP(15 / PHYSICS_TPS);
 
 // Time scale for position integration (velocity * timeScale)
 const TICK_TIME_SCALE_FP = toFP(TICK_TIME_SCALE);

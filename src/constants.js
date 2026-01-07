@@ -4,7 +4,11 @@
 
 // Physics Settings (720Hz Fixed Timestep)
 export const PHYSICS_TPS = 720;
-export const PHYSICS_DT = 1000 / PHYSICS_TPS; // approx 1.38ms
+export const PHYSICS_DT = 1000 / PHYSICS_TPS; // approx 1.389ms per tick
+
+// Time scaling: ratio of one 720Hz tick to one 60Hz frame
+// This is the ONLY place where the legacy 60Hz reference exists
+export const TICK_TIME_SCALE = 60 / PHYSICS_TPS; // 1/12 ≈ 0.0833
 
 // Environment Settings
 export const DAY_DURATION_MS = 360000;
@@ -12,24 +16,40 @@ export const DAY_DURATION_MS = 360000;
 export const TILE_SIZE = 32;
 export const WORLD_WIDTH = 512 * 8;
 export const WORLD_HEIGHT = 256;
-export const GRAVITY = 0.5;
-export const TERMINAL_VELOCITY = 20.0;
-export const JUMP_FORCE = 10;
-export const BIG_JUMP_FORCE = 18;
 export const REACH = 5 * TILE_SIZE;
 export const CAMERA_SMOOTHING = 0.1;
-export const TNT_FUSE_TIME = 3000; // milliseconds
+
+// --- Player Physics Constants (720Hz native, per-tick values) ---
+// Gravity acceleration per tick (velocity units)
+export const GRAVITY_PER_TICK = 0.5 * TICK_TIME_SCALE; // ~0.0417 per tick
+// Terminal velocity cap (velocity units)
+export const TERMINAL_VELOCITY = 20.0;
+// Jump impulse (initial velocity, applied once)
+export const JUMP_FORCE = 10;
+export const BIG_JUMP_FORCE = 18;
+// Velocity threshold for breaking blocks from below
+export const UPWARD_COLLISION_VELOCITY_THRESHOLD = -20;
+// Maximum block ID for natural blocks (0-12)
+export const MAX_NATURAL_BLOCK_ID = 12;
+
+// --- TNT Constants ---
+export const TNT_FUSE_TICKS = 2160; // 3 seconds at 720Hz (3000ms * 720 / 1000)
 export const TNT_EXPLOSION_RADIUS = 8; // tiles
 export const TNT_KNOCKBACK_STRENGTH = 15.0;
 export const TNT_KNOCKBACK_DISTANCE_OFFSET = 2; // multiplied by TILE_SIZE
 
-// Player collision constants
-export const UPWARD_COLLISION_VELOCITY_THRESHOLD = -20; // Velocity threshold for breaking blocks from below
-export const MAX_NATURAL_BLOCK_ID = 12; // Maximum block ID for natural blocks (0-12)
-
-// Accelerator constants
-export const ACCELERATOR_COOLDOWN = 500; // milliseconds
+// --- Accelerator Constants ---
+export const ACCELERATOR_COOLDOWN_TICKS = 360; // 0.5 seconds at 720Hz (500ms * 720 / 1000)
 export const ACCELERATOR_ACCELERATION_AMOUNT = 15; // Fixed acceleration amount
+
+// --- Sapling Constants ---
+export const SAPLING_GROWTH_BASE_TICKS = 4320; // 6 seconds at 720Hz (6000ms * 720 / 1000)
+export const SAPLING_GROWTH_VARIANCE_TICKS = 720; // 1 second variance at 720Hz
+
+// --- Jackpot Constants ---
+export const JACKPOT_COOLDOWN_TICKS = 576; // 0.8 seconds at 720Hz (800ms * 720 / 1000)
+export const JACKPOT_PARTICLE_LIFE_BASE_TICKS = 648; // ~0.9 seconds at 720Hz
+export const JACKPOT_PARTICLE_LIFE_VARIANCE_TICKS = 288; // ~0.4 seconds variance
 
 // Block Types
 // Note: Craftable blocks (FIREWORK, JUMP_PAD, TNT, SAPLING, JACKPOT) are at the end

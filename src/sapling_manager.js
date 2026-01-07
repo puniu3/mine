@@ -1,4 +1,4 @@
-import { BLOCKS, TILE_SIZE, BLOCK_PROPS, PHYSICS_DT } from './constants.js';
+import { BLOCKS, TILE_SIZE, BLOCK_PROPS, SAPLING_GROWTH_BASE_TICKS, SAPLING_GROWTH_VARIANCE_TICKS } from './constants.js';
 import { rectsIntersect, isBlockSolid, isBlockBreakable } from './utils.js';
 
 /**
@@ -6,17 +6,16 @@ import { rectsIntersect, isBlockSolid, isBlockBreakable } from './utils.js';
  */
 export function createSaplingManager({ world, player }) {
     const saplingTimers = [];
-    const SAPLING_GROWTH_TIME = 6000;
 
     /**
      * Adds a new sapling to be tracked.
      * @param {number} x - The x coordinate (tile)
      * @param {number} y - The y coordinate (tile)
-     * @param {number} [remainingTime] - Optional remaining time for loading saves
+     * @param {number} [remainingTicks] - Optional remaining ticks for loading saves
      */
-    function addSapling(x, y, remainingTime) {
-        const time = remainingTime || (SAPLING_GROWTH_TIME + Math.random() * 1000);
-        saplingTimers.push({ x, y, timer: time });
+    function addSapling(x, y, remainingTicks) {
+        const ticks = remainingTicks || (SAPLING_GROWTH_BASE_TICKS + Math.floor(Math.random() * SAPLING_GROWTH_VARIANCE_TICKS));
+        saplingTimers.push({ x, y, timer: ticks });
     }
 
     /**
@@ -307,7 +306,7 @@ export function createSaplingManager({ world, player }) {
                 continue;
             }
 
-            sapling.timer -= PHYSICS_DT;
+            sapling.timer--;
             if (sapling.timer <= 0) {
                 const group = getConnectedSaplings(sapling.x, sapling.y);
                 growSaplingGroup(group);

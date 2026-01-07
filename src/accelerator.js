@@ -1,4 +1,4 @@
-import { BLOCKS, ACCELERATOR_COOLDOWN, PHYSICS_DT } from './constants.js';
+import { BLOCKS, ACCELERATOR_COOLDOWN_TICKS } from './constants.js';
 
 const acceleratorCooldowns = new Map();
 
@@ -13,15 +13,15 @@ export function handleAcceleratorOverlap(player, world) {
             const key = `${x},${y}`;
 
             if ((block === BLOCKS.ACCELERATOR_LEFT || block === BLOCKS.ACCELERATOR_RIGHT) && !acceleratorCooldowns.has(key)) {
-                
+
                 const direction = (block === BLOCKS.ACCELERATOR_RIGHT) ? 1 : -1;
-                
+
                 // Command the player to apply force.
                 // The physics calculation happens deterministically inside the Player class.
                 player.applyAcceleratorForce(direction);
-                
-                acceleratorCooldowns.set(key, ACCELERATOR_COOLDOWN);
-                
+
+                acceleratorCooldowns.set(key, ACCELERATOR_COOLDOWN_TICKS);
+
                 // Return immediately after triggering one accelerator to prevent stacking in the same frame
                 return;
             }
@@ -30,8 +30,8 @@ export function handleAcceleratorOverlap(player, world) {
 }
 
 export function tick() {
-    acceleratorCooldowns.forEach((time, key) => {
-        const next = time - PHYSICS_DT;
+    acceleratorCooldowns.forEach((ticks, key) => {
+        const next = ticks - 1;
         if (next <= 0) {
             acceleratorCooldowns.delete(key);
         } else {
