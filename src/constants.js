@@ -6,6 +6,9 @@
 export const PHYSICS_TPS = 720;
 export const PHYSICS_DT = 1000 / PHYSICS_TPS; // approx 1.38ms
 
+// Environment Settings
+export const DAY_DURATION_MS = 360000;
+
 export const TILE_SIZE = 32;
 export const WORLD_WIDTH = 512 * 8;
 export const WORLD_HEIGHT = 256;

@@ -14,7 +14,8 @@ import {
     TILE_SIZE,
     BLOCKS,
     BLOCK_PROPS,
-    REACH
+    REACH,
+    DAY_DURATION_MS
 } from './constants.js';
 import {
     getSkyGradientColors,
@@ -33,13 +34,12 @@ export function drawGame(ctx, {
     logicalWidth,
     logicalHeight,
     textures,
-    input,
-    dayDuration
+    input
 }) {
     if (!world) return;
 
     // --- 1. Calculate Time & Altitude ---
-    const normalizedTime = (Date.now() % dayDuration) / dayDuration;
+    const normalizedTime = (Date.now() % DAY_DURATION_MS) / DAY_DURATION_MS;
 
     // Altitude: 0.0 (Top) to 1.0 (Bottom)
     // Use camera center position for smooth altitude transitions during world wrap

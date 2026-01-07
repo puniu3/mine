@@ -65,9 +65,6 @@ let saveManager = null;
 const PHYSICS_EPSILON = 0.25;
 let accumulator = 0;
 
-// Day/Night Cycle Settings
-const DAY_DURATION_MS = 360000;
-
 // Logical (CSS) canvas dimensions
 let logicalWidth = window.innerWidth;
 let logicalHeight = window.innerHeight;
@@ -247,8 +244,7 @@ function draw() {
         logicalWidth,
         logicalHeight,
         textures,
-        input,
-        dayDuration: DAY_DURATION_MS
+        input
     });
 }
 
