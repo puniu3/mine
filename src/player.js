@@ -176,12 +176,25 @@ export class Player {
         return this.y + this.height / 2;
     }
 
+    /**
+     * Check if the player's center is in a liquid block (e.g., water)
+     * @returns {boolean} True if the player is in water
+     */
+    isInWater() {
+        const centerX = Math.floor(this.getCenterX() / TILE_SIZE);
+        const centerY = Math.floor(this.getCenterY() / TILE_SIZE);
+        const block = this.world.getBlock(centerX, centerY);
+        const blockType = BLOCK_PROPS[block]?.type;
+        return blockType === 'liquid';
+    }
+
     getRect() {
         return { x: this.x, y: this.y, w: this.width, h: this.height };
     }
 
     update(input, dt) {
         const timeScale = dt / (1000 / 60);
+        const inWater = this.isInWater();
 
         if (input.keys.left) {
             this.vx = -5;
@@ -193,7 +206,17 @@ export class Player {
             this.vx *= Math.pow(0.8, timeScale);
         }
 
-        if (input.keys.jump && this.grounded) {
+        // Water physics: apply friction to horizontal velocity
+        if (inWater) {
+            this.vx *= Math.pow(0.9, timeScale);
+        }
+
+        if (inWater) {
+            // Swimming: press jump to swim upward
+            if (input.keys.jump) {
+                this.vy = -3;
+            }
+        } else if (input.keys.jump && this.grounded) {
             this.vy = -JUMP_FORCE;
             this.grounded = false;
             sounds.playJump();
@@ -220,7 +243,14 @@ export class Player {
             }
         }
 
-        this.vy = Math.max(this.vy, Math.min(this.vy + GRAVITY * timeScale, TERMINAL_VELOCITY));
+        if (inWater) {
+            // Water physics: reduced gravity and friction on vy (no terminal velocity cap)
+            this.vy += GRAVITY * 0.3 * timeScale;
+            this.vy *= Math.pow(0.9, timeScale);
+        } else {
+            // Normal physics: full gravity with terminal velocity cap
+            this.vy = Math.max(this.vy, Math.min(this.vy + GRAVITY * timeScale, TERMINAL_VELOCITY));
+        }
 
         const totalVx = this.vx + this.boardVx;
         
@@ -312,7 +342,7 @@ export class Player {
 
                             if (this.vy < UPWARD_COLLISION_VELOCITY_THRESHOLD &&
                                 isBlockBreakable(block, BLOCK_PROPS) &&
-                                isNaturalBlock(block, MAX_NATURAL_BLOCK_ID)) {
+                                isNaturalBlock(block, MAX_NATURAL_BLOCK_ID, BLOCKS.WATER)) {
                                 if (this.addToInventory) {
                                     this.addToInventory(block);
                                 }
