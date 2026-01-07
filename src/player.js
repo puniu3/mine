@@ -336,9 +336,8 @@ export class Player {
         }
 
         // 4. Gravity Application (FP)
-        this._vy += GRAVITY_PER_TICK_FP;
-        if (this._vy > TERMINAL_VELOCITY_FP) {
-            this._vy = TERMINAL_VELOCITY_FP;
+        if (this._vy < TERMINAL_VELOCITY_FP) {
+            this._vy += GRAVITY_PER_TICK_FP;
         }
 
         // 5. Apply Movement (FP)
