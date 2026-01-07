@@ -60,17 +60,94 @@ export function createActions({
      */
     function handlePointer(screenX, screenY) {
         const worldPos = screenToWorld(screenX, screenY, camera.x, camera.y);
-        // Use 'let' for by because we might modify it (target shifting)
-        let { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
+        const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
 
-        // Check reach
+        // Basic reach check (distance from player center)
         if (!isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
             return;
         }
 
+        // ========================================================================
+        // 1. Auto-Climb Trigger Detection (Top Priority)
+        // ========================================================================
+        // We check this BEFORE looking at what block is at the clicked position.
+        // This ensures that clicking the player/zone always triggers the climb logic,
+        // even if there is a breakable block behind the player.
+
+        const pCenterX = player.getCenterX();
+        const pHeadTileX = Math.floor(pCenterX / TILE_SIZE);
+        const pHeadTileY = Math.floor(player.y / TILE_SIZE);
+
+        // Condition 1: Tile containing the center of the player's head
+        const isHeadTile = (bx === pHeadTileX && by === pHeadTileY);
+
+        // Condition 2: Upper half of the tile directly below the head tile
+        // We use pixel math here for precision
+        const isBelowHead = (bx === pHeadTileX && by === pHeadTileY + 1);
+        const isUpperHalf = (worldPos.y % TILE_SIZE) < (TILE_SIZE / 2);
+        const isBelowHeadUpperHalf = isBelowHead && isUpperHalf;
+
+        // Condition 3: Specific Rect (32px wide, 48px high, top at player.y - 4, centered)
+        const rectX = pCenterX - 16;
+        const rectY = player.y - 4;
+        const rectW = 32;
+        const rectH = 48;
+        const isInsideRect = (
+            worldPos.x >= rectX &&
+            worldPos.x < rectX + rectW &&
+            worldPos.y >= rectY &&
+            worldPos.y < rectY + rectH
+        );
+
+        if (isHeadTile || isBelowHeadUpperHalf || isInsideRect) {
+            // --- Execute Auto-Climb Placement ---
+            
+            // Target is always the feet tile in the center column
+            const targetTx = pHeadTileX;
+            // Ensure feet calculation gets the tile strictly containing the feet bottom
+            const targetTy = Math.floor((player.y + player.height - 0.01) / TILE_SIZE);
+
+            // Validation: Is the feet block replaceable (Air/Water/Grass)?
+            const blockAtFeet = world.getBlock(targetTx, targetTy);
+            const isFeetReplaceable = blockAtFeet === BLOCKS.AIR || isBlockTransparent(blockAtFeet, BLOCK_PROPS);
+
+            // Validation: Is the space ABOVE the new block free for the player to stand?
+            // The player will be moved to: (targetTy * TILE_SIZE) - player.height
+            const newPlayerY = (targetTy * TILE_SIZE) - player.height;
+            const isAreaAboveFree = world.checkAreaFree(player.x, newPlayerY, player.width, player.height);
+
+            if (isFeetReplaceable && isAreaAboveFree) {
+                const selectedBlock = inventory.getSelectedBlockId();
+                const isCloud = selectedBlock === BLOCKS.CLOUD;
+                
+                // Allow placement if there is a neighbor (normal rules) OR if it's a cloud
+                const hasNeighbor = isCloud || hasAdjacentBlock(targetTx, targetTy, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
+
+                if (hasNeighbor) {
+                    if (inventory.consumeFromInventory(selectedBlock)) {
+                        world.setBlock(targetTx, targetTy, selectedBlock);
+                        sounds.playDig('dirt'); // Or appropriate sound
+                        if (onBlockPlaced) onBlockPlaced(targetTx, targetTy, selectedBlock);
+
+                        // Teleport player on top
+                        player.y = newPlayerY - 0.1;
+                        player.vy = 0;
+                        player.grounded = true;
+                    } else {
+                        sounds.playPop(); // Out of ammo
+                    }
+                }
+            }
+            // If we matched the trigger zone, we return immediately.
+            // We do NOT fall through to break/place logic.
+            return;
+        }
+
+        // ========================================================================
+        // 2. Block Breaking
+        // ========================================================================
         const currentBlock = world.getBlock(bx, by);
 
-        // Break
         if (currentBlock !== BLOCKS.AIR && isBlockBreakable(currentBlock, BLOCK_PROPS)) {
             inventory.addToInventory(currentBlock);
             sounds.playDig(getBlockMaterialType(currentBlock, BLOCK_PROPS));
@@ -78,80 +155,26 @@ export function createActions({
             return;
         }
 
-        // Place
+        // ========================================================================
+        // 3. Normal Block Placement
+        // ========================================================================
         if ((currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) && currentBlock !== BLOCKS.WORKBENCH) {
             const playerRect = player.getRect();
             const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
-
+            
+            // Standard check: prevent placing inside player
             const isIntersecting = rectsIntersect(playerRect, blockRect);
 
-            let canPlace = false;
-            let shouldClimb = false;
-
             if (!isIntersecting) {
-                canPlace = true;
-            } else {
-                // Logic modification: Specific body part handling
-                const playerHeadTileY = Math.floor(player.y / TILE_SIZE);
-                // Use -0.01 to ensure we get the tile the feet are actually inside/on
-                const playerFeetTileY = Math.floor((player.y + player.height - 0.01) / TILE_SIZE);
-
-                if (by === playerHeadTileY) {
-                    // Case: User tapped the upper body (Head)
-                    // Action: Shift placement target to feet and trigger climb
-                    by = playerFeetTileY;
-
-                    // Calculate where the player needs to move (on top of the new block)
-                    const targetPlayerY = (by * TILE_SIZE) - player.height;
-
-                    // UPDATED LOGIC:
-                    // 1. Check if the block at the NEW target (feet) is actually replaceable (Air or Transparent)
-                    const blockAtFeet = world.getBlock(bx, by);
-                    const isFeetBlockReplaceable = blockAtFeet === BLOCKS.AIR || isBlockTransparent(blockAtFeet, BLOCK_PROPS);
-                    
-                    // 2. Check if the area above the new block position is free
-                    const isAreaAboveFree = world.checkAreaFree(player.x, targetPlayerY, player.width, player.height);
-
-                    // Only allow placement/climb if both the feet tile is valid AND the space above is free
-                    if (isFeetBlockReplaceable && isAreaAboveFree) {
-                        canPlace = true;
-                        shouldClimb = true;
-                    }
-                } else if (by === playerFeetTileY) {
-                    // Case: User tapped the lower body (Feet)
-                    // Action: Prevent placement
-                    canPlace = false;
-                } else {
-                    // Case: Intersecting but distinct from head/feet logic (fallback)
-                    // Try standard auto-climb check just in case
-                    const targetY = blockRect.y - player.height;
-                    if (world.checkAreaFree(player.x, targetY, player.width, player.height)) {
-                        canPlace = true;
-                        shouldClimb = true;
-                    }
-                }
-            }
-
-            if (canPlace) {
                 const selectedBlock = inventory.getSelectedBlockId();
-                // Cloud blocks can be placed in mid-air without adjacent support
                 const isCloud = selectedBlock === BLOCKS.CLOUD;
-                
-                // UPDATED LOGIC: Removed 'shouldClimb' from the OR condition.
-                // Even if climbing, we now require a valid neighbor (or cloud) to respect "Normal Rules".
                 const hasNeighbor = isCloud || hasAdjacentBlock(bx, by, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
 
                 if (hasNeighbor) {
                     if (inventory.consumeFromInventory(selectedBlock)) {
                         world.setBlock(bx, by, selectedBlock);
                         sounds.playDig('dirt');
-                        if (onBlockPlaced) onBlockPlaced(bx, by, selectedBlock); // Trigger hook
-                        if (shouldClimb) {
-                            // Move player on top of the newly placed block
-                            player.y = (by * TILE_SIZE) - player.height - 0.1;
-                            player.vy = 0;
-                            player.grounded = true;
-                        }
+                        if (onBlockPlaced) onBlockPlaced(bx, by, selectedBlock);
                     } else {
                         sounds.playPop();
                     }
