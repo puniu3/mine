@@ -5,8 +5,7 @@
 
 import {
     TILE_SIZE, BLOCKS, BLOCK_PROPS,
-    TNT_FUSE_TIME, TNT_EXPLOSION_RADIUS,
-    PHYSICS_DT
+    TNT_FUSE_TICKS, TNT_EXPLOSION_RADIUS
 } from './constants.js';
 import { isBlockBreakable } from './utils.js';
 
@@ -196,7 +195,7 @@ export function createTNTManager(context) {
                     continue;
                 }
 
-                tnt.timer -= PHYSICS_DT;
+                tnt.timer--;
 
                 if (tnt.timer <= 0) {
                     // 1. Find the entire cluster of connected TNTs
@@ -217,7 +216,7 @@ export function createTNTManager(context) {
          * @param {number} y - Tile Y coordinate
          */
         onBlockPlaced(x, y) {
-            timers.push({ x, y, timer: TNT_FUSE_TIME });
+            timers.push({ x, y, timer: TNT_FUSE_TICKS });
         },
 
         /**
