@@ -95,19 +95,18 @@ function init(savedState = null) {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
 
     // TNT + JUMP_PAD super launch callback
-    const handleTNTJumpPad = (tntX, tntY) => {
-        // Play explosion sound
+    // tntPositions is an array of Y coordinates for all connected TNTs
+    const handleTNTJumpPad = (tntX, tntPositions) => {
+        // Play explosion sound once
         sounds.playExplosion();
-        // Remove TNT block (don't add to inventory)
-        world.setBlock(tntX, tntY, BLOCKS.AIR);
-        // Cancel any active timer for this TNT
-        if (tntManager) {
-            tntManager.cancelTimerAt(tntX, tntY);
+        // Remove all connected TNT blocks and cancel their timers
+        for (const tntY of tntPositions) {
+            world.setBlock(tntX, tntY, BLOCKS.AIR);
+            if (tntManager) {
+                tntManager.cancelTimerAt(tntX, tntY);
+            }
         }
-        // Create explosion particles at TNT location
-        const pixelX = tntX * TILE_SIZE + TILE_SIZE / 2;
-        const pixelY = tntY * TILE_SIZE + TILE_SIZE / 2;
-        createExplosionParticles(pixelX, pixelY);
+        // No particles - camera moves too fast to see them
     };
 
     player = new Player(world, addToInventory, handleTNTJumpPad);
@@ -131,20 +130,19 @@ function init(savedState = null) {
     });
 
     // Initialize Accelerator with TNT callback
+    // tntPositions is an array of X coordinates for all connected TNTs
     initAccelerator({
-        onTNTAccelerator: (tntX, tntY) => {
-            // Play explosion sound
+        onTNTAccelerator: (tntPositions, tntY) => {
+            // Play explosion sound once
             sounds.playExplosion();
-            // Remove TNT block (don't add to inventory)
-            world.setBlock(tntX, tntY, BLOCKS.AIR);
-            // Cancel any active timer for this TNT
-            if (tntManager) {
-                tntManager.cancelTimerAt(tntX, tntY);
+            // Remove all connected TNT blocks and cancel their timers
+            for (const tntX of tntPositions) {
+                world.setBlock(tntX, tntY, BLOCKS.AIR);
+                if (tntManager) {
+                    tntManager.cancelTimerAt(tntX, tntY);
+                }
             }
-            // Create explosion particles at TNT location
-            const pixelX = tntX * TILE_SIZE + TILE_SIZE / 2;
-            const pixelY = tntY * TILE_SIZE + TILE_SIZE / 2;
-            createExplosionParticles(pixelX, pixelY);
+            // No particles - camera moves too fast to see them
         }
     });
 
@@ -177,37 +175,78 @@ function init(savedState = null) {
         },
         onBlockPlaced: (x, y, type) => {
             if (type === BLOCKS.TNT) {
-                // Skip timer if JUMP_PAD is directly above
-                const blockAbove = world.getBlock(x, y - 1);
-                // Skip timer if ACCELERATOR_LEFT is to the left (TNT is to its right)
-                const blockLeft = world.getBlock(x - 1, y);
-                // Skip timer if ACCELERATOR_RIGHT is to the right (TNT is to its left)
-                const blockRight = world.getBlock(x + 1, y);
+                // Check upward for JUMP_PAD (through connected TNTs)
+                let checkY = y - 1;
+                while (world.getBlock(x, checkY) === BLOCKS.TNT) {
+                    checkY--;
+                }
+                const blockAboveChain = world.getBlock(x, checkY);
+                const hasJumpPadAboveChain = blockAboveChain === BLOCKS.JUMP_PAD;
 
-                const hasJumpPadAbove = blockAbove === BLOCKS.JUMP_PAD;
-                const hasAccelLeftToLeft = blockLeft === BLOCKS.ACCELERATOR_LEFT;
-                const hasAccelRightToRight = blockRight === BLOCKS.ACCELERATOR_RIGHT;
+                // Check left for ACCELERATOR_LEFT (through connected TNTs)
+                let checkLeft = x - 1;
+                while (world.getBlock(checkLeft, y) === BLOCKS.TNT) {
+                    checkLeft--;
+                }
+                const hasAccelLeftOnLeft = world.getBlock(checkLeft, y) === BLOCKS.ACCELERATOR_LEFT;
 
-                if (!hasJumpPadAbove && !hasAccelLeftToLeft && !hasAccelRightToRight) {
+                // Check right for ACCELERATOR_RIGHT (through connected TNTs)
+                let checkRight = x + 1;
+                while (world.getBlock(checkRight, y) === BLOCKS.TNT) {
+                    checkRight++;
+                }
+                const hasAccelRightOnRight = world.getBlock(checkRight, y) === BLOCKS.ACCELERATOR_RIGHT;
+
+                const isProtected = hasJumpPadAboveChain || hasAccelLeftOnLeft || hasAccelRightOnRight;
+
+                if (!isProtected) {
                     tntManager.onBlockPlaced(x, y);
+                } else {
+                    // Cancel timers for TNTs that just got connected to protected chain
+                    if (hasJumpPadAboveChain) {
+                        let belowY = y + 1;
+                        while (world.getBlock(x, belowY) === BLOCKS.TNT) {
+                            tntManager.cancelTimerAt(x, belowY);
+                            belowY++;
+                        }
+                    }
+                    if (hasAccelLeftOnLeft) {
+                        // Cancel timers for TNTs to the right
+                        let rightX = x + 1;
+                        while (world.getBlock(rightX, y) === BLOCKS.TNT) {
+                            tntManager.cancelTimerAt(rightX, y);
+                            rightX++;
+                        }
+                    }
+                    if (hasAccelRightOnRight) {
+                        // Cancel timers for TNTs to the left
+                        let leftX = x - 1;
+                        while (world.getBlock(leftX, y) === BLOCKS.TNT) {
+                            tntManager.cancelTimerAt(leftX, y);
+                            leftX--;
+                        }
+                    }
                 }
             } else if (type === BLOCKS.JUMP_PAD) {
-                // Cancel TNT timer if placed directly above TNT
-                const blockBelow = world.getBlock(x, y + 1);
-                if (blockBelow === BLOCKS.TNT) {
-                    tntManager.cancelTimerAt(x, y + 1);
+                // Cancel timers for all connected TNTs below
+                let checkY = y + 1;
+                while (world.getBlock(x, checkY) === BLOCKS.TNT) {
+                    tntManager.cancelTimerAt(x, checkY);
+                    checkY++;
                 }
             } else if (type === BLOCKS.ACCELERATOR_LEFT) {
-                // Cancel TNT timer if TNT is to the right of this accelerator
-                const blockRight = world.getBlock(x + 1, y);
-                if (blockRight === BLOCKS.TNT) {
-                    tntManager.cancelTimerAt(x + 1, y);
+                // Cancel timers for all connected TNTs to the right
+                let checkX = x + 1;
+                while (world.getBlock(checkX, y) === BLOCKS.TNT) {
+                    tntManager.cancelTimerAt(checkX, y);
+                    checkX++;
                 }
             } else if (type === BLOCKS.ACCELERATOR_RIGHT) {
-                // Cancel TNT timer if TNT is to the left of this accelerator
-                const blockLeft = world.getBlock(x - 1, y);
-                if (blockLeft === BLOCKS.TNT) {
-                    tntManager.cancelTimerAt(x - 1, y);
+                // Cancel timers for all connected TNTs to the left
+                let checkX = x - 1;
+                while (world.getBlock(checkX, y) === BLOCKS.TNT) {
+                    tntManager.cancelTimerAt(checkX, y);
+                    checkX--;
                 }
             } else if (type === BLOCKS.SAPLING) {
                 saplingManager.addSapling(x, y);
