@@ -35,7 +35,8 @@ export function drawGame(ctx, {
     logicalWidth,
     logicalHeight,
     textures,
-    input
+    input,
+    tntManager
 }) {
     if (!world) return;
 
@@ -206,7 +207,55 @@ export function drawGame(ctx, {
             const block = world.getBlock(x, normalizedY);
 
             if (block !== BLOCKS.AIR && textures[block]) {
-                ctx.drawImage(textures[block], x * TILE_SIZE, y * TILE_SIZE);
+                // Special rendering for TNT with active timer
+                if (block === BLOCKS.TNT && tntManager && tntManager.hasTimerAt(x, normalizedY)) {
+                    // Create "about to explode" effect for kids
+                    const time = now * 0.01; // Fast animation
+
+                    // 1. Shake effect - small random offset
+                    const shakeX = Math.sin(time * 15 + x * 7) * 2;
+                    const shakeY = Math.cos(time * 18 + y * 5) * 2;
+
+                    // Draw TNT with shake
+                    ctx.drawImage(
+                        textures[block],
+                        x * TILE_SIZE + shakeX,
+                        y * TILE_SIZE + shakeY
+                    );
+
+                    // 2. Pulsing red/orange overlay (danger!)
+                    const pulse = (Math.sin(time * 8) + 1) / 2; // 0 to 1
+                    ctx.fillStyle = `rgba(255, ${Math.floor(100 - pulse * 100)}, 0, ${0.2 + pulse * 0.3})`;
+                    ctx.fillRect(
+                        x * TILE_SIZE + shakeX,
+                        y * TILE_SIZE + shakeY,
+                        TILE_SIZE,
+                        TILE_SIZE
+                    );
+
+                    // 3. Sparkling fuse effect at top
+                    const sparkle = Math.sin(time * 20) > 0.3;
+                    if (sparkle) {
+                        // Draw bright spark at the top (fuse)
+                        const sparkX = x * TILE_SIZE + TILE_SIZE / 2 + shakeX + (Math.random() - 0.5) * 8;
+                        const sparkY = y * TILE_SIZE + shakeY + 2;
+                        const sparkSize = 3 + Math.random() * 3;
+
+                        // Glowing spark
+                        ctx.fillStyle = '#ffff00';
+                        ctx.beginPath();
+                        ctx.arc(sparkX, sparkY, sparkSize, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Outer glow
+                        ctx.fillStyle = 'rgba(255, 200, 0, 0.5)';
+                        ctx.beginPath();
+                        ctx.arc(sparkX, sparkY, sparkSize + 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } else {
+                    ctx.drawImage(textures[block], x * TILE_SIZE, y * TILE_SIZE);
+                }
 
                 if (!NO_SHADOW_BLOCKS.has(block)) {
                     const aboveY = (normalizedY - 1 + world.height) % world.height;

@@ -353,7 +353,8 @@ function draw() {
         logicalWidth,
         logicalHeight,
         textures,
-        input
+        input,
+        tntManager
     });
 }
 
