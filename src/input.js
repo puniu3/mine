@@ -1,4 +1,4 @@
-export function createInput(canvas, { onHotbarSelect, onTouch }) {
+export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
     const input = {
         keys: { left: false, right: false, jump: false },
         mouse: { x: 0, y: 0, leftDown: false, active: false }
@@ -20,6 +20,7 @@ export function createInput(canvas, { onHotbarSelect, onTouch }) {
             case 'Digit7': if (onHotbarSelect) onHotbarSelect(6); break;
             case 'Digit8': if (onHotbarSelect) onHotbarSelect(7); break;
             case 'Digit9': if (onHotbarSelect) onHotbarSelect(8); break;
+            case 'KeyS': if (onClimb) onClimb(); break;
         }
     });
 

@@ -54,6 +54,61 @@ export function createActions({
     } = utils;
 
     /**
+     * Executes the climb action: places selected block at player's feet and moves player up.
+     * @returns {boolean} True if climb was successful.
+     */
+    function executeClimb() {
+        const pCenterX = player.getCenterX();
+        const pHeadTileX = Math.floor(pCenterX / TILE_SIZE);
+
+        // Target is always the feet tile in the center column
+        const targetTx = pHeadTileX;
+        // Ensure feet calculation gets the tile strictly containing the feet bottom
+        const targetTy = Math.floor((player.y + player.height - 0.01) / TILE_SIZE);
+
+        // Validation: Is the feet block replaceable (Air/Water/Grass)?
+        const blockAtFeet = world.getBlock(targetTx, targetTy);
+        const isFeetReplaceable = blockAtFeet === BLOCKS.AIR || isBlockTransparent(blockAtFeet, BLOCK_PROPS);
+
+        // Validation: Is the space ABOVE the new block free for the player to stand?
+        // The player will be moved to: (targetTy * TILE_SIZE) - player.height
+        const newPlayerY = (targetTy * TILE_SIZE) - player.height;
+        const isAreaAboveFree = world.checkAreaFree(player.x, newPlayerY, player.width, player.height);
+
+        if (isFeetReplaceable && isAreaAboveFree) {
+            const selectedBlock = inventory.getSelectedBlockId();
+            const isCloud = selectedBlock === BLOCKS.CLOUD;
+
+            // Allow placement if there is a neighbor (normal rules) OR if it's a cloud
+            const hasNeighbor = isCloud || hasAdjacentBlock(targetTx, targetTy, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
+
+            if (hasNeighbor) {
+                if (inventory.consumeFromInventory(selectedBlock)) {
+                    world.setBlock(targetTx, targetTy, selectedBlock);
+                    sounds.playDig('dirt'); // Or appropriate sound
+                    if (onBlockPlaced) onBlockPlaced(targetTx, targetTy, selectedBlock);
+
+                    // Teleport player on top
+                    player.y = newPlayerY - 0.1;
+                    player.vy = 0;
+                    player.grounded = true;
+                    return true;
+                } else {
+                    sounds.playPop(); // Out of ammo
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Triggers climb action directly (for key binding).
+     */
+    function triggerClimb() {
+        executeClimb();
+    }
+
+    /**
      * Handles pointer interaction (mouse/touch) for breaking and placing blocks.
      * @param {number} screenX - Screen X coordinate.
      * @param {number} screenY - Screen Y coordinate.
@@ -100,44 +155,8 @@ export function createActions({
         );
 
         if (isHeadTile || isBelowHeadUpperHalf || isInsideRect) {
-            // --- Execute Auto-Climb Placement ---
-            
-            // Target is always the feet tile in the center column
-            const targetTx = pHeadTileX;
-            // Ensure feet calculation gets the tile strictly containing the feet bottom
-            const targetTy = Math.floor((player.y + player.height - 0.01) / TILE_SIZE);
-
-            // Validation: Is the feet block replaceable (Air/Water/Grass)?
-            const blockAtFeet = world.getBlock(targetTx, targetTy);
-            const isFeetReplaceable = blockAtFeet === BLOCKS.AIR || isBlockTransparent(blockAtFeet, BLOCK_PROPS);
-
-            // Validation: Is the space ABOVE the new block free for the player to stand?
-            // The player will be moved to: (targetTy * TILE_SIZE) - player.height
-            const newPlayerY = (targetTy * TILE_SIZE) - player.height;
-            const isAreaAboveFree = world.checkAreaFree(player.x, newPlayerY, player.width, player.height);
-
-            if (isFeetReplaceable && isAreaAboveFree) {
-                const selectedBlock = inventory.getSelectedBlockId();
-                const isCloud = selectedBlock === BLOCKS.CLOUD;
-                
-                // Allow placement if there is a neighbor (normal rules) OR if it's a cloud
-                const hasNeighbor = isCloud || hasAdjacentBlock(targetTx, targetTy, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
-
-                if (hasNeighbor) {
-                    if (inventory.consumeFromInventory(selectedBlock)) {
-                        world.setBlock(targetTx, targetTy, selectedBlock);
-                        sounds.playDig('dirt'); // Or appropriate sound
-                        if (onBlockPlaced) onBlockPlaced(targetTx, targetTy, selectedBlock);
-
-                        // Teleport player on top
-                        player.y = newPlayerY - 0.1;
-                        player.vy = 0;
-                        player.grounded = true;
-                    } else {
-                        sounds.playPop(); // Out of ammo
-                    }
-                }
-            }
+            // Execute climb via shared function
+            executeClimb();
             // If we matched the trigger zone, we return immediately.
             // We do NOT fall through to break/place logic.
             return;
@@ -184,6 +203,7 @@ export function createActions({
     }
 
     return {
-        handlePointer
+        handlePointer,
+        triggerClimb
     };
 }
