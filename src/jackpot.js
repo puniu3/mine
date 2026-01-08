@@ -30,6 +30,36 @@ export function handleJackpotOverlap(player, world, sounds) {
     }
 }
 
+/**
+ * Triggers a massive explosion of jackpot particles.
+ * Used when a Jackpot block is destroyed by TNT.
+ * @param {number} tx - Tile X coordinate
+ * @param {number} ty - Tile Y coordinate
+ */
+export function triggerJackpotExplosion(tx, ty) {
+    const originX = tx * TILE_SIZE + TILE_SIZE / 2;
+    const originY = ty * TILE_SIZE + TILE_SIZE / 2;
+
+    // Spawn significantly more particles than the standard interaction (e.g., 100 particles)
+    for (let i = 0; i < 100; i++) {
+        jackpotParticles.push({
+            // Spread the start position slightly more for an explosion effect
+            x: originX + (Math.random() - 0.5) * TILE_SIZE,
+            y: originY + (Math.random() - 0.5) * TILE_SIZE,
+            
+            // MASSIVE velocity variance for wide spread
+            // vx: Range increased to ~25.0 (was 10.0) to cover wide horizontal area
+            vx: (Math.random() - 0.5) * 25.0 * TICK_TIME_SCALE,
+            // vy: Strong upward force (up to -18.0) to launch them high into the air
+            vy: -(4.0 + Math.random() * 14.0) * TICK_TIME_SCALE, 
+            
+            // Standard life cycle
+            life: JACKPOT_PARTICLE_LIFE_BASE_TICKS + Math.floor(Math.random() * JACKPOT_PARTICLE_LIFE_VARIANCE_TICKS),
+            color: i % 2 === 0 ? '#ffd54f' : '#fbc02d'
+        });
+    }
+}
+
 export function tick() {
     // Manage cooldowns (tick-based)
     jackpotCooldowns.forEach((ticks, key) => {

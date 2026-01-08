@@ -8,6 +8,7 @@ import {
     TNT_FUSE_TICKS, TNT_EXPLOSION_RADIUS
 } from './constants.js';
 import { isBlockBreakable } from './utils.js';
+import { triggerJackpotExplosion } from './jackpot.js';
 
 // Local Fixed-point arithmetic helpers to match Player's logic
 const FP_SHIFT = 12;
@@ -175,6 +176,44 @@ function explodeCluster(tntCluster, context) {
                 const block = world.getBlock(wrappedX, wrappedY);
                 
                 if (block === BLOCKS.AIR) continue;
+
+                // Special handling for FIREWORK: Explode with particles instead of collecting
+                if (block === BLOCKS.FIREWORK) {
+                    // Convert FP block center to pixels
+                    const px = blockCenterX_FP / FP_ONE;
+                    const py = blockCenterY_FP / FP_ONE;
+                    
+                    // Trigger massive particle explosion (Drastically reinforced)
+                    // Call 10 times to spawn ~1000 particles total
+                    // Scatter origin slightly to create a larger "burst" area feeling
+                    for (let i = 0; i < 10; i++) {
+                        const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                        
+                        // Spread the emission point within a 1.5 tile range to simulate a massive volumetric blast
+                        const spreadOffset = TILE_SIZE * 0.75;
+                        const offX = (Math.random() - 0.5) * 2 * spreadOffset;
+                        const offY = (Math.random() - 0.5) * 2 * spreadOffset;
+                        
+                        createExplosionParticles(px + offX, py + offY, color);
+                    }
+                    
+                    // Remove block without adding to inventory
+                    world.setBlock(wrappedX, wrappedY, BLOCKS.AIR);
+                    continue;
+                }
+
+                // Special handling for JACKPOT: Collect AND Explode with coins
+                if (block === BLOCKS.JACKPOT) {
+                    // 1. Trigger massive coin explosion
+                    triggerJackpotExplosion(wrappedX, wrappedY);
+                    
+                    // 2. Add to inventory
+                    addToInventory(block);
+
+                    // 3. Remove block
+                    world.setBlock(wrappedX, wrappedY, BLOCKS.AIR);
+                    continue;
+                }
 
                 if (isBlockBreakable(block, BLOCK_PROPS)) {
                     addToInventory(block);
