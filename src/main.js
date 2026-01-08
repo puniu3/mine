@@ -194,6 +194,13 @@ function init(savedState = null) {
 
                 if (!hasJumpPadAboveChain && !hasAccelLeftToLeft && !hasAccelRightToRight) {
                     tntManager.onBlockPlaced(x, y);
+                } else if (hasJumpPadAboveChain) {
+                    // Also cancel timers for TNTs below that just got connected to JUMP_PAD
+                    let belowY = y + 1;
+                    while (world.getBlock(x, belowY) === BLOCKS.TNT) {
+                        tntManager.cancelTimerAt(x, belowY);
+                        belowY++;
+                    }
                 }
             } else if (type === BLOCKS.JUMP_PAD) {
                 // Cancel timers for all connected TNTs below
