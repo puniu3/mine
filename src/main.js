@@ -93,7 +93,24 @@ window.addEventListener('resize', resize);
 
 function init(savedState = null) {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
-    player = new Player(world, addToInventory);
+
+    // TNT + JUMP_PAD super launch callback
+    const handleTNTJumpPad = (tntX, tntY) => {
+        // Play explosion sound
+        sounds.playExplosion();
+        // Remove TNT block (don't add to inventory)
+        world.setBlock(tntX, tntY, BLOCKS.AIR);
+        // Cancel any active timer for this TNT
+        if (tntManager) {
+            tntManager.cancelTimerAt(tntX, tntY);
+        }
+        // Create explosion particles at TNT location
+        const pixelX = tntX * TILE_SIZE + TILE_SIZE / 2;
+        const pixelY = tntY * TILE_SIZE + TILE_SIZE / 2;
+        createExplosionParticles(pixelX, pixelY);
+    };
+
+    player = new Player(world, addToInventory, handleTNTJumpPad);
     textures = generateTextures();
 
     // Initialize Camera
@@ -142,7 +159,17 @@ function init(savedState = null) {
         },
         onBlockPlaced: (x, y, type) => {
             if (type === BLOCKS.TNT) {
-                tntManager.onBlockPlaced(x, y);
+                // Skip timer if JUMP_PAD is directly above
+                const blockAbove = world.getBlock(x, y - 1);
+                if (blockAbove !== BLOCKS.JUMP_PAD) {
+                    tntManager.onBlockPlaced(x, y);
+                }
+            } else if (type === BLOCKS.JUMP_PAD) {
+                // Cancel TNT timer if placed directly above TNT
+                const blockBelow = world.getBlock(x, y + 1);
+                if (blockBelow === BLOCKS.TNT) {
+                    tntManager.cancelTimerAt(x, y + 1);
+                }
             } else if (type === BLOCKS.SAPLING) {
                 saplingManager.addSapling(x, y);
             }

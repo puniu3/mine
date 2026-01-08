@@ -74,9 +74,10 @@ const KNOCKBACK_OFFSET_FP = toFP(TNT_KNOCKBACK_DISTANCE_OFFSET * TILE_SIZE);
 const TILE_SIZE_SQ = TILE_SIZE * TILE_SIZE;
 
 export class Player {
-    constructor(world, addToInventory = null) {
+    constructor(world, addToInventory = null, onTNTJumpPad = null) {
         this.world = world;
         this.addToInventory = addToInventory;
+        this.onTNTJumpPad = onTNTJumpPad;
 
         // Internal fixed-point storage (Q20.12)
         this._x = 0;
@@ -312,12 +313,25 @@ export class Player {
 
         // Priority 1: Jump Pad Interaction
         if (blockBelow === BLOCKS.JUMP_PAD) {
-            const stackCount = this.countVerticalJumpPads(feetX, feetY);
-            // Jump force from pre-computed lookup table (pure FP)
-            const clampedCount = Math.min(stackCount, 128);
-            this._vy = -JUMP_PAD_FORCE_TABLE_FP[clampedCount];
-            this.grounded = false;
-            sounds.playBigJump();
+            // Check if there's TNT directly below the JUMP_PAD
+            const blockBelowPad = this.world.getBlock(feetX, feetY + 1);
+            if (blockBelowPad === BLOCKS.TNT && this.onTNTJumpPad) {
+                // TNT + JUMP_PAD super launch: 20 JUMP_PADs worth of force
+                const superStackCount = 20;
+                const clampedCount = Math.min(superStackCount, 128);
+                this._vy = -JUMP_PAD_FORCE_TABLE_FP[clampedCount];
+                this.grounded = false;
+                // Trigger callback to handle TNT explosion effects
+                this.onTNTJumpPad(feetX, feetY + 1);
+            } else {
+                // Normal JUMP_PAD behavior
+                const stackCount = this.countVerticalJumpPads(feetX, feetY);
+                // Jump force from pre-computed lookup table (pure FP)
+                const clampedCount = Math.min(stackCount, 128);
+                this._vy = -JUMP_PAD_FORCE_TABLE_FP[clampedCount];
+                this.grounded = false;
+                sounds.playBigJump();
+            }
         }
         // Priority 2: Normal Jump
         else if (input.keys.jump && this.grounded) {

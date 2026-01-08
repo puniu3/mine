@@ -287,6 +287,53 @@ export function createTNTManager(context) {
         loadTimers(savedTimers) {
             timers.length = 0;
             timers.push(...savedTimers);
+        },
+
+        /**
+         * Cancels the TNT timer at the specified position
+         * @param {number} x - Tile X coordinate
+         * @param {number} y - Tile Y coordinate
+         * @returns {boolean} True if a timer was cancelled
+         */
+        cancelTimerAt(x, y) {
+            const idx = timers.findIndex(t => t.x === x && t.y === y);
+            if (idx !== -1) {
+                timers.splice(idx, 1);
+                return true;
+            }
+            return false;
+        },
+
+        /**
+         * Checks if there's a TNT timer at the specified position
+         * @param {number} x - Tile X coordinate
+         * @param {number} y - Tile Y coordinate
+         * @returns {boolean} True if there's a timer at this position
+         */
+        hasTimerAt(x, y) {
+            return timers.some(t => t.x === x && t.y === y);
+        },
+
+        /**
+         * Detonates the TNT at the specified position immediately (for super jump)
+         * @param {number} x - Tile X coordinate
+         * @param {number} y - Tile Y coordinate
+         */
+        detonateTNT(x, y) {
+            // Remove timer if exists
+            this.cancelTimerAt(x, y);
+
+            // Explode the cluster (creates particles, but we won't call full explodeCluster
+            // since we don't want block destruction or player knockback)
+            // Instead, just remove the TNT block and create particles
+            if (world.getBlock(x, y) === BLOCKS.TNT) {
+                world.setBlock(x, y, BLOCKS.AIR);
+
+                // Create explosion particles at TNT location
+                const pixelX = x * TILE_SIZE + TILE_SIZE / 2;
+                const pixelY = y * TILE_SIZE + TILE_SIZE / 2;
+                context.createExplosionParticles(pixelX, pixelY);
+            }
         }
     };
 }
