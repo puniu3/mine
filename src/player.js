@@ -99,6 +99,9 @@ export class Player {
         this.facingRight = true;
         this.animTimer = 0;
 
+        // Physics States
+        this.fastballActive = false; // "Lift" mode active
+
         this.findSpawnPoint();
     }
 
@@ -153,6 +156,14 @@ export class Player {
 
         this._boardVx = (direction > 0) ? newMag : -newMag;
         this.facingRight = (direction > 0);
+    }
+
+    /**
+     * Activates "Fastball Mode" where speed generates lift (counter-gravity).
+     * Called when passing through an Accelerator placed on a Cloud.
+     */
+    activateFastballMode() {
+        this.fastballActive = true;
     }
 
     /**
@@ -350,9 +361,36 @@ export class Player {
             }
         }
 
-        // 4. Gravity Application (FP)
+        // 4. Gravity Application (FP) with optional Fastball Lift
         if (this._vy < TERMINAL_VELOCITY_FP) {
-            this._vy += GRAVITY_PER_TICK_FP;
+            let gravityToApply = GRAVITY_PER_TICK_FP;
+
+            // Fastball Mode: Apply lift proportional to horizontal momentum
+            // Effect: At max accelerator speed, lift ~ gravity (flying straight).
+            // As speed decays due to drag, gravity takes over.
+            if (this.fastballActive) {
+                const currentSpeedFP = Math.abs(this._boardVx);
+                
+                // If we've slowed down significantly, disable the mode
+                // (Threshold: 1/4 of accelerator boost)
+                if (currentSpeedFP < (ACCELERATOR_AMOUNT_FP >> 2)) {
+                    this.fastballActive = false;
+                } else {
+                    // Calculate Lift Ratio = CurrentSpeed / ReferenceMaxSpeed
+                    // We assume ACCELERATOR_AMOUNT_FP is the reference "full speed"
+                    // Lift = Gravity * Ratio.
+                    // If Ratio >= 1, Lift >= Gravity (slight rise or flat)
+                    // If Ratio < 1, Gravity > Lift (curve down)
+                    
+                    // Fixed Point Math:
+                    // lift = (GRAVITY * speed) / MAX
+                    const liftFP = Math.floor((GRAVITY_PER_TICK_FP * currentSpeedFP) / ACCELERATOR_AMOUNT_FP);
+                    
+                    gravityToApply -= liftFP;
+                }
+            }
+
+            this._vy += gravityToApply;
         }
 
         // 5. Apply Movement (FP)
@@ -441,6 +479,7 @@ export class Player {
         this._boardVx = 0;
         this._x = toFP((this.world.width / 2) * TILE_SIZE);
         this.findSpawnPoint();
+        this.fastballActive = false;
     }
 
     /**

@@ -65,23 +65,29 @@ export function handleAcceleratorOverlap(player, world) {
 
                 // Check for connected TNTs behind the accelerator (opposite of pointing direction)
                 const tntStartX = x - direction;
-                const tntY = y;
-                const tntPositions = countConnectedTNTsBehindAccelerator(world, tntStartX, tntY, direction);
+                const tntPositions = countConnectedTNTsBehindAccelerator(world, tntStartX, y, direction);
 
+                // --- 1. Apply Boost Force ---
                 if (tntPositions.length > 0 && onTNTAccelerator) {
                     // TNT + Accelerator super boost (scales with TNT count)
                     applySuperAcceleratorForce(player, direction, tntPositions.length);
                     // Trigger callback to handle all TNT explosion effects
-                    onTNTAccelerator(tntPositions, tntY);
-                    acceleratorCooldowns.set(key, ACCELERATOR_COOLDOWN_TICKS);
-                    return;
+                    onTNTAccelerator(tntPositions, y);
+                } else {
+                    // Normal accelerator behavior
+                    // Command the player to apply force.
+                    player.applyAcceleratorForce(direction);
                 }
 
-                // Normal accelerator behavior
-                // Command the player to apply force.
-                // The physics calculation happens deterministically inside the Player class.
-                player.applyAcceleratorForce(direction);
+                // --- 2. Check for Fastball Mode (Shared Logic) ---
+                // If the block directly below the accelerator is a CLOUD, enable fastball physics (lift).
+                const blockBelow = world.getBlock(x, y + 1);
+                if (blockBelow === BLOCKS.CLOUD) {
+                    // Activate "Fastball Mode" (Lift counteracts gravity based on speed)
+                    player.activateFastballMode();
+                }
 
+                // --- 3. Set Cooldown & Return ---
                 acceleratorCooldowns.set(key, ACCELERATOR_COOLDOWN_TICKS);
 
                 // Return immediately after triggering one accelerator to prevent stacking in the same frame
