@@ -30,7 +30,7 @@ import { createActions } from './actions.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { drawJackpotParticles, handleJackpotOverlap, tick as tickJackpots } from './jackpot.js';
-import { handleAcceleratorOverlap, tick as tickAccelerators } from './accelerator.js';
+import { handleAcceleratorOverlap, tick as tickAccelerators, initAccelerator } from './accelerator.js';
 import { createSaveManager, loadGameState } from './save.js';
 import { createTNTManager } from './tnt.js';
 import { findSpawnPosition } from './world_share.js';
@@ -130,6 +130,24 @@ function init(savedState = null) {
         player
     });
 
+    // Initialize Accelerator with TNT callback
+    initAccelerator({
+        onTNTAccelerator: (tntX, tntY) => {
+            // Play explosion sound
+            sounds.playExplosion();
+            // Remove TNT block (don't add to inventory)
+            world.setBlock(tntX, tntY, BLOCKS.AIR);
+            // Cancel any active timer for this TNT
+            if (tntManager) {
+                tntManager.cancelTimerAt(tntX, tntY);
+            }
+            // Create explosion particles at TNT location
+            const pixelX = tntX * TILE_SIZE + TILE_SIZE / 2;
+            const pixelY = tntY * TILE_SIZE + TILE_SIZE / 2;
+            createExplosionParticles(pixelX, pixelY);
+        }
+    });
+
     // Initialize Actions
     actions = createActions({
         world,
@@ -161,7 +179,16 @@ function init(savedState = null) {
             if (type === BLOCKS.TNT) {
                 // Skip timer if JUMP_PAD is directly above
                 const blockAbove = world.getBlock(x, y - 1);
-                if (blockAbove !== BLOCKS.JUMP_PAD) {
+                // Skip timer if ACCELERATOR_LEFT is to the left (pointing right at TNT)
+                const blockLeft = world.getBlock(x - 1, y);
+                // Skip timer if ACCELERATOR_RIGHT is to the right (pointing left at TNT)
+                const blockRight = world.getBlock(x + 1, y);
+
+                const hasJumpPadAbove = blockAbove === BLOCKS.JUMP_PAD;
+                const hasAccelLeftPointing = blockLeft === BLOCKS.ACCELERATOR_LEFT;
+                const hasAccelRightPointing = blockRight === BLOCKS.ACCELERATOR_RIGHT;
+
+                if (!hasJumpPadAbove && !hasAccelLeftPointing && !hasAccelRightPointing) {
                     tntManager.onBlockPlaced(x, y);
                 }
             } else if (type === BLOCKS.JUMP_PAD) {
@@ -169,6 +196,18 @@ function init(savedState = null) {
                 const blockBelow = world.getBlock(x, y + 1);
                 if (blockBelow === BLOCKS.TNT) {
                     tntManager.cancelTimerAt(x, y + 1);
+                }
+            } else if (type === BLOCKS.ACCELERATOR_LEFT) {
+                // Cancel TNT timer if placed to the left of TNT (pointing at it)
+                const blockRight = world.getBlock(x + 1, y);
+                if (blockRight === BLOCKS.TNT) {
+                    tntManager.cancelTimerAt(x + 1, y);
+                }
+            } else if (type === BLOCKS.ACCELERATOR_RIGHT) {
+                // Cancel TNT timer if placed to the right of TNT (pointing at it)
+                const blockLeft = world.getBlock(x - 1, y);
+                if (blockLeft === BLOCKS.TNT) {
+                    tntManager.cancelTimerAt(x - 1, y);
                 }
             } else if (type === BLOCKS.SAPLING) {
                 saplingManager.addSapling(x, y);
