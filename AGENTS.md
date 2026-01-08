@@ -15,6 +15,9 @@ AI-readable project specification for Block Craft 2D XL, a browser-based 2D Mine
 mine/
 ├── index.html          # Entry HTML with canvas and UI scaffolding
 ├── AGENTS.md           # This file (AI-readable project spec)
+├── fonts/
+│   ├── fredoka-one-latin-400-normal.woff2  # Local font for logo (primary)
+│   └── fredoka-one-latin-400-normal.woff   # Local font for logo (fallback)
 ├── styles/
 │   └── style.css       # Responsive layout, pixel-art viewport, hotbar, touch controls
 └── src/
