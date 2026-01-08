@@ -44,12 +44,12 @@ export function handleAcceleratorOverlap(player, world) {
 
                 const direction = (block === BLOCKS.ACCELERATOR_RIGHT) ? 1 : -1;
 
-                // Check for TNT in the direction the accelerator points
-                const tntX = x + direction;
+                // Check for TNT behind the accelerator (opposite of pointing direction)
+                const tntX = x - direction;
                 const tntY = y;
-                const blockInDirection = world.getBlock(tntX, tntY);
+                const blockBehind = world.getBlock(tntX, tntY);
 
-                if (blockInDirection === BLOCKS.TNT && onTNTAccelerator) {
+                if (blockBehind === BLOCKS.TNT && onTNTAccelerator) {
                     // TNT + Accelerator super boost
                     applySuperAcceleratorForce(player, direction);
                     // Trigger callback to handle TNT explosion effects
