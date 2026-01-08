@@ -17,17 +17,36 @@ export function initAccelerator(callbacks) {
 }
 
 /**
- * Apply super acceleration force (20 accelerators worth)
+ * Apply super acceleration force (TNT count * 20 accelerators worth)
  * @param {Object} player - Player instance
  * @param {number} direction - 1 for right, -1 for left
+ * @param {number} tntCount - Number of connected TNTs
  */
-function applySuperAcceleratorForce(player, direction) {
-    // 20 accelerators worth of force
-    // Each accelerator adds sqrt(current^2 + AMOUNT^2), so 20x means:
-    // final = sqrt(20 * AMOUNT^2) = AMOUNT * sqrt(20)
-    const superForce = ACCELERATOR_ACCELERATION_AMOUNT * Math.sqrt(20);
+function applySuperAcceleratorForce(player, direction, tntCount) {
+    // TNT count * 20 accelerators worth of force, clamped to 128
+    const stackCount = Math.min(tntCount * 20, 128);
+    const superForce = ACCELERATOR_ACCELERATION_AMOUNT * Math.sqrt(stackCount);
     player.boardVx = direction * superForce;
     player.facingRight = (direction > 0);
+}
+
+/**
+ * Count connected TNTs behind the accelerator
+ * @param {Object} world - World instance
+ * @param {number} startX - Starting X coordinate (first TNT position)
+ * @param {number} y - Y coordinate
+ * @param {number} direction - Accelerator direction (1 for right, -1 for left)
+ * @returns {number[]} Array of X coordinates for connected TNTs
+ */
+function countConnectedTNTsBehindAccelerator(world, startX, y, direction) {
+    const tntPositions = [];
+    let currentX = startX;
+    // TNTs are behind the accelerator, so we move opposite to accelerator direction
+    while (world.getBlock(currentX, y) === BLOCKS.TNT) {
+        tntPositions.push(currentX);
+        currentX -= direction;
+    }
+    return tntPositions;
 }
 
 export function handleAcceleratorOverlap(player, world) {
@@ -44,16 +63,16 @@ export function handleAcceleratorOverlap(player, world) {
 
                 const direction = (block === BLOCKS.ACCELERATOR_RIGHT) ? 1 : -1;
 
-                // Check for TNT behind the accelerator (opposite of pointing direction)
-                const tntX = x - direction;
+                // Check for connected TNTs behind the accelerator (opposite of pointing direction)
+                const tntStartX = x - direction;
                 const tntY = y;
-                const blockBehind = world.getBlock(tntX, tntY);
+                const tntPositions = countConnectedTNTsBehindAccelerator(world, tntStartX, tntY, direction);
 
-                if (blockBehind === BLOCKS.TNT && onTNTAccelerator) {
-                    // TNT + Accelerator super boost
-                    applySuperAcceleratorForce(player, direction);
-                    // Trigger callback to handle TNT explosion effects
-                    onTNTAccelerator(tntX, tntY, direction);
+                if (tntPositions.length > 0 && onTNTAccelerator) {
+                    // TNT + Accelerator super boost (scales with TNT count)
+                    applySuperAcceleratorForce(player, direction, tntPositions.length);
+                    // Trigger callback to handle all TNT explosion effects
+                    onTNTAccelerator(tntPositions, tntY);
                     acceleratorCooldowns.set(key, ACCELERATOR_COOLDOWN_TICKS);
                     return;
                 }
