@@ -17,21 +17,43 @@ export function initUI(callbacks) {
         if (screen) screen.style.display = 'none';
     }
 
-    function refreshContinueButton() {
+    /**
+     * Updates the Start Screen state based on save data availability.
+     * Toggles the 'has-save' class on the container to let CSS handle visibility.
+     */
+    function updateStartScreenState() {
         const savedState = loadGameState();
-        const continueBtn = document.getElementById('continue-btn');
-        if (!continueBtn) return;
-        continueBtn.style.display = savedState ? 'inline-block' : 'none';
+        const container = document.querySelector('.start-buttons');
+        
+        if (container) {
+            if (savedState) {
+                container.classList.add('has-save');
+            } else {
+                container.classList.remove('has-save');
+            }
+        }
     }
 
-    // Initialize button state immediately
-    refreshContinueButton();
+    // Initialize button state immediately on load
+    updateStartScreenState();
 
-    // Event: Start New Game
-    document.getElementById('start-btn').addEventListener('click', () => {
-        hideStartScreen();
-        onStartGame();
-    });
+    // Event: Start New Game (Fresh Start)
+    const startButton = document.getElementById('start-btn');
+    if (startButton) {
+        startButton.addEventListener('click', () => {
+            hideStartScreen();
+            onStartGame();
+        });
+    }
+
+    // Event: Start New Game (Reset / Start Over)
+    const resetButton = document.getElementById('reset-btn');
+    if (resetButton) {
+        resetButton.addEventListener('click', () => {
+            hideStartScreen();
+            onStartGame();
+        });
+    }
 
     // Event: Continue Game
     const continueButton = document.getElementById('continue-btn');

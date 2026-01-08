@@ -183,11 +183,17 @@ button {
     transition: transform 0.1s, box-shadow 0.1s;
 }
 
-button:active {
+/* Common Action Button Base */
+.action-btn {
+    /* Default ordering logic managed by CSS Display */
+}
+
+.action-btn:active {
     transform: scale(0.95);
 }
 
-#start-btn {
+/* Primary Style (Big Green) */
+.action-btn.primary-style {
     background: #4CAF50;
     color: white;
     font-size: 32px;
@@ -195,35 +201,50 @@ button:active {
     border-bottom: 6px solid #2E7D32; /* 3D effect */
     box-shadow: 0 10px 20px rgba(0,0,0,0.2);
     animation: pulse-btn 3s infinite;
+    order: 1; /* Always on top if visible */
 }
 
-#start-btn:active {
+.action-btn.primary-style:active {
     border-bottom-width: 0;
     transform: translateY(6px);
 }
 
-/* Sub Actions Container */
-.sub-actions {
-    display: flex;
-    gap: 15px;
-    /* Center items so if one is hidden, the other stays centered */
-    justify-content: center;
-    width: 100%;
-}
-
-.secondary-btn {
+/* Secondary Style (Small White) */
+.action-btn.secondary-style {
     background: #fff;
     color: #555;
     font-size: 18px;
     padding: 10px 20px;
     border-bottom: 4px solid #ccc;
-    /* "display: none" will be toggled by JS for continue-btn */
+    width: 200px;
+    order: 2; /* Below primary */
 }
+
+/* World Button Override (Orange) */
 #world-btn {
     background: #FF9800;
     color: white;
     border-bottom-color: #F57C00;
 }
+
+/* --- State-based Visibility Logic --- */
+
+/* 1. Default State (No Save Data) */
+/* Continue: Hidden */
+#continue-btn { display: none; }
+/* Start (Fresh): Visible */
+#start-btn { display: block; }
+/* Reset: Hidden */
+#reset-btn { display: none; }
+
+/* 2. 'has-save' State (Save Data Exists) */
+/* Continue: Visible */
+.start-buttons.has-save #continue-btn { display: block; }
+/* Start (Fresh): Hidden */
+.start-buttons.has-save #start-btn { display: none; }
+/* Reset: Visible */
+.start-buttons.has-save #reset-btn { display: block; }
+
 
 /* --- Instructions Card --- */
 .instructions-card {
@@ -368,7 +389,7 @@ button:active {
     align-items: flex-end;
 }
 
-.action-btn {
+.action-btn-mobile {
     position: absolute;
     right: 20px;
     bottom: 10px;
@@ -401,7 +422,7 @@ button:active {
     backdrop-filter: blur(2px);
 }
 
-.arrow-btn:active, .action-btn:active {
+.arrow-btn:active, .action-btn-mobile:active {
     background: rgba(255, 255, 255, 0.5);
     transform: scale(0.95);
 }
@@ -603,7 +624,7 @@ button:active {
 @media (max-width: 480px) {
     .logo { font-size: 40px; margin-bottom: 20px; }
     
-    #start-btn {
+    .action-btn.primary-style {
         padding: 15px 40px;
         font-size: 24px;
     }
