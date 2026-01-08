@@ -14,7 +14,7 @@ import {
     UPWARD_COLLISION_VELOCITY_THRESHOLD, MAX_NATURAL_BLOCK_ID,
     TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET,
     ACCELERATOR_ACCELERATION_AMOUNT,
-    TICK_TIME_SCALE, GRAVITY_PER_TICK, PHYSICS_TPS, PHYSICS_DT
+    TICK_TIME_SCALE, GRAVITY_PER_TICK, GRAVITY_LOW_FACTOR, PHYSICS_TPS, PHYSICS_DT
 } from './constants.js';
 
 // --- Q20.12 Fixed-point arithmetic ---
@@ -100,7 +100,8 @@ export class Player {
         this.animTimer = 0;
 
         // Physics States
-        this.fastballActive = false; // "Lift" mode active
+        this.fastballActive = false; // "Lift" mode active (Accelerator + Cloud)
+        this.lowGravityActive = false; // "Moon Jump" mode active (Jump Pad + Cloud)
 
         this.findSpawnPoint();
     }
@@ -325,7 +326,21 @@ export class Player {
 
         // Priority 1: Jump Pad Interaction
         if (blockBelow === BLOCKS.JUMP_PAD) {
-            // Check for connected TNTs directly below the JUMP_PAD
+            
+            // --- Determine Moon Jump (Low Gravity) Condition ---
+            // Scan down to find the bottom of the Jump Pad stack
+            let bottomPadY = feetY;
+            while (this.world.getBlock(feetX, bottomPadY + 1) === BLOCKS.JUMP_PAD) {
+                bottomPadY++;
+            }
+
+            // Check if the base of the Jump Pad stack is on a Cloud
+            const blockSupport = this.world.getBlock(feetX, bottomPadY + 1);
+            if (blockSupport === BLOCKS.CLOUD) {
+                this.lowGravityActive = true;
+            }
+
+            // Check for connected TNTs directly below the JUMP_PAD (checks immediate neighbor)
             const tntPositions = this.countConnectedTNTsBelowJumpPad(feetX, feetY + 1);
             if (tntPositions.length > 0 && this.onTNTJumpPad) {
                 // TNT + JUMP_PAD super launch: TNT count * 20 JUMP_PADs worth of force
@@ -361,13 +376,17 @@ export class Player {
             }
         }
 
-        // 4. Gravity Application (FP) with optional Fastball Lift
+        // 4. Gravity Application (FP)
         if (this._vy < TERMINAL_VELOCITY_FP) {
             let gravityToApply = GRAVITY_PER_TICK_FP;
 
+            // Apply Low Gravity (Moon Jump Mode) if active
+            // This takes precedence, or applies alongside Fastball logic.
+            if (this.lowGravityActive) {
+                gravityToApply = Math.floor(gravityToApply * GRAVITY_LOW_FACTOR);
+            }
+
             // Fastball Mode: Apply lift proportional to horizontal momentum
-            // Effect: At max accelerator speed, lift ~ gravity (flying straight).
-            // As speed decays due to drag, gravity takes over.
             if (this.fastballActive) {
                 const currentSpeedFP = Math.abs(this._boardVx);
                 
@@ -377,15 +396,8 @@ export class Player {
                     this.fastballActive = false;
                 } else {
                     // Calculate Lift Ratio = CurrentSpeed / ReferenceMaxSpeed
-                    // We assume ACCELERATOR_AMOUNT_FP is the reference "full speed"
                     // Lift = Gravity * Ratio.
-                    // If Ratio >= 1, Lift >= Gravity (slight rise or flat)
-                    // If Ratio < 1, Gravity > Lift (curve down)
-                    
-                    // Fixed Point Math:
-                    // lift = (GRAVITY * speed) / MAX
-                    const liftFP = Math.floor((GRAVITY_PER_TICK_FP * currentSpeedFP) / ACCELERATOR_AMOUNT_FP);
-                    
+                    const liftFP = Math.floor((gravityToApply * currentSpeedFP) / ACCELERATOR_AMOUNT_FP);
                     gravityToApply -= liftFP;
                 }
             }
@@ -480,6 +492,7 @@ export class Player {
         this._x = toFP((this.world.width / 2) * TILE_SIZE);
         this.findSpawnPoint();
         this.fastballActive = false;
+        this.lowGravityActive = false;
     }
 
     /**
@@ -515,6 +528,8 @@ export class Player {
                             this._y = y * TILE_SIZE_FP - this._height - COLLISION_EPSILON_FP;
                             this.grounded = true;
                             this._vy = 0;
+                            // Reset special physics modes on landing
+                            this.lowGravityActive = false;
                         } else if (this._vy < 0) {
                             // Moving up - hit ceiling
                             this._y = (y + 1) * TILE_SIZE_FP + COLLISION_EPSILON_FP;

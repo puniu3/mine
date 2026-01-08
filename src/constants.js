@@ -22,6 +22,9 @@ export const CAMERA_SMOOTHING = 0.1;
 // --- Player Physics Constants (720Hz native, per-tick values) ---
 // Gravity acceleration per tick (velocity units)
 export const GRAVITY_PER_TICK = 0.5 * TICK_TIME_SCALE; // ~0.0417 per tick
+// Low Gravity Factor (for Cloud + Jump Pad)
+export const GRAVITY_LOW_FACTOR = 0.25; // 25% gravity
+
 // Terminal velocity cap (velocity units)
 export const TERMINAL_VELOCITY = 20.0;
 // Jump impulse (initial velocity, applied once)
