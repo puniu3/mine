@@ -221,8 +221,8 @@ export function drawGame(ctx, {
 
     // --- 6. Entities & Particles ---
     if (player) player.draw(ctx);
-    drawJackpotParticles(ctx);
-    drawFireworks(ctx);
+    drawJackpotParticles(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
+    drawFireworks(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
 
     // --- 7. Cursor Highlight ---
     if (input && input.mouse && input.mouse.active) {
