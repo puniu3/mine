@@ -26,6 +26,7 @@ import {
 } from './inventory.js';
 import { isCraftingOpen, updateCrafting } from './crafting.js';
 import { tick as tickFireworks, createExplosionParticles } from './fireworks.js';
+import { tick as tickBlockParticles } from './block_particles.js';
 import { createActions } from './actions.js';
 import { World } from './world.js';
 import { Player } from './player.js';
@@ -328,6 +329,7 @@ function tick() {
     tickAccelerators();
 
     tickFireworks(world, camera.x, camera.y, { width: logicalWidth, height: logicalHeight });
+    tickBlockParticles();
 
     tntManager.tick();
     saplingManager.tick();

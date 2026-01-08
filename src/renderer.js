@@ -25,6 +25,7 @@ import {
 } from './sky.js';
 import { drawJackpotParticles } from './jackpot.js';
 import { draw as drawFireworks } from './fireworks.js';
+import { draw as drawBlockParticles } from './block_particles.js';
 
 export function drawGame(ctx, {
     world,
@@ -223,6 +224,7 @@ export function drawGame(ctx, {
     if (player) player.draw(ctx);
     drawJackpotParticles(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
     drawFireworks(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
+    drawBlockParticles(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
 
     // --- 7. Cursor Highlight ---
     if (input && input.mouse && input.mouse.active) {

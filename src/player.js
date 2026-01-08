@@ -7,6 +7,7 @@
 
 import { isBlockSolid, isBlockBreakable, getBlockMaterialType, isNaturalBlock } from './utils.js';
 import { sounds } from './audio.js';
+import { emitBlockBreakParticles } from './block_particles.js';
 import {
     TILE_SIZE, BLOCKS, BLOCK_PROPS,
     JUMP_FORCE, BIG_JUMP_FORCE, TERMINAL_VELOCITY,
@@ -487,6 +488,7 @@ export class Player {
                                     this.addToInventory(block);
                                 }
                                 sounds.playDig(getBlockMaterialType(block, BLOCK_PROPS));
+                                emitBlockBreakParticles(x, y, block);
                                 this.world.setBlock(x, y, BLOCKS.AIR);
                                 this._vy += VELOCITY_BOOST_ON_BREAK_FP;
                                 return;
