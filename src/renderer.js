@@ -213,9 +213,8 @@ export function drawGame(ctx, {
                     const time = now * 0.01; // Fast animation
 
                     // 1. Shake effect - small random offset
-                    const shakeX = Math.sin(time * 15 + x * 7) * 2;
-                    const shakeY = Math.cos(time * 18 + y * 5) * 2;
-
+                    const shakeX = Math.sin(time * 15 + x * 7) * 1.2;
+                    const shakeY = Math.cos(time * 18 + y * 5) * 1.2;
                     // Draw TNT with shake
                     ctx.drawImage(
                         textures[block],
