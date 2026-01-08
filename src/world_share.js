@@ -30,6 +30,10 @@ const EXPORT_COLORS = {
     [BLOCKS.ACCELERATOR_RIGHT]: '#66bb6a'
 };
 
+// Strict tolerance for specific blocks (Redmean distance threshold)
+// Lower value = stricter matching required
+const STRICT_TOLERANCE = 30; 
+
 /**
  * Convert hex color to RGB
  */
@@ -49,17 +53,47 @@ for (const [blockId, color] of Object.entries(EXPORT_COLORS)) {
 }
 
 /**
- * Find nearest block ID by color distance (Euclidean)
+ * Calculate color distance using "Redmean" formula.
+ * This approximates human vision better than simple Euclidean distance.
+ * (Humans are more sensitive to Green, less to Blue)
+ */
+function getRedmeanDistance(r1, g1, b1, r2, g2, b2) {
+    const rMean = (r1 + r2) / 2;
+    const r = r1 - r2;
+    const g = g1 - g2;
+    const b = b1 - b2;
+    
+    // Formula: sqrt( (2 + rMean/256)*r^2 + 4*g^2 + (2 + (255-rMean)/256)*b^2 )
+    // We omit sqrt for performance in comparisons, but include it here for threshold consistency
+    const weightR = 2 + (rMean / 256);
+    const weightG = 4.0;
+    const weightB = 2 + ((255 - rMean) / 256);
+
+    return Math.sqrt(weightR * r * r + weightG * g * g + weightB * b * b);
+}
+
+/**
+ * Find nearest block ID by color distance (Perceptual)
  */
 function findNearestBlock(r, g, b) {
     let minDist = Infinity;
-    let nearestId = BLOCKS.AIR;
+    let nearestId = BLOCKS.DIRT; // Default fallback if everything fails
 
-    for (const [blockId, rgb] of Object.entries(BLOCK_RGB_MAP)) {
-        const dist = (r - rgb.r) ** 2 + (g - rgb.g) ** 2 + (b - rgb.b) ** 2;
+    for (const [blockIdStr, rgb] of Object.entries(BLOCK_RGB_MAP)) {
+        const blockId = parseInt(blockIdStr);
+        const dist = getRedmeanDistance(r, g, b, rgb.r, rgb.g, rgb.b);
+
+        // --- STRICTNESS CHECK ---
+        // If the candidate is AIR or WORKBENCH, require extremely close match.
+        // If the color is not very close, we skip this block as a candidate.
+        if ((blockId === BLOCKS.AIR || blockId === BLOCKS.WORKBENCH) && dist > STRICT_TOLERANCE) {
+            continue;
+        }
+        // ------------------------
+
         if (dist < minDist) {
             minDist = dist;
-            nearestId = parseInt(blockId);
+            nearestId = blockId;
         }
     }
 
@@ -93,7 +127,7 @@ export function exportWorldToImage(worldMap, width, height) {
                 data[pixelIndex] = rgb.r;
                 data[pixelIndex + 1] = rgb.g;
                 data[pixelIndex + 2] = rgb.b;
-                data[pixelIndex + 3] = 255; // Alpha
+                data[pixelIndex + 3] = 255; // Alpha (Always opaque for export)
             }
         }
 
@@ -104,6 +138,8 @@ export function exportWorldToImage(worldMap, width, height) {
 
 /**
  * Import world from image file
+ * Overlays image onto a newly generated world.
+ * Transparent pixels in the image preserve the underlying world.
  * @param {File} file - Image file
  * @returns {Promise<Uint8Array>} World map data
  */
@@ -115,32 +151,81 @@ export function importWorldFromImage(file) {
             const img = new Image();
 
             img.onload = () => {
-                // Create canvas at target world size
+                // 1. Generate a base world first (Terrain, Trees, etc.)
+                // The World constructor calls generate() automatically.
+                const baseWorld = new World(WORLD_WIDTH, WORLD_HEIGHT);
+                const worldMap = baseWorld.map;
+
+                // 2. Prepare canvas for image processing
                 const canvas = document.createElement('canvas');
                 canvas.width = WORLD_WIDTH;
                 canvas.height = WORLD_HEIGHT;
                 const ctx = canvas.getContext('2d');
 
+                // Clear canvas (transparent)
+                ctx.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
                 // Disable smoothing for nearest-neighbor scaling
                 ctx.imageSmoothingEnabled = false;
 
-                // Draw image scaled to world size
-                ctx.drawImage(img, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+                // --- Aspect Ratio Logic ---
+                const worldRatio = WORLD_WIDTH / WORLD_HEIGHT;
+                const imgRatio = img.width / img.height;
 
-                // Get pixel data
+                let drawWidth, drawHeight, offsetX, offsetY;
+
+                if (imgRatio > worldRatio) {
+                    // Landscape: Fit Height, Cut Left/Right
+                    drawHeight = WORLD_HEIGHT;
+                    drawWidth = img.width * (WORLD_HEIGHT / img.height);
+                    offsetX = (WORLD_WIDTH - drawWidth) / 2; 
+                    offsetY = 0;
+                } else {
+                    // Portrait/Square: Fit inside (Contain)
+                    const scale = Math.min(WORLD_WIDTH / img.width, WORLD_HEIGHT / img.height);
+                    drawWidth = img.width * scale;
+                    drawHeight = img.height * scale;
+                    offsetX = (WORLD_WIDTH - drawWidth) / 2;
+                    offsetY = (WORLD_HEIGHT - drawHeight) / 2;
+                }
+
+                // Draw image (centered)
+                ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+                
+                // Get pixel data from canvas
                 const imageData = ctx.getImageData(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
                 const data = imageData.data;
 
-                // Convert to world map
-                const worldMap = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT);
+                // Calculate integer bounds for the drawn image
+                const startX = Math.floor(offsetX);
+                const endX = Math.floor(offsetX + drawWidth);
+                const startY = Math.floor(offsetY);
+                const endY = Math.floor(offsetY + drawHeight);
 
-                for (let i = 0; i < worldMap.length; i++) {
-                    const pixelIndex = i * 4;
-                    const r = data[pixelIndex];
-                    const g = data[pixelIndex + 1];
-                    const b = data[pixelIndex + 2];
+                // 3. Overlay image data onto the generated world
+                for (let y = 0; y < WORLD_HEIGHT; y++) {
+                    for (let x = 0; x < WORLD_WIDTH; x++) {
+                        
+                        // Check if current pixel is inside the drawn image area
+                        const isInsideImage = (x >= startX && x < endX && y >= startY && y < endY);
 
-                    worldMap[i] = findNearestBlock(r, g, b);
+                        if (isInsideImage) {
+                            const index = y * WORLD_WIDTH + x;
+                            const pixelIndex = index * 4;
+                            
+                            const r = data[pixelIndex];
+                            const g = data[pixelIndex + 1];
+                            const b = data[pixelIndex + 2];
+                            const a = data[pixelIndex + 3];
+
+                            // Check transparency
+                            if (a >= 128) {
+                                // Only overwrite existing terrain if the image pixel is OPAQUE.
+                                // Transparent pixels are skipped, leaving the generated terrain intact.
+                                worldMap[index] = findNearestBlock(r, g, b);
+                            }
+                        }
+                    }
                 }
 
                 resolve(worldMap);
@@ -180,6 +265,7 @@ export function findSpawnPosition(worldMap, width, height) {
         const index = y * width + centerX;
         const blockBelow = worldMap[(y + 1) * width + centerX];
 
+        // Ensure we spawn in AIR, but land on something solid
         if (worldMap[index] === BLOCKS.AIR && blockBelow !== BLOCKS.AIR) {
             return { x: centerX, y };
         }
