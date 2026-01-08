@@ -15,20 +15,30 @@ const FP_ONE = 1 << FP_SHIFT;
 const toFP = (val) => Math.floor(val * FP_ONE);
 
 /**
+ * Helper to wrap coordinates around world dimensions
+ * @param {number} val - Coordinate value
+ * @param {number} max - World dimension (width or height)
+ * @returns {number} Wrapped coordinate [0, max)
+ */
+const wrap = (val, max) => ((val % max) + max) % max;
+
+/**
  * Finds all contiguous TNT blocks connected to the start coordinates.
- * Uses a Flood Fill algorithm (Depth-First Search).
+ * Uses a Flood Fill algorithm (Depth-First Search) with world wrapping.
  * @param {number} startX - X coordinate
  * @param {number} startY - Y coordinate
  * @param {Object} world - World object
- * @returns {Array} Array of connected TNT coordinates [{x, y}, ...]
+ * @returns {Array} Array of connected TNT coordinates (continuous, not wrapped) [{x, y}, ...]
  */
 function getConnectedTNTs(startX, startY, world) {
     const connected = [];
     const visited = new Set();
+    // Stack stores continuous coordinates (can be negative or > width due to wrapping)
     const stack = [{ x: startX, y: startY }];
     
-    // Helper to generate a unique key for the Set
-    const key = (x, y) => `${x},${y}`;
+    // Helper to generate a unique key for the Set using wrapped coordinates
+    // This ensures we don't process the same physical block twice
+    const key = (x, y) => `${wrap(x, world.width)},${wrap(y, world.height)}`;
 
     visited.add(key(startX, startY));
 
@@ -45,15 +55,15 @@ function getConnectedTNTs(startX, startY, world) {
         ];
 
         for (const n of neighbors) {
-            // Check bounds
-            if (n.x >= 0 && n.x < world.width && n.y >= 0 && n.y < world.height) {
-                const k = key(n.x, n.y);
-                if (!visited.has(k)) {
-                    // If it is a TNT block, add to stack
-                    if (world.getBlock(n.x, n.y) === BLOCKS.TNT) {
-                        visited.add(k);
-                        stack.push(n);
-                    }
+            const wrappedX = wrap(n.x, world.width);
+            const wrappedY = wrap(n.y, world.height);
+            const k = key(n.x, n.y);
+
+            if (!visited.has(k)) {
+                // If it is a TNT block, add to stack
+                if (world.getBlock(wrappedX, wrappedY) === BLOCKS.TNT) {
+                    visited.add(k);
+                    stack.push(n);
                 }
             }
         }
@@ -77,10 +87,11 @@ function explodeCluster(tntCluster, context) {
     let sumY = 0;
     
     // Remove the TNT blocks from the world immediately
+    // Note: tnt.x/y are continuous, so we must wrap them to access the world
     for (const tnt of tntCluster) {
         sumX += tnt.x;
         sumY += tnt.y;
-        world.setBlock(tnt.x, tnt.y, BLOCKS.AIR); 
+        world.setBlock(wrap(tnt.x, world.width), wrap(tnt.y, world.height), BLOCKS.AIR); 
     }
 
     // Calculate centroid in grid units (float for averaging, but then snapped to FP)
@@ -123,6 +134,8 @@ function explodeCluster(tntCluster, context) {
     }
 
     // 3. Apply Knockback (Delegated to Player for deterministic physics)
+    // We pass the continuous center coordinates. The player physics might need adaptation 
+    // to handle wrapping logic relative to this center, but passing the raw center is best here.
     player.applyExplosionImpulse(centerX_FP, centerY_FP, radius_FP, sizeMultiplier_FP);
 
     // 4. Destroy blocks in the expanded radius
@@ -130,21 +143,23 @@ function explodeCluster(tntCluster, context) {
     // Convert radius_FP back to blocks for the loop bounds
     const radiusInBlocks = Math.ceil(radius_FP / FP_ONE);
     
-    // Center in Grid units
+    // Center in Grid units (using the continuous pixel coordinates)
     const centerGridX = Math.floor(pixelCenterX / TILE_SIZE);
     const centerGridY = Math.floor(pixelCenterY / TILE_SIZE);
 
-    const startX = Math.max(0, centerGridX - radiusInBlocks);
-    const endX = Math.min(world.width - 1, centerGridX + radiusInBlocks);
-    const startY = Math.max(0, centerGridY - radiusInBlocks);
-    const endY = Math.min(world.height - 1, centerGridY + radiusInBlocks);
+    // We do NOT clamp these bounds to 0..width/height because we want to handle wrapping.
+    // We iterate over the logical square area around the continuous center.
+    const startX = centerGridX - radiusInBlocks;
+    const endX = centerGridX + radiusInBlocks;
+    const startY = centerGridY - radiusInBlocks;
+    const endY = centerGridY + radiusInBlocks;
 
     // Squared radius in FP World Units for distance comparison
     const radiusSq_FP = Math.floor((radius_FP * TILE_SIZE) * (radius_FP * TILE_SIZE));
 
     for (let by = startY; by <= endY; by++) {
         for (let bx = startX; bx <= endX; bx++) {
-            // Calculate block center in FP World Units
+            // Calculate block center in FP World Units (continuous)
             const blockCenterX_FP = bx * TILE_SIZE * FP_ONE + toFP(TILE_SIZE / 2);
             const blockCenterY_FP = by * TILE_SIZE * FP_ONE + toFP(TILE_SIZE / 2);
 
@@ -152,19 +167,18 @@ function explodeCluster(tntCluster, context) {
             const dy = blockCenterY_FP - centerY_FP;
 
             // Check if block is within explosion radius using squared distance (Integer math)
-            // Note: Since we are in FP (x4096), squaring can result in large numbers.
-            // 4096^2 = 16,777,216. TILE_SIZE=32.
-            // Max typical distance ~10 blocks = 320 pixels.
-            // 320 * 4096 = 1,310,720.
-            // Square ~= 1.7e12. Safe within JS Number (9e15).
             if (dx * dx + dy * dy <= radiusSq_FP) {
-                const block = world.getBlock(bx, by);
+                // Determine the actual physical block coordinates by wrapping
+                const wrappedX = wrap(bx, world.width);
+                const wrappedY = wrap(by, world.height);
+
+                const block = world.getBlock(wrappedX, wrappedY);
                 
                 if (block === BLOCKS.AIR) continue;
 
                 if (isBlockBreakable(block, BLOCK_PROPS)) {
                     addToInventory(block);
-                    world.setBlock(bx, by, BLOCKS.AIR);
+                    world.setBlock(wrappedX, wrappedY, BLOCKS.AIR);
                 }
             }
         }
