@@ -138,7 +138,7 @@ export function exportWorldToImage(worldMap, width, height) {
 
 /**
  * Import world from image file
- * Overlays image onto a newly generated world.
+ * Overlays image onto a newly generated world with Floyd-Steinberg Dithering.
  * Transparent pixels in the image preserve the underlying world.
  * @param {File} file - Image file
  * @returns {Promise<Uint8Array>} World map data
@@ -165,7 +165,7 @@ export function importWorldFromImage(file) {
                 // Clear canvas (transparent)
                 ctx.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-                // Disable smoothing for nearest-neighbor scaling
+                // Disable smoothing for pixel manipulation control
                 ctx.imageSmoothingEnabled = false;
 
                 // --- Aspect Ratio Logic ---
@@ -196,34 +196,79 @@ export function importWorldFromImage(file) {
                 const imageData = ctx.getImageData(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
                 const data = imageData.data;
 
-                // Calculate integer bounds for the drawn image
+                // --- Floyd-Steinberg Dithering Setup ---
+                // We use a Float32Array to hold pixel data so we can store 
+                // negative errors or values > 255 during the diffusion process.
+                const floatData = new Float32Array(data.length);
+                for (let i = 0; i < data.length; i++) {
+                    floatData[i] = data[i];
+                }
+
+                // Calculate bounds for the drawn image to optimize checks
                 const startX = Math.floor(offsetX);
                 const endX = Math.floor(offsetX + drawWidth);
                 const startY = Math.floor(offsetY);
                 const endY = Math.floor(offsetY + drawHeight);
 
-                // 3. Overlay image data onto the generated world
+                // 3. Process Dithering and Map Generation
                 for (let y = 0; y < WORLD_HEIGHT; y++) {
                     for (let x = 0; x < WORLD_WIDTH; x++) {
                         
-                        // Check if current pixel is inside the drawn image area
+                        const index = y * WORLD_WIDTH + x;
+                        const pixelIndex = index * 4;
+
+                        // Check transparency directly from the float buffer
+                        // Alpha channel is at +3
+                        const alpha = floatData[pixelIndex + 3];
+
+                        // Only process if the pixel is inside the image bounds and opaque enough
                         const isInsideImage = (x >= startX && x < endX && y >= startY && y < endY);
-
-                        if (isInsideImage) {
-                            const index = y * WORLD_WIDTH + x;
-                            const pixelIndex = index * 4;
+                        
+                        if (isInsideImage && alpha >= 128) {
                             
-                            const r = data[pixelIndex];
-                            const g = data[pixelIndex + 1];
-                            const b = data[pixelIndex + 2];
-                            const a = data[pixelIndex + 3];
+                            // Get current color (potentially modified by previous error diffusion)
+                            const oldR = floatData[pixelIndex];
+                            const oldG = floatData[pixelIndex + 1];
+                            const oldB = floatData[pixelIndex + 2];
 
-                            // Check transparency
-                            if (a >= 128) {
-                                // Only overwrite existing terrain if the image pixel is OPAQUE.
-                                // Transparent pixels are skipped, leaving the generated terrain intact.
-                                worldMap[index] = findNearestBlock(r, g, b);
-                            }
+                            // Find nearest block palette color
+                            const blockId = findNearestBlock(oldR, oldG, oldB);
+                            worldMap[index] = blockId;
+
+                            // Get the ACTUAL color of the chosen block
+                            // (We default to DIRT if something goes wrong, though findNearestBlock handles it)
+                            const paletteRgb = BLOCK_RGB_MAP[blockId] || BLOCK_RGB_MAP[BLOCKS.DIRT];
+
+                            // Calculate Quantization Error
+                            const errR = oldR - paletteRgb.r;
+                            const errG = oldG - paletteRgb.g;
+                            const errB = oldB - paletteRgb.b;
+
+                            // --- Floyd-Steinberg Error Diffusion ---
+                            // Distribute error to neighboring pixels:
+                            //         X   7
+                            //     3   5   1
+                            // (/16)
+
+                            const distributeError = (dx, dy, factor) => {
+                                const nx = x + dx;
+                                const ny = y + dy;
+
+                                // Boundary check
+                                if (nx >= 0 && nx < WORLD_WIDTH && ny >= 0 && ny < WORLD_HEIGHT) {
+                                    const nIndex = (ny * WORLD_WIDTH + nx) * 4;
+                                    
+                                    // Add fraction of error to neighbor
+                                    floatData[nIndex]     += errR * factor / 16;
+                                    floatData[nIndex + 1] += errG * factor / 16;
+                                    floatData[nIndex + 2] += errB * factor / 16;
+                                }
+                            };
+
+                            distributeError(1, 0, 7);   // Right
+                            distributeError(-1, 1, 3);  // Bottom Left
+                            distributeError(0, 1, 5);   // Bottom
+                            distributeError(1, 1, 1);   // Bottom Right
                         }
                     }
                 }
