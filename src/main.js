@@ -257,7 +257,8 @@ function init(savedState = null) {
     // Initialize Input
     input = createInput(canvas, {
         onHotbarSelect: selectHotbar,
-        onTouch: (x, y) => actions.handlePointer(x, y)
+        onTouch: (x, y) => actions.handlePointer(x, y),
+        onClimb: () => actions.triggerClimb()
     });
 
     initHotbarUI(textures);
