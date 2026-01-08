@@ -15,7 +15,7 @@ const CRAFTING_RECIPES = [
     },
     {
         id: BLOCKS.TNT,
-        cost: { [BLOCKS.COAL]: 4, [BLOCKS.WOOD]: 2 },
+        cost: { [BLOCKS.COAL]: 3, [BLOCKS.WOOD]: 2 },
         count: 1
     },
     {
@@ -30,12 +30,12 @@ const CRAFTING_RECIPES = [
     },
     {
         id: BLOCKS.ACCELERATOR_LEFT,
-        cost: { [BLOCKS.GOLD]: 1, [BLOCKS.SAND]: 2 },
+        cost: { [BLOCKS.GOLD]: 2, [BLOCKS.SAND]: 2 },
         count: 1
     },
     {
         id: BLOCKS.ACCELERATOR_RIGHT,
-        cost: { [BLOCKS.GOLD]: 1, [BLOCKS.SNOW]: 2 },
+        cost: { [BLOCKS.GOLD]: 2, [BLOCKS.SNOW]: 2 },
         count: 1
     }
 ];
