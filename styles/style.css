@@ -53,6 +53,9 @@ body {
     z-index: 2000;
     pointer-events: auto;
     overflow: hidden;
+    /* STRATEGY 1: Add top padding to shift visual center down towards the 'sky' center */
+    padding-top: 10vh;
+    box-sizing: border-box; /* Ensure padding doesn't affect total height calculation */
 }
 
 /* --- Decoration Layer (Parallax-like) --- */
@@ -134,7 +137,8 @@ body {
 .logo {
     display: flex;
     gap: 2px;
-    margin-bottom: 30px;
+    /* STRATEGY 2: Increase margin-bottom to separate logo from buttons */
+    margin-bottom: 50px; 
     /* Use rounded, chunky font */
     font-family: 'Fredoka One', cursive; 
     font-size: 80px;
@@ -168,7 +172,8 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    /* STRATEGY 3: Increase gap to use more vertical space */
+    gap: 20px;
     margin-bottom: 30px;
     width: 100%;
 }
