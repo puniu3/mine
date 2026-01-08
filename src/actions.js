@@ -69,8 +69,10 @@ export function createActions({
         const targetTy = Math.floor((player.y + player.height - 0.01) / TILE_SIZE);
 
         // Validation: Is the feet block replaceable (Air/Water/Grass)?
+        // Must be AIR or transparent AND breakable (not unbreakable like WORKBENCH/BEDROCK)
         const blockAtFeet = world.getBlock(targetTx, targetTy);
-        const isFeetReplaceable = blockAtFeet === BLOCKS.AIR || isBlockTransparent(blockAtFeet, BLOCK_PROPS);
+        const isFeetReplaceable = blockAtFeet === BLOCKS.AIR ||
+            (isBlockTransparent(blockAtFeet, BLOCK_PROPS) && isBlockBreakable(blockAtFeet, BLOCK_PROPS));
 
         // Validation: Is the space ABOVE the new block free for the player to stand?
         // The player will be moved to: (targetTy * TILE_SIZE) - player.height
