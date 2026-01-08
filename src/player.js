@@ -313,16 +313,16 @@ export class Player {
 
         // Priority 1: Jump Pad Interaction
         if (blockBelow === BLOCKS.JUMP_PAD) {
-            // Check if there's TNT directly below the JUMP_PAD
-            const blockBelowPad = this.world.getBlock(feetX, feetY + 1);
-            if (blockBelowPad === BLOCKS.TNT && this.onTNTJumpPad) {
-                // TNT + JUMP_PAD super launch: 20 JUMP_PADs worth of force
-                const superStackCount = 20;
+            // Check for connected TNTs directly below the JUMP_PAD
+            const tntPositions = this.countConnectedTNTsBelowJumpPad(feetX, feetY + 1);
+            if (tntPositions.length > 0 && this.onTNTJumpPad) {
+                // TNT + JUMP_PAD super launch: TNT count * 20 JUMP_PADs worth of force
+                const superStackCount = tntPositions.length * 20;
                 const clampedCount = Math.min(superStackCount, 128);
                 this._vy = -JUMP_PAD_FORCE_TABLE_FP[clampedCount];
                 this.grounded = false;
-                // Trigger callback to handle TNT explosion effects
-                this.onTNTJumpPad(feetX, feetY + 1);
+                // Trigger callback to handle all TNT explosion effects
+                this.onTNTJumpPad(feetX, tntPositions);
             } else {
                 // Normal JUMP_PAD behavior
                 const stackCount = this.countVerticalJumpPads(feetX, feetY);
@@ -389,6 +389,20 @@ export class Player {
             currentY++;
         }
         return count;
+    }
+
+    /**
+     * Count connected TNTs below a JUMP_PAD
+     * Returns array of TNT positions (y coordinates) for removal
+     */
+    countConnectedTNTsBelowJumpPad(x, startY) {
+        const tntPositions = [];
+        let currentY = startY;
+        while (this.world.getBlock(x, currentY) === BLOCKS.TNT) {
+            tntPositions.push(currentY);
+            currentY++;
+        }
+        return tntPositions;
     }
 
     /**

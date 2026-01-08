@@ -95,19 +95,18 @@ function init(savedState = null) {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
 
     // TNT + JUMP_PAD super launch callback
-    const handleTNTJumpPad = (tntX, tntY) => {
-        // Play explosion sound
+    // tntPositions is an array of Y coordinates for all connected TNTs
+    const handleTNTJumpPad = (tntX, tntPositions) => {
+        // Play explosion sound once
         sounds.playExplosion();
-        // Remove TNT block (don't add to inventory)
-        world.setBlock(tntX, tntY, BLOCKS.AIR);
-        // Cancel any active timer for this TNT
-        if (tntManager) {
-            tntManager.cancelTimerAt(tntX, tntY);
+        // Remove all connected TNT blocks and cancel their timers
+        for (const tntY of tntPositions) {
+            world.setBlock(tntX, tntY, BLOCKS.AIR);
+            if (tntManager) {
+                tntManager.cancelTimerAt(tntX, tntY);
+            }
         }
-        // Create explosion particles at TNT location
-        const pixelX = tntX * TILE_SIZE + TILE_SIZE / 2;
-        const pixelY = tntY * TILE_SIZE + TILE_SIZE / 2;
-        createExplosionParticles(pixelX, pixelY);
+        // No particles - camera moves too fast to see them
     };
 
     player = new Player(world, addToInventory, handleTNTJumpPad);
