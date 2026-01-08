@@ -14,8 +14,7 @@
         <div id="hotbar-wrapper">
             <span class="hotbar-scroll-indicator left" id="hotbar-scroll-left">◀</span>
             <div id="hotbar">
-                <!-- Slots injected by JS -->
-            </div>
+                </div>
             <span class="hotbar-scroll-indicator right" id="hotbar-scroll-right">▶</span>
         </div>
 
@@ -24,55 +23,77 @@
                 <div class="arrow-btn" id="btn-left">←</div>
                 <div class="arrow-btn" id="btn-right">→</div>
             </div>
-            <div class="action-btn" id="btn-jump">ジャンプ</div>
+            <div class="action-btn" id="btn-jump">JUMP</div>
         </div>
 
-        <!-- Crafting Modal -->
         <div id="crafting-modal">
             <div id="crafting-status" class="crafting-status"></div>
             <div id="craft-list">
-                <!-- Items injected by JS -->
-            </div>
+                </div>
         </div>
     </div>
 
     <div id="start-screen">
-        <h1>ピクトコ</h1>
-        <div class="start-buttons">
-            <button id="start-btn">はじめる</button>
-            <button id="continue-btn">つづける</button>
-            <button id="world-btn">ワールド</button>
+        <div class="scene-layer">
+            <div class="sun"></div>
+            <div class="cloud c1"></div>
+            <div class="cloud c2"></div>
+            <div class="cloud c3"></div>
+            <div class="bg-trees"></div>
+            <div class="bg-ground"></div>
         </div>
-        <div class="instructions">
-            [パソコン]<br>
-            うごく: A / D / ← →<br>
-            とぶ: スペース / W / ↑<br>
-            のぼる: S / ↓<br>
-            こわす・おく: ひだりクリック<br>
-            アイテムをえらぶ: 1〜9のキー<br>
-            <br>
-            [スマホ]<br>
-            うごく: ← →<br>
-            こわす・おく: タップ<br>
-            <br>
-            ★じぶんの ばしょに おくと<br>
-            あしもとに おいて のぼれるよ！
+
+        <div class="title-content">
+            <h1 class="logo">
+                <span class="char c1">p</span>
+                <span class="char c2">i</span>
+                <span class="char c3">c</span>
+                <span class="char c4">t</span>
+                <span class="char c5">o</span>
+                <span class="char c6">c</span>
+                <span class="char c7">o</span>
+            </h1>
+            
+            <div class="start-buttons">
+                <div class="main-action">
+                    <button id="start-btn">▶ はじめる</button>
+                </div>
+                <div class="sub-actions">
+                    <button id="continue-btn" class="secondary-btn">つづきから</button>
+                    <button id="world-btn" class="secondary-btn">ワールド</button>
+                </div>
+            </div>
+
+            <div class="instructions-card">
+                <div class="inst-col">
+                    <strong>パソコン</strong>
+                    <span>うごく: やじるし / WASD</span>
+                    <span>とぶ: スペース</span>
+                    <span>つくる・こわす: クリック</span>
+                </div>
+                <div class="inst-line"></div>
+                <div class="inst-col">
+                    <strong>スマホ</strong>
+                    <span>うごく: ← →</span>
+                    <span>つくる・こわす: タップ</span>
+                </div>
+            </div>
+            <p class="hint-text">★ あしもとに おくと のぼれるよ！</p>
         </div>
     </div>
 
-    <!-- World Share Modal -->
     <div id="world-modal">
         <h2>ワールド</h2>
     
         <div class="world-section">
-            <h3>ほぞん</h3>
-            <p>つくった ワールドを えに して のこす</p>
+            <h3>のこす</h3>
+            <p>つくった せかいを えにする</p>
             <button id="export-btn">えにする</button>
         </div>
     
         <div class="world-section">
-            <h3>よみこみ</h3>
-            <p>えから ワールドを つくる</p>
+            <h3>よみこむ</h3>
+            <p>えを よみこんで あそぶ</p>
             <input type="file" id="import-file" accept="image/*">
             <button id="import-btn">よみこむ</button>
         </div>
