@@ -27,8 +27,8 @@ const particles = {
     count: 0
 };
 
-const GRAVITY = 0.03;
-const FRICTION = 0.98;
+const GRAVITY = 0.008;
+const FRICTION = 0.995;
 const PARTICLE_LIFE = 360; // ~0.5 seconds at 720Hz
 const PARTICLES_PER_BREAK = 8;
 
@@ -131,14 +131,6 @@ function addParticle(x, y, vx, vy, life, r, g, b) {
     particles.count++;
 }
 
-// Cardinal directions: up, down, left, right
-const DIRECTIONS = [
-    { vx: 0, vy: -1 },   // up
-    { vx: 0, vy: 1 },    // down
-    { vx: -1, vy: 0 },   // left
-    { vx: 1, vy: 0 }     // right
-];
-
 /**
  * Emit particles when a block is destroyed
  * @param {number} tileX - Block tile X coordinate
@@ -154,15 +146,13 @@ export function emitBlockBreakParticles(tileX, tileY, blockId) {
         // Sample color from texture
         const color = sampleTextureColor(blockId);
 
-        // Pick one of 4 cardinal directions with some randomness
-        const dir = DIRECTIONS[i % 4];
-        const baseSpeed = 0.12 + Math.random() * 0.08;
+        // Random angle for all directions
+        const angle = Math.random() * Math.PI * 2;
+        // High speed for visible scattering
+        const speed = 0.4 + Math.random() * 0.4;
 
-        // Add some perpendicular variance for natural feel
-        const perpVariance = (Math.random() - 0.5) * 0.06;
-
-        const vx = dir.vx * baseSpeed + (dir.vy !== 0 ? perpVariance : 0);
-        const vy = dir.vy * baseSpeed + (dir.vx !== 0 ? perpVariance : 0) - 0.02; // Slight upward bias
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
 
         // Random position offset within the block
         const offsetX = (Math.random() - 0.5) * TILE_SIZE * 0.5;
