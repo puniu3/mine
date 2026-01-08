@@ -1,3 +1,5 @@
+import { emitBlockBreakParticles } from './block_particles.js';
+
 /**
  * Game Actions Module
  * Encapsulates block interaction logic.
@@ -170,6 +172,7 @@ export function createActions({
         if (currentBlock !== BLOCKS.AIR && isBlockBreakable(currentBlock, BLOCK_PROPS)) {
             inventory.addToInventory(currentBlock);
             sounds.playDig(getBlockMaterialType(currentBlock, BLOCK_PROPS));
+            emitBlockBreakParticles(bx, by, currentBlock);
             world.setBlock(bx, by, BLOCKS.AIR);
             return;
         }
