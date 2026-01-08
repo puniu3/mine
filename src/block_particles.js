@@ -1,10 +1,11 @@
 /**
  * Block Break Particle System
  * Emits small colored particles when blocks are destroyed.
+ * Samples colors directly from block textures.
  * Uses TypedArray SoA (Structure of Arrays) for cache-friendly access.
  */
 
-import { TILE_SIZE, BLOCK_PROPS } from './constants.js';
+import { TILE_SIZE } from './constants.js';
 
 // ============================================================
 // High-Performance Particle System using TypedArrays (SoA)
@@ -13,13 +14,16 @@ import { TILE_SIZE, BLOCK_PROPS } from './constants.js';
 const MAX_PARTICLES = 500;
 
 // Structure of Arrays (SoA) for cache-friendly access
+// Using RGB instead of HSL for direct texture color sampling
 const particles = {
     x: new Float32Array(MAX_PARTICLES),
     y: new Float32Array(MAX_PARTICLES),
     vx: new Float32Array(MAX_PARTICLES),
     vy: new Float32Array(MAX_PARTICLES),
     life: new Uint16Array(MAX_PARTICLES),
-    hue: new Uint16Array(MAX_PARTICLES),
+    r: new Uint8Array(MAX_PARTICLES),
+    g: new Uint8Array(MAX_PARTICLES),
+    b: new Uint8Array(MAX_PARTICLES),
     count: 0
 };
 
@@ -32,94 +36,64 @@ const PARTICLES_PER_BREAK = 8;
 let cullMinX = 0, cullMaxX = 0, cullMinY = 0, cullMaxY = 0;
 const CULL_MARGIN = 50;
 
+// Texture reference (set via init)
+let blockTextures = null;
+
+// Cache for texture ImageData
+const textureDataCache = new Map();
+
 /**
- * Convert hex color to HSL hue (0-360)
- * @param {string} hex - Hex color string (e.g., '#5d4037')
- * @returns {number} Hue value 0-360
+ * Initialize the particle system with block textures
+ * @param {Object.<number, HTMLCanvasElement>} textures - Block textures
  */
-function hexToHue(hex) {
-    // Remove # if present
-    hex = hex.replace('#', '');
-
-    // Parse RGB
-    const r = parseInt(hex.substring(0, 2), 16) / 255;
-    const g = parseInt(hex.substring(2, 4), 16) / 255;
-    const b = parseInt(hex.substring(4, 6), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const delta = max - min;
-
-    if (delta === 0) return 0;
-
-    let hue;
-    if (max === r) {
-        hue = ((g - b) / delta) % 6;
-    } else if (max === g) {
-        hue = (b - r) / delta + 2;
-    } else {
-        hue = (r - g) / delta + 4;
-    }
-
-    hue = Math.round(hue * 60);
-    if (hue < 0) hue += 360;
-
-    return hue;
+export function initBlockParticles(textures) {
+    blockTextures = textures;
 }
 
 /**
- * Convert hex color to saturation and lightness
- * @param {string} hex - Hex color string
- * @returns {{saturation: number, lightness: number}}
+ * Get ImageData for a block texture (cached)
+ * @param {number} blockId
+ * @returns {ImageData|null}
  */
-function hexToSL(hex) {
-    hex = hex.replace('#', '');
-
-    const r = parseInt(hex.substring(0, 2), 16) / 255;
-    const g = parseInt(hex.substring(2, 4), 16) / 255;
-    const b = parseInt(hex.substring(4, 6), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const lightness = (max + min) / 2;
-
-    let saturation = 0;
-    if (max !== min) {
-        const delta = max - min;
-        saturation = lightness > 0.5
-            ? delta / (2 - max - min)
-            : delta / (max + min);
+function getTextureData(blockId) {
+    if (textureDataCache.has(blockId)) {
+        return textureDataCache.get(blockId);
     }
+
+    if (!blockTextures || !blockTextures[blockId]) {
+        return null;
+    }
+
+    const canvas = blockTextures[blockId];
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE);
+    textureDataCache.set(blockId, imageData);
+    return imageData;
+}
+
+/**
+ * Sample a random color from the block texture
+ * @param {number} blockId
+ * @returns {{r: number, g: number, b: number}}
+ */
+function sampleTextureColor(blockId) {
+    const imageData = getTextureData(blockId);
+
+    if (!imageData) {
+        // Fallback to gray if no texture
+        return { r: 128, g: 128, b: 128 };
+    }
+
+    // Sample from random position
+    const x = Math.floor(Math.random() * TILE_SIZE);
+    const y = Math.floor(Math.random() * TILE_SIZE);
+    const idx = (y * TILE_SIZE + x) * 4;
 
     return {
-        saturation: Math.round(saturation * 100),
-        lightness: Math.round(lightness * 100)
+        r: imageData.data[idx],
+        g: imageData.data[idx + 1],
+        b: imageData.data[idx + 2]
     };
-}
-
-// Cache for block colors (hue, saturation, lightness)
-const blockColorCache = new Map();
-
-/**
- * Get cached HSL values for a block type
- * @param {number} blockId
- * @returns {{hue: number, saturation: number, lightness: number}}
- */
-function getBlockHSL(blockId) {
-    if (blockColorCache.has(blockId)) {
-        return blockColorCache.get(blockId);
-    }
-
-    const props = BLOCK_PROPS[blockId];
-    const color = props?.color || '#808080';
-
-    const hsl = {
-        hue: hexToHue(color),
-        ...hexToSL(color)
-    };
-
-    blockColorCache.set(blockId, hsl);
-    return hsl;
 }
 
 /**
@@ -133,7 +107,9 @@ function removeParticle(index) {
         particles.vx[index] = particles.vx[last];
         particles.vy[index] = particles.vy[last];
         particles.life[index] = particles.life[last];
-        particles.hue[index] = particles.hue[last];
+        particles.r[index] = particles.r[last];
+        particles.g[index] = particles.g[last];
+        particles.b[index] = particles.b[last];
     }
     particles.count--;
 }
@@ -141,7 +117,7 @@ function removeParticle(index) {
 /**
  * Add a new particle to the system
  */
-function addParticle(x, y, vx, vy, life, hue) {
+function addParticle(x, y, vx, vy, life, r, g, b) {
     if (particles.count >= MAX_PARTICLES) return;
     const i = particles.count;
     particles.x[i] = x;
@@ -149,9 +125,19 @@ function addParticle(x, y, vx, vy, life, hue) {
     particles.vx[i] = vx;
     particles.vy[i] = vy;
     particles.life[i] = life;
-    particles.hue[i] = hue;
+    particles.r[i] = r;
+    particles.g[i] = g;
+    particles.b[i] = b;
     particles.count++;
 }
+
+// Cardinal directions: up, down, left, right
+const DIRECTIONS = [
+    { vx: 0, vy: -1 },   // up
+    { vx: 0, vy: 1 },    // down
+    { vx: -1, vy: 0 },   // left
+    { vx: 1, vy: 0 }     // right
+];
 
 /**
  * Emit particles when a block is destroyed
@@ -160,25 +146,27 @@ function addParticle(x, y, vx, vy, life, hue) {
  * @param {number} blockId - Block type ID
  */
 export function emitBlockBreakParticles(tileX, tileY, blockId) {
-    const hsl = getBlockHSL(blockId);
-
     // Center of the block in world coordinates
     const centerX = tileX * TILE_SIZE + TILE_SIZE / 2;
     const centerY = tileY * TILE_SIZE + TILE_SIZE / 2;
 
     for (let i = 0; i < PARTICLES_PER_BREAK; i++) {
-        // Random angle for each particle
-        const angle = Math.random() * Math.PI * 2;
-        // Speed with some variance
-        const speed = 0.08 + Math.random() * 0.12;
+        // Sample color from texture
+        const color = sampleTextureColor(blockId);
 
-        // Velocity components - particles fly outward
-        const vx = Math.cos(angle) * speed;
-        const vy = Math.sin(angle) * speed - 0.05; // Slight upward bias
+        // Pick one of 4 cardinal directions with some randomness
+        const dir = DIRECTIONS[i % 4];
+        const baseSpeed = 0.12 + Math.random() * 0.08;
+
+        // Add some perpendicular variance for natural feel
+        const perpVariance = (Math.random() - 0.5) * 0.06;
+
+        const vx = dir.vx * baseSpeed + (dir.vy !== 0 ? perpVariance : 0);
+        const vy = dir.vy * baseSpeed + (dir.vx !== 0 ? perpVariance : 0) - 0.02; // Slight upward bias
 
         // Random position offset within the block
-        const offsetX = (Math.random() - 0.5) * TILE_SIZE * 0.6;
-        const offsetY = (Math.random() - 0.5) * TILE_SIZE * 0.6;
+        const offsetX = (Math.random() - 0.5) * TILE_SIZE * 0.5;
+        const offsetY = (Math.random() - 0.5) * TILE_SIZE * 0.5;
 
         // Life with some variance
         const life = PARTICLE_LIFE + Math.floor(Math.random() * 120) - 60;
@@ -189,7 +177,9 @@ export function emitBlockBreakParticles(tileX, tileY, blockId) {
             vx,
             vy,
             life,
-            hsl.hue
+            color.r,
+            color.g,
+            color.b
         );
     }
 }
@@ -234,8 +224,8 @@ export function draw(ctx, cameraX, cameraY, viewWidth, viewHeight) {
     cullMinY = cameraY - CULL_MARGIN;
     cullMaxY = cameraY + viewHeight + CULL_MARGIN;
 
-    // Group particles by hue for batch rendering
-    const hueGroups = new Map();
+    // Group particles by color for batch rendering
+    const colorGroups = new Map();
 
     for (let i = 0; i < particles.count; i++) {
         const x = particles.x[i];
@@ -246,17 +236,22 @@ export function draw(ctx, cameraX, cameraY, viewWidth, viewHeight) {
             continue;
         }
 
-        const hue = particles.hue[i];
-        if (!hueGroups.has(hue)) {
-            hueGroups.set(hue, []);
+        // Create color key for grouping
+        const colorKey = (particles.r[i] << 16) | (particles.g[i] << 8) | particles.b[i];
+        if (!colorGroups.has(colorKey)) {
+            colorGroups.set(colorKey, []);
         }
-        hueGroups.get(hue).push(i);
+        colorGroups.get(colorKey).push(i);
     }
 
     // Batch render by color
-    for (const [hue, indices] of hueGroups) {
-        // Use the hue from the block with fixed saturation/lightness for visibility
-        ctx.fillStyle = `hsl(${hue}, 60%, 45%)`;
+    for (const [colorKey, indices] of colorGroups) {
+        const r = (colorKey >> 16) & 0xFF;
+        const g = (colorKey >> 8) & 0xFF;
+        const b = colorKey & 0xFF;
+
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+
         for (const i of indices) {
             // Calculate alpha based on remaining life
             const lifeRatio = particles.life[i] / PARTICLE_LIFE;
