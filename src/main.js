@@ -179,16 +179,16 @@ function init(savedState = null) {
             if (type === BLOCKS.TNT) {
                 // Skip timer if JUMP_PAD is directly above
                 const blockAbove = world.getBlock(x, y - 1);
-                // Skip timer if ACCELERATOR_LEFT is to the right (TNT behind ACCEL_LEFT)
-                const blockRight = world.getBlock(x + 1, y);
-                // Skip timer if ACCELERATOR_RIGHT is to the left (TNT behind ACCEL_RIGHT)
+                // Skip timer if ACCELERATOR_LEFT is to the left (TNT is to its right)
                 const blockLeft = world.getBlock(x - 1, y);
+                // Skip timer if ACCELERATOR_RIGHT is to the right (TNT is to its left)
+                const blockRight = world.getBlock(x + 1, y);
 
                 const hasJumpPadAbove = blockAbove === BLOCKS.JUMP_PAD;
-                const hasTNTBehindAccelLeft = blockRight === BLOCKS.ACCELERATOR_LEFT;
-                const hasTNTBehindAccelRight = blockLeft === BLOCKS.ACCELERATOR_RIGHT;
+                const hasAccelLeftToLeft = blockLeft === BLOCKS.ACCELERATOR_LEFT;
+                const hasAccelRightToRight = blockRight === BLOCKS.ACCELERATOR_RIGHT;
 
-                if (!hasJumpPadAbove && !hasTNTBehindAccelLeft && !hasTNTBehindAccelRight) {
+                if (!hasJumpPadAbove && !hasAccelLeftToLeft && !hasAccelRightToRight) {
                     tntManager.onBlockPlaced(x, y);
                 }
             } else if (type === BLOCKS.JUMP_PAD) {
@@ -198,16 +198,16 @@ function init(savedState = null) {
                     tntManager.cancelTimerAt(x, y + 1);
                 }
             } else if (type === BLOCKS.ACCELERATOR_LEFT) {
-                // Cancel TNT timer if placed to the right of TNT (TNT is behind ACCEL_LEFT)
-                const blockLeft = world.getBlock(x - 1, y);
-                if (blockLeft === BLOCKS.TNT) {
-                    tntManager.cancelTimerAt(x - 1, y);
-                }
-            } else if (type === BLOCKS.ACCELERATOR_RIGHT) {
-                // Cancel TNT timer if placed to the left of TNT (TNT is behind ACCEL_RIGHT)
+                // Cancel TNT timer if TNT is to the right of this accelerator
                 const blockRight = world.getBlock(x + 1, y);
                 if (blockRight === BLOCKS.TNT) {
                     tntManager.cancelTimerAt(x + 1, y);
+                }
+            } else if (type === BLOCKS.ACCELERATOR_RIGHT) {
+                // Cancel TNT timer if TNT is to the left of this accelerator
+                const blockLeft = world.getBlock(x - 1, y);
+                if (blockLeft === BLOCKS.TNT) {
+                    tntManager.cancelTimerAt(x - 1, y);
                 }
             } else if (type === BLOCKS.SAPLING) {
                 saplingManager.addSapling(x, y);
