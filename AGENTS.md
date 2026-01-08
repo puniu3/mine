@@ -33,6 +33,7 @@ mine/
     ├── audio.js        # Web Audio API sound effects (jump, mining, UI, coin, explosion)
     ├── fireworks.js    # Firework particle effects for celebrations
     ├── jackpot.js      # Jackpot block: coin burst particles on player overlap
+    ├── block_particles.js # Block destruction particle effects (texture color sampling)
     ├── sky.js          # Dynamic sky colors, sun/moon orbit, and star rendering
     ├── save.js         # Save/load system using localStorage with autosave functionality
     ├── tnt.js          # TNT explosion logic, timers, knockback, and block destruction
@@ -50,13 +51,14 @@ main.js
 ├── input.js
 ├── inventory.js
 ├── crafting.js
-├── actions.js
+├── actions.js (imports: block_particles)
 ├── world.js
-├── player.js
+├── player.js (imports: block_particles)
 ├── camera.js (imports: utils, constants)
-├── renderer.js
+├── renderer.js (imports: block_particles)
 ├── jackpot.js
 ├── fireworks.js
+├── block_particles.js (imports: constants)
 ├── save.js
 ├── tnt.js
 ├── sapling_manager.js (imports: constants, utils)
@@ -103,13 +105,21 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - Handles all canvas drawing operations
 - **Sky**: Draws gradients, stars, sun, and moon based on time/altitude
 - **World**: Renders visible tiles with optimization (clipping)
-- **Entities**: Draws player, particles (fireworks, jackpots)
+- **Entities**: Draws player, particles (fireworks, jackpots, block destruction)
 - **UI**: Renders cursor highlight and overlays
 
 ### Actions (actions.js)
-- Block breaking: reach check, breakability check, inventory add
+- Block breaking: reach check, breakability check, inventory add, particle emission
 - Block placing: reach check, adjacency check, collision check, inventory consume
 - TNT/Sapling placement triggers delegation to respective managers via callbacks
+
+### Block Particles (block_particles.js)
+- Emits colored particles when blocks are destroyed (click/tap or jump-break)
+- Samples actual RGB colors from block textures (not static BLOCK_PROPS colors)
+- TypedArray SoA (Structure of Arrays) for high-performance rendering
+- Particles scatter in all directions with physics (gravity, friction)
+- `initBlockParticles(textures)`: Initialize with texture references
+- `emitBlockBreakParticles(tileX, tileY, blockId)`: Spawn particles at block position
 
 ### UI Manager (ui_manager.js)
 - Decouples DOM manipulation from game logic
@@ -139,10 +149,10 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - Used by `ui_manager.js`
 
 ### Game Loop (main.js)
-- **Orchestrator**: Initializes all subsystems (World, Player, Camera, Managers)
+- **Orchestrator**: Initializes all subsystems (World, Player, Camera, Managers, Block Particles)
 - **Update Loop**:
   - Updates Physics, Input
-  - Delegates specific updates to `camera`, `tntManager`, `saplingManager`, `jackpot`, `fireworks`
+  - Delegates specific updates to `camera`, `tntManager`, `saplingManager`, `jackpot`, `fireworks`, `block_particles`
 - **Draw Loop**: Calls `renderer.drawGame()`
 
 ## Input Handling (input.js)
