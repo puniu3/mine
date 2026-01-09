@@ -25,8 +25,22 @@ mine/
     ├── constants.js    # Block IDs, physics values, block metadata (BLOCKS, BLOCK_PROPS)
     ├── utils.js        # Pure helpers: collision, coordinates, visibility, reach checks
     ├── renderer.js     # Rendering logic: sky, world, entities, and particles
-    ├── world.js        # World class: orchestration of terrain logic, biome rules, and state
-    ├── painters.js     # Dumb drawing functions for structures, vegetation, and clouds
+    ├── world/          # World generation system (modular)
+    │   ├── index.js    # World class: core state (getBlock, setBlock, checkAreaFree)
+    │   ├── biomes.js   # BIOMES constants, configs, surface/subsurface block logic
+    │   ├── generate.js # Main generation orchestration loop
+    │   ├── terrain.js  # Extreme terrain (canyon, volcano, plateau, rolling hills)
+    │   ├── water.js    # Water simulation (settling, ocean restoration)
+    │   ├── vegetation.js # Biome-specific plant selection logic
+    │   ├── features.js # Structures, hidden features, ponds, waterfalls
+    │   ├── caves.js    # Cave walker and geology generation
+    │   └── clouds.js   # Cloud placement
+    ├── painters/       # Dumb drawing functions (coordinate-based block placement)
+    │   ├── index.js    # Re-exports all painters
+    │   ├── core.js     # drawBlob, drawPond, drawCavePocket
+    │   ├── vegetation.js # Trees (oak, pine, jungle, acacia, swamp, dead), bush, cactus, boulder
+    │   ├── structures.js # Oasis, monolith, bunker, world tree, islands, ruins, mineshaft
+    │   └── clouds.js   # Cloud shapes (puffy, long, layered, cluster)
     ├── player.js       # Player class: movement, physics, collision, rendering
     ├── camera.js       # Camera state, smoothing, and world wrapping logic
     ├── input.js        # Keyboard, mouse, touch input bindings
@@ -56,7 +70,20 @@ main.js
 ├── inventory.js
 ├── crafting.js
 ├── actions.js (imports: block_particles)
-├── world.js (imports: painters)
+├── world/index.js
+│   ├── world/generate.js
+│   │   ├── world/biomes.js
+│   │   ├── world/terrain.js
+│   │   ├── world/water.js
+│   │   ├── world/vegetation.js (imports: painters/)
+│   │   ├── world/features.js (imports: painters/)
+│   │   ├── world/caves.js (imports: painters/)
+│   │   └── world/clouds.js (imports: painters/)
+│   └── painters/index.js
+│       ├── painters/core.js
+│       ├── painters/vegetation.js
+│       ├── painters/structures.js (imports: painters/vegetation)
+│       └── painters/clouds.js
 ├── player.js (imports: block_particles)
 ├── camera.js (imports: utils, constants)
 ├── renderer.js (imports: block_particles)
@@ -95,19 +122,41 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - Special: jump pad detection (1.8x jump force)
 - Vertical wrap: player wraps around world vertically
 
-### World (world.js)
+### World (world/)
 - **Role**: Logic Orchestrator & State Container.
-- Procedural terrain generation logic (heightmaps, biome probabilities).
-- Determines *where* and *what* to generate based on logic rules.
-- Delegates specific structure/vegetation drawing to `painters.js`.
-- Ore distribution at depth layers.
-- Block get/set with bounds checking.
+- Modular structure for AI-efficient editing (touch only relevant files).
 
-### Painters (painters.js)
+| File | Lines | Responsibility |
+|------|-------|----------------|
+| `index.js` | ~55 | World class core (getBlock, setBlock, checkAreaFree) |
+| `biomes.js` | ~57 | BIOMES enum, getBiomeConfigs, getSurfaceBlock, getSubSurfaceBlock |
+| `generate.js` | ~85 | Main generation loop orchestration |
+| `terrain.js` | ~160 | Extreme terrain (canyon, volcano, plateau, hills, cliff painting) |
+| `water.js` | ~116 | Water settling simulation, ocean level restoration |
+| `vegetation.js` | ~47 | Biome-specific plant selection (delegates to painters) |
+| `features.js` | ~134 | Structures, hidden features, ponds, waterfalls |
+| `caves.js` | ~56 | Cave walker algorithm, geology (dirt/sand/water pockets) |
+| `clouds.js` | ~30 | Cloud placement logic |
+
+**Editing guide**:
+- New biome: `biomes.js` + `vegetation.js`
+- New tree type: `painters/vegetation.js` + `world/vegetation.js`
+- Water behavior: `water.js` only
+- New structure: `painters/structures.js` + `world/features.js`
+
+### Painters (painters/)
 - **Role**: Pure Implementation / Dumb Drawers.
-- Contains functions to draw specific shapes (Trees, Clouds, Ponds, Ruins) given coordinates.
+- Contains functions to draw specific shapes given coordinates.
 - **Logic-free**: Does not decide *if* a tree should spawn, only *how* to draw it.
 - Uses an accessor interface (`get`/`set`) to modify the world.
+
+| File | Lines | Contents |
+|------|-------|----------|
+| `index.js` | ~8 | Re-exports all painters |
+| `core.js` | ~49 | drawBlob, drawPond, drawCavePocket |
+| `vegetation.js` | ~175 | drawTreeOak/Pine/Jungle/Acacia/Swamp/Dead, drawCactus, drawBush, drawBoulder |
+| `structures.js` | ~260 | drawOasis, drawMonolith, drawBuriedBunker, drawWorldTree, drawFloatingIsland, drawOceanIsland, drawDesertRuin, drawMineshaft, drawAncientRuins |
+| `clouds.js` | ~95 | drawCloudPuffy/Long/Layered/Cluster, drawCloudByShapeId |
 
 ### Camera (camera.js)
 - Manages viewport position (x, y)
