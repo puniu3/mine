@@ -61,6 +61,9 @@ const TILE_SIZE_FP = toFP(TILE_SIZE);
 // Small offset for feet detection (0.1 pixels in FP)
 const FEET_OFFSET_FP = toFP(0.1);
 
+// Head clearance required for underwater jump (0.2 tiles in FP)
+const HEAD_CLEARANCE_FP = toFP(0.2 * TILE_SIZE);
+
 // Animation velocity threshold in FP
 const ANIM_VX_THRESHOLD_FP = toFP(0.1);
 
@@ -420,11 +423,24 @@ export class Player {
             }
         }
         // Priority 2: Normal Jump (also allow underwater jump when vy > threshold)
-        else if (input.keys.jump && (this.grounded || (isInWater && this._vy > WATER_JUMP_VY_THRESHOLD_FP))) {
-            // Use water jump force when underwater, normal jump force otherwise
-            this._vy = isInWater ? -WATER_JUMP_FORCE_FP : -JUMP_FORCE_FP;
+        // For underwater jump, also require head clearance of 0.2 tiles to prevent spam-jumping against ceiling
+        else if (input.keys.jump && this.grounded) {
+            this._vy = -JUMP_FORCE_FP;
             this.grounded = false;
             sounds.playJump();
+        }
+        else if (input.keys.jump && isInWater && this._vy > WATER_JUMP_VY_THRESHOLD_FP) {
+            // Check if there's enough space above the player's head (0.2 tiles)
+            const headCheckY_FP = this._y - HEAD_CLEARANCE_FP;
+            const headCheckX = Math.floor((this._x + (this._width >> 1)) / TILE_SIZE_FP);
+            const headCheckY = Math.floor(headCheckY_FP / TILE_SIZE_FP);
+            const hasHeadClearance = !isBlockSolid(this.world.getBlock(headCheckX, headCheckY), BLOCK_PROPS);
+
+            if (hasHeadClearance) {
+                this._vy = -WATER_JUMP_FORCE_FP;
+                this.grounded = false;
+                sounds.playJump();
+            }
         }
 
         // 3. Board velocity decay (FP)
