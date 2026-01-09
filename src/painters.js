@@ -204,6 +204,61 @@ export function drawBoulder(accessor, x, y) {
 
 // --- Structure Painters ---
 
+export function drawOasis(accessor, cx, cy) {
+    const waterRadius = 3 + Math.floor(Math.random() * 2);
+    const grassRadius = waterRadius + 2;
+
+    // 1. Draw Grass Bed (replaces Sand to create lush area)
+    for (let dx = -grassRadius; dx <= grassRadius; dx++) {
+        const dist = Math.abs(dx);
+        for (let dy = -1; dy <= 3; dy++) {
+            const x = cx + dx;
+            const y = cy + dy;
+            
+            // Create a "bowl" for the water
+            if (dist <= waterRadius) {
+                 if (dy > 0) accessor.set(x, y, BLOCKS.SAND); // Bed of the pool
+            } else {
+                // The rim
+                if (dy === 0) accessor.set(x, y, BLOCKS.GRASS);
+                else if (dy > 0) accessor.set(x, y, BLOCKS.DIRT);
+            }
+        }
+    }
+
+    // 2. Fill Water
+    for (let dx = -waterRadius; dx <= waterRadius; dx++) {
+        // Flatten the water surface logic a bit for aesthetic
+        const depth = (Math.abs(dx) < waterRadius - 1) ? 1 : 0;
+        for (let dy = 0; dy <= depth; dy++) {
+            accessor.set(cx + dx, cy + dy, BLOCKS.WATER);
+        }
+        // Clear air above water
+        accessor.set(cx + dx, cy - 1, BLOCKS.AIR);
+        accessor.set(cx + dx, cy - 2, BLOCKS.AIR);
+    }
+
+    // 3. Add Vegetation (Palm Trees using Jungle Tree logic)
+    const treeCount = 1 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < treeCount; i++) {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const tx = cx + (side * (waterRadius + 1));
+        // Ensure we plant on the grass rim
+        if (accessor.get(tx, cy) === BLOCKS.GRASS) {
+            drawTreeJungle(accessor, tx, cy - 1);
+        }
+    }
+    
+    // 4. Add a bush or two
+    if (Math.random() < 0.5) {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const bx = cx + (side * (grassRadius - 1));
+         if (accessor.get(bx, cy) === BLOCKS.GRASS) {
+            drawBush(accessor, bx, cy - 1);
+        }
+    }
+}
+
 export function drawMonolith(accessor, x, y) {
     const height = 6 + Math.floor(Math.random() * 5);
     for (let i = 0; i < height; i++) {

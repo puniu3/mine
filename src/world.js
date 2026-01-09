@@ -421,8 +421,8 @@ export class World {
             const biome = biomeByColumn[x];
             const y = heights[x];
 
-            // 1. Skip Snowfield completely
-            if (biome === BIOMES.SNOWFIELD) continue;
+            // 1. Skip Snowfield and Desert
+            if (biome === BIOMES.SNOWFIELD || biome === BIOMES.DESERT) continue;
 
             // 2. Skip Mountains if above snowline (y < snowLine because 0 is top)
             if (biome === BIOMES.MOUNTAIN && y < snowLine) continue;
@@ -465,12 +465,20 @@ export class World {
             }
         }
 
-        // Desert Ruins
+        // Desert Ruins and Oases
         for (let x = 0; x < this.width; x += 1) {
-            if (biomeByColumn[x] === BIOMES.DESERT && Math.random() < 0.015) {
-                if (Math.abs(heights[x + 2] - heights[x]) < 2) {
-                    Painters.drawDesertRuin(paint, x, heights[x]);
-                    x += 15;
+            if (biomeByColumn[x] === BIOMES.DESERT) {
+                // Rare Oasis
+                if (Math.random() < 0.002) {
+                     Painters.drawOasis(paint, x, heights[x]);
+                     x += 25; // Space them out
+                }
+                // Ruins
+                else if (Math.random() < 0.015) {
+                    if (Math.abs(heights[x + 2] - heights[x]) < 2) {
+                        Painters.drawDesertRuin(paint, x, heights[x]);
+                        x += 15;
+                    }
                 }
             }
         }
