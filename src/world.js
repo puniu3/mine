@@ -146,7 +146,7 @@ export class World {
         this.paintCliffFaces(heights);
         this.generateGeology(heights);
         this.generateCaves(heights);
-        this.generateSurfacePonds(heights, SEA_LEVEL);
+        this.generateSurfacePonds(heights, biomeByColumn, SEA_LEVEL);
         this.generateStructures(heights, biomeByColumn, SEA_LEVEL);
         this.generateHiddenFeatures(heights, biomeByColumn);
 
@@ -392,13 +392,22 @@ export class World {
         }
     }
 
-    generateSurfacePonds(heights, seaLevel) {
+    generateSurfacePonds(heights, biomeByColumn, seaLevel) {
         const paint = this.getAccessor();
         const pondCount = Math.floor(this.width / 60);
+        const snowLine = this.height / 2 - 14;
+
         for (let i = 0; i < pondCount; i++) {
             const x = Math.floor(Math.random() * (this.width - 10)) + 5;
+            const biome = biomeByColumn[x];
             const y = heights[x];
-            
+
+            // 1. Skip Snowfield completely
+            if (biome === BIOMES.SNOWFIELD) continue;
+
+            // 2. Skip Mountains if above snowline (y < snowLine because 0 is top)
+            if (biome === BIOMES.MOUNTAIN && y < snowLine) continue;
+
             if (y <= seaLevel && Math.abs(heights[x - 2] - heights[x + 2]) < 3) { 
                  Painters.drawPond(paint, x, y, 2 + Math.floor(Math.random() * 3));
             }
