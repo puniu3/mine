@@ -89,14 +89,23 @@ export function initUI(callbacks) {
 
     function showWorldModal() {
         if (worldModal) {
-            worldModal.style.display = 'block';
+            worldModal.classList.add('visible');
             updateWorldModalState();
         }
     }
-    function hideWorldModal() { if(worldModal) worldModal.style.display = 'none'; }
+    function hideWorldModal() { if(worldModal) worldModal.classList.remove('visible'); }
 
     if(worldBtn) worldBtn.addEventListener('click', showWorldModal);
     if(worldCloseBtn) worldCloseBtn.addEventListener('click', hideWorldModal);
+
+    // Close modal when clicking outside (on the overlay)
+    if(worldModal) {
+        worldModal.addEventListener('click', (e) => {
+            if (e.target === worldModal) {
+                hideWorldModal();
+            }
+        });
+    }
     if(importFile) importFile.addEventListener('change', updateWorldModalState);
 
     // Event: Export World

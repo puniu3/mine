@@ -83,22 +83,24 @@
     </div>
 
     <div id="world-modal">
-        <h2 data-i18n="world_modal_title">ワールド</h2>
-    
-        <div class="world-section">
-            <h3 data-i18n="world_export_title">のこす</h3>
-            <p data-i18n="world_export_desc">つくった せかいを えにする</p>
-            <button id="export-btn" data-i18n="world_export_btn">えにする</button>
+        <div class="world-modal-content">
+            <h2 data-i18n="world_modal_title">ワールド</h2>
+
+            <div class="world-section">
+                <h3 data-i18n="world_export_title">のこす</h3>
+                <p data-i18n="world_export_desc">つくった せかいを えにする</p>
+                <button id="export-btn" data-i18n="world_export_btn">えにする</button>
+            </div>
+
+            <div class="world-section">
+                <h3 data-i18n="world_import_title">よみこむ</h3>
+                <p data-i18n="world_import_desc">えを よみこんで あそぶ</p>
+                <input type="file" id="import-file" accept="image/*">
+                <button id="import-btn" data-i18n="world_import_btn">よみこむ</button>
+            </div>
+
+            <button id="world-close-btn" data-i18n="world_back_btn">もどる</button>
         </div>
-    
-        <div class="world-section">
-            <h3 data-i18n="world_import_title">よみこむ</h3>
-            <p data-i18n="world_import_desc">えを よみこんで あそぶ</p>
-            <input type="file" id="import-file" accept="image/*">
-            <button id="import-btn" data-i18n="world_import_btn">よみこむ</button>
-        </div>
-    
-        <button id="world-close-btn" data-i18n="world_back_btn">もどる</button>
     </div>
 
     <script type="module" src="src/main.js"></script>
