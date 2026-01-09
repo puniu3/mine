@@ -46,6 +46,7 @@ const BIG_JUMP_FORCE_FP = toFP(BIG_JUMP_FORCE);
 const TERMINAL_VELOCITY_FP = toFP(TERMINAL_VELOCITY);
 const UPWARD_COLLISION_THRESHOLD_FP = toFP(UPWARD_COLLISION_VELOCITY_THRESHOLD);
 const VELOCITY_BOOST_ON_BREAK_FP = toFP(2);
+const DOUBLE_JUMP_VELOCITY_THRESHOLD_FP = toFP(-3);
 
 // Collision epsilon in FP (~0.01 pixels)
 const COLLISION_EPSILON_FP = 41; // 0.01 * 4096 ≈ 41
@@ -104,6 +105,7 @@ export class Player {
         this.grounded = false;
         this.facingRight = true;
         this.animTimer = 0;
+        this.canDoubleJump = false;
 
         // Physics States
         this.fastballActive = false; // "Lift" mode active (Accelerator + Cloud)
@@ -317,6 +319,10 @@ export class Player {
         const centerGridY = Math.floor(centerY_FP / TILE_SIZE_FP);
         const isInWater = this.world.getBlock(centerGridX, centerGridY) === BLOCKS.WATER;
 
+        if (this.grounded) {
+            this.canDoubleJump = true;
+        }
+
         // 1. Horizontal Movement & Friction (FP)
         if (input.keys.left) {
             this._vx = -WALK_SPEED_FP;
@@ -416,6 +422,17 @@ export class Player {
             this._vy = -JUMP_FORCE_FP;
             this.grounded = false;
             sounds.playJump();
+        }
+        // Priority 3: Water Double Jump
+        else if (input.keys.jump && this.canDoubleJump && isInWater) {
+            if (this._vy >= DOUBLE_JUMP_VELOCITY_THRESHOLD_FP) {
+                this._vy = -JUMP_FORCE_FP;
+                this.canDoubleJump = false;
+                // No need to set grounded = false explicitly, it will be handled by physics,
+                // but setting it ensures we are not considered grounded immediately.
+                this.grounded = false;
+                sounds.playJump();
+            }
         }
 
         // 3. Board velocity decay (FP)
