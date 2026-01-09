@@ -380,7 +380,7 @@ button {
 
 /* Mobile Controls */
 .touch-controls {
-    display: none; 
+    display: block;
     position: absolute;
     bottom: 80px;
     width: 100%;
