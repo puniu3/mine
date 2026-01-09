@@ -24,8 +24,6 @@ export const resources = {
         craft_missing: "ざいりょうがたりないよ",
         craft_done: "できたよ！",
 
-        msg_no_save: "セーブデータがありません",
-        msg_select_img: "えを えらんでね",
         msg_import_err: "この えでは ワールドを つくれないよ"
     }
 };
