@@ -137,6 +137,9 @@ export class World {
         // Water Physics Simulation (Fixes walls and floating water)
         this.simulateWaterSettling();
 
+        // Restore Ocean levels (avoiding borders to prevent water walls)
+        this.restoreOceanLevels(biomeByColumn, SEA_LEVEL);
+
         this.generateClouds(heights);
     }
 
@@ -234,6 +237,46 @@ export class World {
                 }
             }
             if (changes === 0) break;
+        }
+    }
+
+    /**
+     * Fixes the issue where Ocean water drains into adjacent caves or terrain.
+     * Restores Ocean surface to SEA_LEVEL, BUT avoids the biome borders (margins).
+     * This prevents creating "water walls" against the shore, keeping the physics-simulated slope.
+     */
+    restoreOceanLevels(biomeByColumn, seaLevel) {
+        const BORDER_MARGIN = 5; // Distance from shore where we DO NOT restore water
+
+        for (let x = 0; x < this.width; x++) {
+            if (biomeByColumn[x] === BIOMES.OCEAN) {
+                
+                // Check neighbors to see if we are near a non-Ocean biome
+                let isNearShore = false;
+                for (let dx = -BORDER_MARGIN; dx <= BORDER_MARGIN; dx++) {
+                    const checkX = x + dx;
+                    if (checkX >= 0 && checkX < this.width) {
+                        if (biomeByColumn[checkX] !== BIOMES.OCEAN) {
+                            isNearShore = true;
+                            break;
+                        }
+                    }
+                }
+
+                // If near shore, let physics result stand (don't force refill)
+                if (isNearShore) continue;
+
+                // Otherwise, refill deep ocean
+                const surfaceStart = seaLevel + 1;
+                for (let y = surfaceStart; y < this.height; y++) {
+                    const block = this.getBlock(x, y);
+                    if (block === BLOCKS.AIR) {
+                        this.setBlock(x, y, BLOCKS.WATER);
+                    } else if (isBlockSolid(block, BLOCK_PROPS) || block === BLOCKS.WATER) {
+                        break;
+                    }
+                }
+            }
         }
     }
 
