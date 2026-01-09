@@ -255,6 +255,95 @@ export function drawMineshaft(accessor, startX, startY) {
     }
 }
 
+export function drawLaputa(accessor, cx, cy) {
+    const width = 25 + Math.floor(Math.random() * 10); // Radius
+    const depth = 20 + Math.floor(Math.random() * 5); // Depth of the cone
+
+    // 1. Draw the main inverted cone
+    for (let dy = 0; dy <= depth; dy++) {
+        // Radius decreases as we go down
+        // shape factor power 0.7 makes it a bit rounded
+        const currentRadius = width * (1 - Math.pow(dy / depth, 0.8));
+        const radCeil = Math.ceil(currentRadius);
+
+        for (let dx = -radCeil; dx <= radCeil; dx++) {
+            // Basic ellipse check
+            if ((dx * dx) / (currentRadius * currentRadius) <= 1) {
+                const x = cx + dx;
+                const y = cy + dy;
+
+                if (dy === 0) {
+                    // Top soil
+                    accessor.set(x, y, BLOCKS.GRASS);
+                } else if (dy < 3) {
+                    // Sub soil
+                    accessor.set(x, y, BLOCKS.DIRT);
+                } else {
+                    // Stone core
+                    // Occasionally mix in ore or clay/sand for texture
+                    const r = Math.random();
+                    if (r > 0.98) accessor.set(x, y, BLOCKS.GOLD); // Ancient tech
+                    else if (r > 0.95) accessor.set(x, y, BLOCKS.COAL); // Old fuel
+                    else accessor.set(x, y, BLOCKS.STONE);
+                }
+            }
+        }
+    }
+
+    // 2. Surface Features (Ruins)
+    // We iterate over the top surface
+    for (let dx = -width + 2; dx <= width - 2; dx++) {
+        const x = cx + dx;
+        const y = cy; // Surface level
+
+        // Random ruin pillars
+        if (Math.abs(dx) % 5 === 0 && Math.random() < 0.6) {
+            const h = 4 + Math.floor(Math.random() * 5);
+            for (let i = 1; i <= h; i++) {
+                accessor.set(x, y - i, BLOCKS.STONE);
+            }
+            // Maybe a crossbeam
+            if (Math.random() < 0.5) {
+                accessor.set(x + 1, y - h, BLOCKS.STONE);
+                accessor.set(x - 1, y - h, BLOCKS.STONE);
+            }
+        }
+
+        // Random trees
+        if (Math.random() < 0.05 && accessor.get(x, y) === BLOCKS.GRASS) {
+            drawTreeOak(accessor, x, y - 1);
+        }
+
+        // Water pools
+        if (Math.abs(dx) < 5 && Math.random() < 0.3) {
+            accessor.set(x, y, BLOCKS.WATER);
+            accessor.set(x, y + 1, BLOCKS.STONE); // basin
+        }
+    }
+
+    // 3. The Central "Castle" / Structure
+    const castleWidth = 8;
+    const castleHeight = 8;
+    for (let dx = -castleWidth; dx <= castleWidth; dx++) {
+        for (let dy = 0; dy < castleHeight; dy++) {
+            const x = cx + dx;
+            const y = cy - 1 - dy;
+            // Crumbling Walls
+            if ((Math.abs(dx) === castleWidth || Math.abs(dx) === castleWidth - 2) && Math.random() > 0.2) {
+                accessor.set(x, y, BLOCKS.STONE);
+            }
+        }
+    }
+
+    // Core Crystal
+    const coreY = cy - castleHeight + 2;
+    accessor.set(cx, coreY, BLOCKS.JACKPOT);
+    accessor.set(cx, coreY - 1, BLOCKS.GOLD);
+    accessor.set(cx, coreY + 1, BLOCKS.GOLD);
+    accessor.set(cx - 1, coreY, BLOCKS.GOLD);
+    accessor.set(cx + 1, coreY, BLOCKS.GOLD);
+}
+
 export function drawAncientRuins(accessor, cx, floorY) {
     // Randomize shape and size
     const caveRadiusX = 20 + Math.floor(Math.random() * 10); // 20 - 29
