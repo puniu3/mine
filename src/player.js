@@ -11,7 +11,7 @@ import { emitBlockBreakParticles } from './block_particles.js';
 import {
     TILE_SIZE, BLOCKS, BLOCK_PROPS,
     JUMP_FORCE, BIG_JUMP_FORCE, TERMINAL_VELOCITY,
-    UPWARD_COLLISION_VELOCITY_THRESHOLD, MAX_NATURAL_BLOCK_ID,
+    UPWARD_COLLISION_VELOCITY_THRESHOLD, NATURAL_BLOCK_IDS,
     TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET,
     ACCELERATOR_ACCELERATION_AMOUNT,
     TICK_TIME_SCALE, GRAVITY_PER_TICK, GRAVITY_LOW_FACTOR, PHYSICS_TPS, PHYSICS_DT
@@ -600,7 +600,7 @@ export class Player {
                             // Block breaking from below
                             if (this._vy < UPWARD_COLLISION_THRESHOLD_FP &&
                                 isBlockBreakable(block, BLOCK_PROPS) &&
-                                isNaturalBlock(block, MAX_NATURAL_BLOCK_ID)) {
+                                isNaturalBlock(block, NATURAL_BLOCK_IDS)) {
                                 if (this.addToInventory) {
                                     this.addToInventory(block);
                                 }

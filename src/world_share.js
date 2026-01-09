@@ -27,7 +27,8 @@ const EXPORT_COLORS = {
     [BLOCKS.SAPLING]: '#6fa85b',
     [BLOCKS.JACKPOT]: '#ffd54f',
     [BLOCKS.ACCELERATOR_LEFT]: '#42a5f5',
-    [BLOCKS.ACCELERATOR_RIGHT]: '#66bb6a'
+    [BLOCKS.ACCELERATOR_RIGHT]: '#66bb6a',
+    [BLOCKS.WATER]: '#2196f3'
 };
 
 // Strict tolerance for specific blocks (Redmean distance threshold)
