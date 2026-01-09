@@ -149,21 +149,23 @@ export class World {
      * 1. Gravity: Fall down into AIR.
      * 2. Diagonal Flow: Slide down-left or down-right into AIR (fixes vertical walls).
      * 3. Spreading: Flow sideways if supported by solid/water.
+     * * [Updated] Now uses modulo arithmetic to wrap water flow around the world edges.
      */
     simulateWaterSettling() {
-        const passes = 12; // Sufficient passes to settle deep bodies of water
+        const passes = 12; 
         
         for (let pass = 0; pass < passes; pass++) {
             let changes = 0;
             
-            // Scan top-down to propagate gravity efficiently
-            // Alternating scan direction (left-right / right-left) avoids flow bias
             const scanLeftToRight = pass % 2 === 0;
-            const startX = scanLeftToRight ? 1 : this.width - 2;
-            const endX = scanLeftToRight ? this.width - 1 : 0;
+            const startX = scanLeftToRight ? 0 : this.width - 1;
+            const endX = scanLeftToRight ? this.width : -1;
             const stepX = scanLeftToRight ? 1 : -1;
 
             for (let y = 0; y < this.height - 1; y++) {
+                // Iterate through X with wrapping awareness
+                // Note: The loop condition `x !== endX` handles standard iteration.
+                // We handle neighbor wrapping inside the loop.
                 for (let x = startX; x !== endX; x += stepX) {
                     if (this.getBlock(x, y) === BLOCKS.WATER) {
                         
@@ -172,22 +174,21 @@ export class World {
                             this.setBlock(x, y + 1, BLOCKS.WATER);
                             this.setBlock(x, y, BLOCKS.AIR);
                             changes++;
-                            continue; // Block moved, process next
+                            continue; 
                         }
 
                         // Rule 2: Diagonal Flow (Slide Down)
-                        // Allows water to cascade over edges, breaking vertical walls
-                        const left = x - 1;
-                        const right = x + 1;
+                        // [Fix] Wrap coordinates for neighbors
+                        const left = (x - 1 + this.width) % this.width;
+                        const right = (x + 1) % this.width;
                         const down = y + 1;
                         
-                        const canGoLeftDown = left >= 0 && this.getBlock(left, y) === BLOCKS.AIR && this.getBlock(left, down) === BLOCKS.AIR;
-                        const canGoRightDown = right < this.width && this.getBlock(right, y) === BLOCKS.AIR && this.getBlock(right, down) === BLOCKS.AIR;
+                        // Note: getBlock handles wrapping if -1 is passed, but explicit wrapping is clearer for logic
+                        const canGoLeftDown = this.getBlock(left, y) === BLOCKS.AIR && this.getBlock(left, down) === BLOCKS.AIR;
+                        const canGoRightDown = this.getBlock(right, y) === BLOCKS.AIR && this.getBlock(right, down) === BLOCKS.AIR;
 
                         if (canGoLeftDown || canGoRightDown) {
-                            // If both are open, pick randomly to avoid patterns
                             const goLeft = (canGoLeftDown && canGoRightDown) ? Math.random() < 0.5 : canGoLeftDown;
-                            
                             const targetX = goLeft ? left : right;
                             this.setBlock(targetX, down, BLOCKS.WATER);
                             this.setBlock(x, y, BLOCKS.AIR);
@@ -196,22 +197,21 @@ export class World {
                         }
 
                         // Rule 3: Spreading (Sideways)
-                        // Only spread if supported below (don't fly), but fill gaps
                         const below = this.getBlock(x, y + 1);
                         if (below === BLOCKS.WATER || isBlockSolid(below, BLOCK_PROPS)) {
-                            const canGoLeft = left >= 0 && this.getBlock(left, y) === BLOCKS.AIR;
-                            const canGoRight = right < this.width && this.getBlock(right, y) === BLOCKS.AIR;
+                            const canGoLeft = this.getBlock(left, y) === BLOCKS.AIR;
+                            const canGoRight = this.getBlock(right, y) === BLOCKS.AIR;
 
                             if (canGoLeft || canGoRight) {
                                 let goLeft;
 
                                 if (canGoLeft && canGoRight) {
-                                    // [Improved Logic]
-                                    // Instead of purely random choice, check if moving in a direction 
-                                    // helps join existing water or fill against a wall (cohesion).
-                                    // We look 2 blocks away (neighbor of the target) to see if it attracts.
-                                    const leftNeighbor = (x - 2 >= 0) ? this.getBlock(x - 2, y) : BLOCKS.AIR;
-                                    const rightNeighbor = (x + 2 < this.width) ? this.getBlock(x + 2, y) : BLOCKS.AIR;
+                                    // Look 2 blocks away for cohesion (wrapping applied)
+                                    const left2 = (x - 2 + this.width) % this.width;
+                                    const right2 = (x + 2) % this.width;
+
+                                    const leftNeighbor = this.getBlock(left2, y);
+                                    const rightNeighbor = this.getBlock(right2, y);
 
                                     const isLeftAttractive = leftNeighbor === BLOCKS.WATER || isBlockSolid(leftNeighbor, BLOCK_PROPS);
                                     const isRightAttractive = rightNeighbor === BLOCKS.WATER || isBlockSolid(rightNeighbor, BLOCK_PROPS);
@@ -241,32 +241,27 @@ export class World {
     }
 
     /**
-     * Fixes the issue where Ocean water drains into adjacent caves or terrain.
-     * Restores Ocean surface to SEA_LEVEL, BUT avoids the biome borders (margins).
-     * This prevents creating "water walls" against the shore, keeping the physics-simulated slope.
+     * Fixes Ocean water levels.
+     * [Updated] Now uses wrapped distance checks so shores wrap correctly.
      */
     restoreOceanLevels(biomeByColumn, seaLevel) {
-        const BORDER_MARGIN = 5; // Distance from shore where we DO NOT restore water
+        const BORDER_MARGIN = 5; 
 
         for (let x = 0; x < this.width; x++) {
             if (biomeByColumn[x] === BIOMES.OCEAN) {
                 
-                // Check neighbors to see if we are near a non-Ocean biome
                 let isNearShore = false;
                 for (let dx = -BORDER_MARGIN; dx <= BORDER_MARGIN; dx++) {
-                    const checkX = x + dx;
-                    if (checkX >= 0 && checkX < this.width) {
-                        if (biomeByColumn[checkX] !== BIOMES.OCEAN) {
-                            isNearShore = true;
-                            break;
-                        }
+                    // Check wrapped neighbor column
+                    const checkX = (x + dx + this.width) % this.width;
+                    if (biomeByColumn[checkX] !== BIOMES.OCEAN) {
+                        isNearShore = true;
+                        break;
                     }
                 }
 
-                // If near shore, let physics result stand (don't force refill)
                 if (isNearShore) continue;
 
-                // Otherwise, refill deep ocean
                 const surfaceStart = seaLevel + 1;
                 for (let y = surfaceStart; y < this.height; y++) {
                     const block = this.getBlock(x, y);
@@ -281,41 +276,32 @@ export class World {
     }
 
     createExtremeTerrain(heights) {
-        // Strategy: Use a weighted list of feature generators to add variety.
-        // We look for gaps between features to ensure they don't overlap too chaotically.
-        
         const MIN_FEATURE_GAP = 80;
         let lastFeatureX = -MIN_FEATURE_GAP;
 
-        // Iterate through the map, trying to spawn features
         for (let x = 20; x < this.width - 20; x++) {
             if (x - lastFeatureX < MIN_FEATURE_GAP) continue;
 
             const rand = Math.random();
             const currentHeight = heights[x];
             
-            // 1. Great Canyon (Terraced deep cut) - Rare
             if (rand < 0.003) {
                 const width = 25 + Math.floor(Math.random() * 20);
                 this.generateCanyon(heights, x, width);
                 lastFeatureX = x + width;
             }
-            // 2. Volcano / Crater Peak (Rise with a hole) - Very Rare
-            else if (rand < 0.0045) { // 0.003 to 0.0045 range
+            else if (rand < 0.0045) { 
                 const width = 30 + Math.floor(Math.random() * 20);
-                // Avoid spawning volcanoes too high (limit sky limit)
                 if (currentHeight > 50) {
                     this.generateVolcano(heights, x, width);
                     lastFeatureX = x + width;
                 }
             }
-            // 3. Mesa / Plateau (Flat top, steep sides) - Occasional
             else if (rand > 0.995) {
                 const width = 20 + Math.floor(Math.random() * 25);
                 this.generatePlateau(heights, x, width);
                 lastFeatureX = x + width;
             }
-            // 4. Rolling Hills (Gentle sine waves added to flat areas) - Common filler
             else if (rand > 0.985) {
                 const width = 40 + Math.floor(Math.random() * 30);
                 this.generateRollingHills(heights, x, width);
@@ -324,38 +310,40 @@ export class World {
         }
     }
 
-    // Helper: Terraced Canyon (More natural than a simple Cosine cut)
+    // Helper: Access heights array with wrapping
+    getHeight(heights, x) {
+        return heights[(x % this.width + this.width) % this.width];
+    }
+    
+    // Helper: Set heights array with wrapping
+    setHeight(heights, x, val) {
+        heights[(x % this.width + this.width) % this.width] = val;
+    }
+
+    // [Fix] Updated all feature generators to wrap around the world edges (removed bounds checks)
     generateCanyon(heights, centerX, width) {
         const depth = 25 + Math.floor(Math.random() * 20);
         const halfWidth = Math.floor(width / 2);
         
         for (let dx = -halfWidth; dx <= halfWidth; dx++) {
             const tx = centerX + dx;
-            if (tx < 0 || tx >= this.width) continue;
+            const wrappedTx = (tx % this.width + this.width) % this.width;
 
-            const dist = Math.abs(dx) / halfWidth; // 0.0 (center) to 1.0 (edge)
+            const dist = Math.abs(dx) / halfWidth;
             
-            // Use a "stepped" shape logic for terraces
-            // We mix a smooth curve with a step function
             const smoothShape = Math.pow(Math.cos(dist * Math.PI / 2), 0.5);
-            const stepShape = Math.floor(smoothShape * 4) / 4; // Creates 4 distinct terrace levels
-            
-            // Blend smooth and step for "eroded" look
+            const stepShape = Math.floor(smoothShape * 4) / 4; 
             const shapeFactor = (smoothShape * 0.3) + (stepShape * 0.7);
-
-            // Add some noise to the bottom so it's not perfectly flat
             const noise = (Math.sin(tx * 0.5) * 2); 
 
             let change = Math.floor(depth * shapeFactor) + noise;
             
-            // Apply
-            heights[tx] += change;
-            heights[tx] = Math.min(this.height - 5, heights[tx]); // Don't break bedrock
+            let current = heights[wrappedTx];
+            heights[wrappedTx] = Math.min(this.height - 5, current + change);
         }
         this.smoothTerrain(heights, centerX - halfWidth, centerX + halfWidth);
     }
 
-    // Helper: Volcano (Rise then dip)
     generateVolcano(heights, centerX, width) {
         const heightRise = 30 + Math.floor(Math.random() * 15);
         const halfWidth = Math.floor(width / 2);
@@ -363,101 +351,95 @@ export class World {
 
         for (let dx = -halfWidth; dx <= halfWidth; dx++) {
             const tx = centerX + dx;
-            if (tx < 0 || tx >= this.width) continue;
-
+            const wrappedTx = (tx % this.width + this.width) % this.width;
             const dist = Math.abs(dx);
             
-            // Cone shape: Gaussian-ish curve
             let shapeFactor = Math.exp(-Math.pow(dist / (width * 0.35), 2));
 
-            // Crater logic: If near center, subtract height
             if (dist < craterWidth) {
                 const craterDepth = Math.pow((craterWidth - dist) / craterWidth, 2);
-                shapeFactor -= craterDepth * 1.5; // Dig deep in middle
+                shapeFactor -= craterDepth * 1.5; 
             }
 
             let change = Math.floor(heightRise * shapeFactor);
-            heights[tx] -= change; // Moving UP (smaller y)
-            heights[tx] = Math.max(10, heights[tx]);
+            heights[wrappedTx] = Math.max(10, heights[wrappedTx] - change);
         }
     }
 
-    // Helper: Natural Plateau
     generatePlateau(heights, centerX, width) {
         const heightRise = 15 + Math.floor(Math.random() * 15);
         const halfWidth = Math.floor(width / 2);
 
         for (let dx = -halfWidth; dx <= halfWidth; dx++) {
             const tx = centerX + dx;
-            if (tx < 0 || tx >= this.width) continue;
-
+            const wrappedTx = (tx % this.width + this.width) % this.width;
             const dist = Math.abs(dx) / halfWidth;
             let factor = 0;
 
             if (dist < 0.6) {
-                // Top is mostly flat with slight noise
                 factor = 1.0 + (Math.random() * 0.1); 
             } else {
-                // Sides fall off smoothly (Sigmoid-like ease out)
-                const falloff = (1 - dist) / 0.4; // 1.0 down to 0.0
-                factor = falloff * falloff; // Quadratic ease
+                const falloff = (1 - dist) / 0.4;
+                factor = falloff * falloff;
             }
 
-            heights[tx] -= Math.floor(heightRise * factor);
-            heights[tx] = Math.max(10, heights[tx]);
+            heights[wrappedTx] = Math.max(10, heights[wrappedTx] - Math.floor(heightRise * factor));
         }
     }
 
-    // Helper: Rolling Hills (Gentle bumps)
     generateRollingHills(heights, centerX, width) {
         const halfWidth = Math.floor(width / 2);
         for (let dx = -halfWidth; dx <= halfWidth; dx++) {
             const tx = centerX + dx;
-            if (tx < 0 || tx >= this.width) continue;
+            const wrappedTx = (tx % this.width + this.width) % this.width;
 
-            const rad = (dx / width) * Math.PI * 4; // 2 full sine waves
-            const change = Math.sin(rad) * 6; // +/- 6 blocks
+            const rad = (dx / width) * Math.PI * 4;
+            const change = Math.sin(rad) * 6;
             
-            // Fade out at edges
             const dist = Math.abs(dx) / halfWidth;
             const blend = 1 - Math.pow(dist, 3); 
 
-            heights[tx] -= Math.floor(change * blend);
+            heights[wrappedTx] -= Math.floor(change * blend);
         }
     }
 
-    // Post-processing to remove single-block spikes after extreme terrain operations
+    // [Fix] Wraps around the world when smoothing
     smoothTerrain(heights, startX, endX) {
-        const safeStart = Math.max(1, startX);
-        const safeEnd = Math.min(this.width - 2, endX);
+        for (let x = startX; x <= endX; x++) {
+            // Calculate wrapped indices
+            const prevIdx = ((x - 1) % this.width + this.width) % this.width;
+            const currIdx = ((x) % this.width + this.width) % this.width;
+            const nextIdx = ((x + 1) % this.width + this.width) % this.width;
 
-        for (let x = safeStart; x <= safeEnd; x++) {
-            const prev = heights[x - 1];
-            const curr = heights[x];
-            const next = heights[x + 1];
+            const prev = heights[prevIdx];
+            const curr = heights[currIdx];
+            const next = heights[nextIdx];
 
-            // Simple 3-point average if the spike is too sharp
             if (Math.abs(prev - curr) > 3 && Math.abs(next - curr) > 3) {
-                heights[x] = Math.floor((prev + curr + next) / 3);
+                heights[currIdx] = Math.floor((prev + curr + next) / 3);
             }
         }
     }
 
+    // [Fix] Wraps around the world when painting cliffs
     paintCliffFaces(heights) {
-        for (let x = 1; x < this.width - 1; x++) {
+        for (let x = 0; x < this.width; x++) {
+            const prevIdx = (x - 1 + this.width) % this.width;
+            const nextIdx = (x + 1) % this.width;
+
             const h = heights[x];
-            const hLeft = heights[x - 1];
-            const hRight = heights[x + 1];
+            const hLeft = heights[prevIdx];
+            const hRight = heights[nextIdx];
 
             if (h > hLeft + 2) {
                 for (let y = hLeft + 1; y <= h; y++) {
-                   if (this.getBlock(x - 1, y) === BLOCKS.DIRT) this.setBlock(x - 1, y, BLOCKS.STONE);
+                   if (this.getBlock(prevIdx, y) === BLOCKS.DIRT) this.setBlock(prevIdx, y, BLOCKS.STONE);
                 }
             }
 
             if (h > hRight + 2) {
                 for (let y = hRight + 1; y <= h; y++) {
-                    if (this.getBlock(x + 1, y) === BLOCKS.DIRT) this.setBlock(x + 1, y, BLOCKS.STONE);
+                    if (this.getBlock(nextIdx, y) === BLOCKS.DIRT) this.setBlock(nextIdx, y, BLOCKS.STONE);
                 }
             }
         }
@@ -471,8 +453,8 @@ export class World {
         const SEA_LEVEL = Math.floor(this.height / 2) + 2;
 
         for (let i = 0; i < cloudCount; i++) {
-            const startX = Math.floor(Math.random() * (this.width - 30));
-            const groundHeight = heights[Math.min(startX, this.width - 1)];
+            const startX = Math.floor(Math.random() * this.width);
+            const groundHeight = heights[startX];
             
             const effectiveSurfaceY = Math.min(groundHeight, SEA_LEVEL);
             
@@ -535,6 +517,8 @@ export class World {
         for (let i = 0; i < dirtPocketCount; i++) {
             const x = Math.floor(Math.random() * this.width);
             const y = Math.floor(Math.random() * this.height);
+            // heights access implicitly safe via index if inside loop, but map coords need wrapping implicitly handled by painters if needed.
+            // Here we use random coords within width, which is safe.
             if (y > heights[x] + 8) Painters.drawBlob(paint, x, y, BLOCKS.DIRT, 2 + Math.random() * 2.5);
         }
 
@@ -563,13 +547,13 @@ export class World {
             const biome = biomeByColumn[x];
             const y = heights[x];
 
-            // 1. Skip Snowfield and Desert
             if (biome === BIOMES.SNOWFIELD || biome === BIOMES.DESERT) continue;
-
-            // 2. Skip Mountains if above snowline (y < snowLine because 0 is top)
             if (biome === BIOMES.MOUNTAIN && y < snowLine) continue;
 
-            if (y <= seaLevel && Math.abs(heights[x - 2] - heights[x + 2]) < 3) { 
+            const prevH = heights[(x - 2 + this.width) % this.width];
+            const nextH = heights[(x + 2) % this.width];
+
+            if (y <= seaLevel && Math.abs(prevH - nextH) < 3) { 
                  Painters.drawPond(paint, x, y, 2 + Math.floor(Math.random() * 3));
             }
         }
@@ -581,17 +565,11 @@ export class World {
         // Floating Islands
         const islandCount = Math.floor(this.width / 80);
         for (let i = 0; i < islandCount; i++) {
-            const x = 20 + Math.floor(Math.random() * (this.width - 40));
+            const x = Math.floor(Math.random() * this.width);
             const surface = heights[x];
-            
-            // Fix: Use Math.min(surface, seaLevel) to prevent spawning inside deep rifts.
-            // If the surface is a deep hole (surface > seaLevel), we treat it as if the surface is at seaLevel.
-            // If the surface is a mountain (surface < seaLevel), we use the mountain height.
             const spawnBaseY = Math.min(surface, seaLevel);
-
-            // Ensure the island is at least 35 blocks above the calculated base
             const maxY = spawnBaseY - 35;
-            const minY = 15; // Keep away from the ceiling
+            const minY = 15; 
 
             if (maxY > minY) {
                 const y = minY + Math.floor(Math.random() * (maxY - minY));
@@ -610,14 +588,13 @@ export class World {
         // Desert Ruins and Oases
         for (let x = 0; x < this.width; x += 1) {
             if (biomeByColumn[x] === BIOMES.DESERT) {
-                // Rare Oasis
                 if (Math.random() < 0.002) {
                      Painters.drawOasis(paint, x, heights[x]);
-                     x += 25; // Space them out
+                     x += 25; 
                 }
-                // Ruins
                 else if (Math.random() < 0.015) {
-                    if (Math.abs(heights[x + 2] - heights[x]) < 2) {
+                    const nextH = heights[(x + 2) % this.width];
+                    if (Math.abs(nextH - heights[x]) < 2) {
                         Painters.drawDesertRuin(paint, x, heights[x]);
                         x += 15;
                     }
@@ -628,7 +605,7 @@ export class World {
         // Mineshafts
         const mineshaftCount = Math.floor(this.width / 50);
         for (let i = 0; i < mineshaftCount; i++) {
-            const x = 10 + Math.floor(Math.random() * (this.width - 20));
+            const x = Math.floor(Math.random() * this.width);
             const surface = heights[x];
             Painters.drawMineshaft(paint, x, surface + 15 + Math.floor(Math.random() * (this.height - surface - 20)));
         }
@@ -636,17 +613,17 @@ export class World {
 
     generateHiddenFeatures(heights, biomeByColumn) {
         const paint = this.getAccessor();
-        for (let x = 10; x < this.width - 10; x++) {
+        for (let x = 0; x < this.width; x++) {
             const biome = biomeByColumn[x];
             const surfaceY = heights[x];
 
-            // 1. Ancient Monolith (Rare in Plains/Wasteland)
+            // 1. Ancient Monolith
             if ((biome === BIOMES.PLAINS || biome === BIOMES.WASTELAND) && Math.random() < 0.003) {
                 Painters.drawMonolith(paint, x, surfaceY);
                 x += 10; continue;
             }
 
-            // 2. Buried Bunker (Rare in Forest/Savanna)
+            // 2. Buried Bunker
             if ((biome === BIOMES.FOREST || biome === BIOMES.SAVANNA) && Math.random() < 0.004) {
                 if (surfaceY < this.height - 20) {
                     Painters.drawBuriedBunker(paint, x, surfaceY + 8);
@@ -654,7 +631,7 @@ export class World {
                 }
             }
 
-            // 3. World Tree (Very Rare in Deep Forest)
+            // 3. World Tree
             if (biome === BIOMES.DEEP_FOREST && Math.random() < 0.005) {
                 Painters.drawWorldTree(paint, x, surfaceY);
                 x += 15; continue;
@@ -666,7 +643,7 @@ export class World {
         const paint = this.getAccessor();
         const caveWalkers = Math.max(3, Math.floor(this.width / 35));
         for (let i = 0; i < caveWalkers; i++) {
-            const startX = 5 + Math.floor(Math.random() * (this.width - 10));
+            const startX = Math.floor(Math.random() * this.width);
             const surface = heights[startX];
             const minY = surface + 8;
             const maxY = this.height - 6;
@@ -682,8 +659,10 @@ export class World {
                 x += Math.floor(Math.random() * 3) - 1;
                 y += Math.floor(Math.random() * 3) - 1;
 
-                if (x < 3 || x >= this.width - 3) x = Math.max(3, Math.min(this.width - 4, x));
-                const surfaceAtX = heights[Math.max(0, Math.min(this.width - 1, x))];
+                // Wrapping X for cave walkers
+                x = (x % this.width + this.width) % this.width;
+
+                const surfaceAtX = heights[x];
                 y = Math.max(surfaceAtX + 6, Math.min(this.height - 5, y));
             }
         }
