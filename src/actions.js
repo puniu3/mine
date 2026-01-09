@@ -69,10 +69,11 @@ export function createActions({
         const targetTy = Math.floor((player.y + player.height - 0.01) / TILE_SIZE);
 
         // Validation: Is the feet block replaceable (Air/Water/Grass)?
-        // Must be AIR or transparent AND breakable (not unbreakable like WORKBENCH/BEDROCK)
+        // Must be transparent AND (AIR or breakable). 
+        // Note: AIR is transparent, so checking isBlockTransparent covers the first requirement for AIR.
         const blockAtFeet = world.getBlock(targetTx, targetTy);
-        const isFeetReplaceable = blockAtFeet === BLOCKS.AIR ||
-            (isBlockTransparent(blockAtFeet, BLOCK_PROPS) && isBlockBreakable(blockAtFeet, BLOCK_PROPS));
+        const isFeetReplaceable = isBlockTransparent(blockAtFeet, BLOCK_PROPS) && 
+            (blockAtFeet === BLOCKS.AIR || isBlockBreakable(blockAtFeet, BLOCK_PROPS));
 
         // Validation: Is the space ABOVE the new block free for the player to stand?
         // The player will be moved to: (targetTy * TILE_SIZE) - player.height
@@ -88,14 +89,22 @@ export function createActions({
 
             if (hasNeighbor) {
                 if (inventory.consumeFromInventory(selectedBlock)) {
+                    // If replacing a non-air transparent block (e.g. Water/Sapling), add it to inventory
+                    if (blockAtFeet !== BLOCKS.AIR) {
+                        inventory.addToInventory(blockAtFeet);
+                    }
+
                     world.setBlock(targetTx, targetTy, selectedBlock);
                     sounds.playDig('dirt'); // Or appropriate sound
                     if (onBlockPlaced) onBlockPlaced(targetTx, targetTy, selectedBlock);
 
-                    // Teleport player on top
-                    player.y = newPlayerY - 0.1;
-                    player.vy = 0;
-                    player.grounded = true;
+                    // Teleport player on top ONLY if the placed block is NOT transparent
+                    // (e.g. don't climb on top of a sapling or water)
+                    if (!isBlockTransparent(selectedBlock, BLOCK_PROPS)) {
+                        player.y = newPlayerY - 0.1;
+                        player.vy = 0;
+                        player.grounded = true;
+                    }
                     return true;
                 } else {
                     sounds.playPop(); // Out of ammo
@@ -196,6 +205,11 @@ export function createActions({
 
                 if (hasNeighbor) {
                     if (inventory.consumeFromInventory(selectedBlock)) {
+                        // If replacing a non-air transparent block (e.g. Water/Sapling), add it to inventory
+                        if (currentBlock !== BLOCKS.AIR) {
+                            inventory.addToInventory(currentBlock);
+                        }
+
                         world.setBlock(bx, by, selectedBlock);
                         sounds.playDig('dirt');
                         if (onBlockPlaced) onBlockPlaced(bx, by, selectedBlock);
