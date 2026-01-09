@@ -357,7 +357,8 @@ export class Player {
                         // JS numbers are 53-bit integers anyway, so it's safe.
 
                         if ((absVy * FP_ONE) < (absVx * TAN_15_DEG_FP)) {
-                             this._vy = -this._vy;
+                             this._vy = toFP(JUMP_FORCE * -.5);
+                             sounds.playJump();
                         }
                     }
                 }
