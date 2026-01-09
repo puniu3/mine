@@ -304,6 +304,13 @@ export class Player {
      * @param {Object} input - Input state
      */
     tick(input) {
+        // Check if player center is in water
+        const centerX_FP = this._x + (this._width >> 1);
+        const centerY_FP = this._y + (this._height >> 1);
+        const centerGridX = Math.floor(centerX_FP / TILE_SIZE_FP);
+        const centerGridY = Math.floor(centerY_FP / TILE_SIZE_FP);
+        const isInWater = this.world.getBlock(centerGridX, centerGridY) === BLOCKS.WATER;
+
         // 1. Horizontal Movement & Friction (FP)
         if (input.keys.left) {
             this._vx = -WALK_SPEED_FP;
@@ -377,7 +384,8 @@ export class Player {
         }
 
         // 4. Gravity Application (FP)
-        if (this._vy < TERMINAL_VELOCITY_FP) {
+        // Apply gravity only if NOT in water (Gravity=0 in water)
+        if (this._vy < TERMINAL_VELOCITY_FP && !isInWater) {
             let gravityToApply = GRAVITY_PER_TICK_FP;
 
             // Apply Low Gravity (Moon Jump Mode) if active
@@ -406,15 +414,23 @@ export class Player {
         }
 
         // 5. Apply Movement (FP)
+        // Determine time scale: normal or scaled by 0.6 if in water
+        let timeScale_FP = TICK_TIME_SCALE_FP;
+        if (isInWater) {
+            // 0.6 * 4096 = 2457.6 -> 2458
+            const WATER_SCALE_FP = 2458;
+            timeScale_FP = (timeScale_FP * WATER_SCALE_FP) >> FP_SHIFT;
+        }
+
         // Position += velocity * timeScale (all in FP)
         const totalVx_FP = this._vx + this._boardVx;
 
         // Horizontal movement: x += totalVx * timeScale
-        this._x += (totalVx_FP * TICK_TIME_SCALE_FP) >> FP_SHIFT;
+        this._x += (totalVx_FP * timeScale_FP) >> FP_SHIFT;
         this.handleCollisions(true, totalVx_FP);
 
         // Vertical movement: y += vy * timeScale
-        this._y += (this._vy * TICK_TIME_SCALE_FP) >> FP_SHIFT;
+        this._y += (this._vy * timeScale_FP) >> FP_SHIFT;
         this.handleCollisions(false, this._vy);
 
         // 6. World Wrapping

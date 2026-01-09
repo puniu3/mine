@@ -141,6 +141,30 @@ export function generateTextures() {
         addNoise(ctx, 0.05);
     });
 
+    createTexture(BLOCKS.WATER, (ctx, s) => {
+        // Clear background
+        ctx.clearRect(0, 0, s, s);
+
+        // Semi-transparent blue base
+        ctx.fillStyle = 'rgba(33, 150, 243, 0.6)';
+        ctx.fillRect(0, 0, s, s);
+
+        // Water ripple/wave effect
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+
+        // Draw some wavy lines
+        ctx.beginPath();
+        for (let i = 0; i < 3; i++) {
+            const y = s * (0.3 + i * 0.25);
+            ctx.moveTo(0, y);
+            ctx.bezierCurveTo(s * 0.3, y - 4, s * 0.7, y + 4, s, y);
+        }
+        ctx.stroke();
+
+        addNoise(ctx, 0.05);
+    });
+
     createTexture(BLOCKS.BEDROCK, (ctx, s) => {
         ctx.fillStyle = '#212121';
         ctx.fillRect(0, 0, s, s);
