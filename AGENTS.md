@@ -25,7 +25,8 @@ mine/
     ├── constants.js    # Block IDs, physics values, block metadata (BLOCKS, BLOCK_PROPS)
     ├── utils.js        # Pure helpers: collision, coordinates, visibility, reach checks
     ├── renderer.js     # Rendering logic: sky, world, entities, and particles
-    ├── world.js        # World class: terrain generation, block get/set, adjacency
+    ├── world.js        # World class: orchestration of terrain logic, biome rules, and state
+    ├── painters.js     # Dumb drawing functions for structures, vegetation, and clouds
     ├── player.js       # Player class: movement, physics, collision, rendering
     ├── camera.js       # Camera state, smoothing, and world wrapping logic
     ├── input.js        # Keyboard, mouse, touch input bindings
@@ -55,7 +56,7 @@ main.js
 ├── inventory.js
 ├── crafting.js
 ├── actions.js (imports: block_particles)
-├── world.js
+├── world.js (imports: painters)
 ├── player.js (imports: block_particles)
 ├── camera.js (imports: utils, constants)
 ├── renderer.js (imports: block_particles)
@@ -95,9 +96,18 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - Vertical wrap: player wraps around world vertically
 
 ### World (world.js)
-- Procedural terrain generation with biomes
-- Ore distribution at depth layers
-- Block get/set with bounds checking
+- **Role**: Logic Orchestrator & State Container.
+- Procedural terrain generation logic (heightmaps, biome probabilities).
+- Determines *where* and *what* to generate based on logic rules.
+- Delegates specific structure/vegetation drawing to `painters.js`.
+- Ore distribution at depth layers.
+- Block get/set with bounds checking.
+
+### Painters (painters.js)
+- **Role**: Pure Implementation / Dumb Drawers.
+- Contains functions to draw specific shapes (Trees, Clouds, Ponds, Ruins) given coordinates.
+- **Logic-free**: Does not decide *if* a tree should spawn, only *how* to draw it.
+- Uses an accessor interface (`get`/`set`) to modify the world.
 
 ### Camera (camera.js)
 - Manages viewport position (x, y)
