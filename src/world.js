@@ -562,11 +562,11 @@ export class World {
 
     generateWaterfalls(heights, biomeByColumn, seaLevel) {
         const paint = this.getAccessor();
-        const maxWaterfalls = Math.floor(this.width / 32);
+        const maxWaterfalls = 2 + Math.floor(Math.random() * 2); // 2 to 3 waterfalls
         let created = 0;
         let attempts = 0;
 
-        while (created < maxWaterfalls && attempts < this.width * 2) {
+        while (created < maxWaterfalls && attempts < this.width * 4) {
             attempts++;
             const x = Math.floor(Math.random() * this.width);
             const biome = biomeByColumn[x];
