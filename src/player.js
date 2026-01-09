@@ -431,10 +431,19 @@ export class Player {
         }
         else if (input.keys.jump && isInWater && this._vy > WATER_JUMP_VY_THRESHOLD_FP) {
             // Check if there's enough space above the player's head (0.2 tiles)
+            // Must check full width of player to handle straddling tile boundaries
             const headCheckY_FP = this._y - HEAD_CLEARANCE_FP;
-            const headCheckX = Math.floor((this._x + (this._width >> 1)) / TILE_SIZE_FP);
             const headCheckY = Math.floor(headCheckY_FP / TILE_SIZE_FP);
-            const hasHeadClearance = !isBlockSolid(this.world.getBlock(headCheckX, headCheckY), BLOCK_PROPS);
+            const startX = Math.floor(this._x / TILE_SIZE_FP);
+            const endX = Math.floor((this._x + this._width) / TILE_SIZE_FP);
+
+            let hasHeadClearance = true;
+            for (let checkX = startX; checkX <= endX; checkX++) {
+                if (isBlockSolid(this.world.getBlock(checkX, headCheckY), BLOCK_PROPS)) {
+                    hasHeadClearance = false;
+                    break;
+                }
+            }
 
             if (hasHeadClearance) {
                 this._vy = -WATER_JUMP_FORCE_FP;
