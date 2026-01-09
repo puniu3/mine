@@ -384,29 +384,34 @@ export class Player {
         }
 
         // 4. Gravity Application (FP)
-        // Apply gravity only if NOT in water (Gravity=0 in water)
-        if (this._vy < TERMINAL_VELOCITY_FP && !isInWater) {
+        if (this._vy < TERMINAL_VELOCITY_FP) {
             let gravityToApply = GRAVITY_PER_TICK_FP;
 
-            // Apply Low Gravity (Moon Jump Mode) if active
-            // This takes precedence, or applies alongside Fastball logic.
-            if (this.lowGravityActive) {
-                gravityToApply = Math.floor(gravityToApply * GRAVITY_LOW_FACTOR);
-            }
+            if (isInWater) {
+                // Reduced gravity in water (10% of normal)
+                // 0.1 * 4096 = 409.6 -> 410
+                gravityToApply = Math.floor((gravityToApply * 410) / FP_ONE);
+            } else {
+                // Apply Low Gravity (Moon Jump Mode) if active
+                // This takes precedence, or applies alongside Fastball logic.
+                if (this.lowGravityActive) {
+                    gravityToApply = Math.floor(gravityToApply * GRAVITY_LOW_FACTOR);
+                }
 
-            // Fastball Mode: Apply lift proportional to horizontal momentum
-            if (this.fastballActive) {
-                const currentSpeedFP = Math.abs(this._boardVx);
-                
-                // If we've slowed down significantly, disable the mode
-                // (Threshold: 1/4 of accelerator boost)
-                if (currentSpeedFP < (ACCELERATOR_AMOUNT_FP >> 2)) {
-                    this.fastballActive = false;
-                } else {
-                    // Calculate Lift Ratio = CurrentSpeed / ReferenceMaxSpeed
-                    // Lift = Gravity * Ratio.
-                    const liftFP = Math.floor((gravityToApply * currentSpeedFP) / ACCELERATOR_AMOUNT_FP);
-                    gravityToApply -= liftFP;
+                // Fastball Mode: Apply lift proportional to horizontal momentum
+                if (this.fastballActive) {
+                    const currentSpeedFP = Math.abs(this._boardVx);
+
+                    // If we've slowed down significantly, disable the mode
+                    // (Threshold: 1/4 of accelerator boost)
+                    if (currentSpeedFP < (ACCELERATOR_AMOUNT_FP >> 2)) {
+                        this.fastballActive = false;
+                    } else {
+                        // Calculate Lift Ratio = CurrentSpeed / ReferenceMaxSpeed
+                        // Lift = Gravity * Ratio.
+                        const liftFP = Math.floor((gravityToApply * currentSpeedFP) / ACCELERATOR_AMOUNT_FP);
+                        gravityToApply -= liftFP;
+                    }
                 }
             }
 
