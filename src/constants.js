@@ -29,6 +29,7 @@ export const GRAVITY_LOW_FACTOR = 0.25; // 25% gravity
 export const TERMINAL_VELOCITY = 20.0;
 // Jump impulse (initial velocity, applied once)
 export const JUMP_FORCE = 10;
+export const SWIM_FORCE = 2;
 export const BIG_JUMP_FORCE = 18;
 // Velocity threshold for breaking blocks from below
 export const UPWARD_COLLISION_VELOCITY_THRESHOLD = -20;

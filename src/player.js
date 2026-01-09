@@ -10,7 +10,7 @@ import { sounds } from './audio.js';
 import { emitBlockBreakParticles } from './block_particles.js';
 import {
     TILE_SIZE, BLOCKS, BLOCK_PROPS,
-    JUMP_FORCE, BIG_JUMP_FORCE, TERMINAL_VELOCITY,
+    JUMP_FORCE, SWIM_FORCE, BIG_JUMP_FORCE, TERMINAL_VELOCITY,
     UPWARD_COLLISION_VELOCITY_THRESHOLD, NATURAL_BLOCK_IDS,
     TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET,
     ACCELERATOR_ACCELERATION_AMOUNT,
@@ -42,6 +42,7 @@ const TICK_TIME_SCALE_FP = toFP(TICK_TIME_SCALE);
 // Velocity constants in FP
 const WALK_SPEED_FP = toFP(5);
 const JUMP_FORCE_FP = toFP(JUMP_FORCE);
+const SWIM_FORCE_FP = toFP(SWIM_FORCE);
 const BIG_JUMP_FORCE_FP = toFP(BIG_JUMP_FORCE);
 const TERMINAL_VELOCITY_FP = toFP(TERMINAL_VELOCITY);
 const UPWARD_COLLISION_THRESHOLD_FP = toFP(UPWARD_COLLISION_VELOCITY_THRESHOLD);
@@ -416,6 +417,12 @@ export class Player {
             this._vy = -JUMP_FORCE_FP;
             this.grounded = false;
             sounds.playJump();
+        }
+        // Priority 3: Swim
+        else if (input.keys.jump && isInWater && !this.grounded) {
+            // vy = min(0, vy) - SWIM_FORCE
+            this._vy = Math.min(0, this._vy) - SWIM_FORCE_FP;
+            // No ground state change needed as we are already not grounded
         }
 
         // 3. Board velocity decay (FP)
