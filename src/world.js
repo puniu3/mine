@@ -64,12 +64,19 @@ export class World {
         return true;
     }
 
-    ensureAllBiomesPresent(biomeByColumn) {
+    /**
+     * Checks if any biomes are missing from the generated map.
+     * If missing, it forces a segment of the map to become that biome.
+     * UPDATED: Now also adjusts the terrain height to match the forced biome.
+     */
+    ensureAllBiomesPresent(biomeByColumn, heights) {
         const allBiomes = Object.values(BIOMES);
         const present = new Set(biomeByColumn);
         const missing = allBiomes.filter(b => !present.has(b));
         if (missing.length === 0) return;
 
+        // Fetch configs to know the appropriate base height for each biome
+        const biomeConfigs = this.getBiomeConfigs();
         const segmentWidth = Math.max(12, Math.floor(this.width / (allBiomes.length * 4)));
 
         for (let i = 0; i < missing.length; i++) {
@@ -81,8 +88,18 @@ export class World {
             startX = Math.max(0, Math.min(this.width - 1, startX));
             endX = Math.max(0, Math.min(this.width - 1, endX));
 
+            const config = biomeConfigs[biome];
+
             for (let x = startX; x <= endX; x++) {
                 biomeByColumn[x] = biome;
+                
+                // Fix: Force the terrain height to match the forced biome.
+                // This ensures Oceans are deep enough for water, and Mountains are high enough.
+                if (config) {
+                    // Add slight random variation to avoid perfectly flat unnatural segments
+                    const variation = Math.floor(Math.random() * 5) - 2; 
+                    heights[x] = config.baseHeight + variation;
+                }
             }
         }
     }
@@ -93,7 +110,9 @@ export class World {
         const SEA_LEVEL = Math.floor(this.height / 2) + 2;
 
         this.createExtremeTerrain(heights);
-        this.ensureAllBiomesPresent(biomeByColumn);
+        
+        // Pass heights to ensure terrain matches if a biome is forced
+        this.ensureAllBiomesPresent(biomeByColumn, heights);
 
         // Main block placement loop
         for (let x = 0; x < this.width; x++) {
