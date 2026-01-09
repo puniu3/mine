@@ -228,11 +228,18 @@ export class World {
         const minHeightAboveGround = 20;
         const cloudCount = Math.floor(this.width / 25);
         const accessor = this.getAccessor();
+        
+        // Define Sea Level to ensure clouds don't spawn underwater
+        const SEA_LEVEL = Math.floor(this.height / 2) + 2;
 
         for (let i = 0; i < cloudCount; i++) {
             const startX = Math.floor(Math.random() * (this.width - 30));
             const groundHeight = heights[Math.min(startX, this.width - 1)];
-            const maxCloudY = groundHeight - minHeightAboveGround;
+            
+            // Use the higher surface (smaller Y value) between ground and sea level
+            const effectiveSurfaceY = Math.min(groundHeight, SEA_LEVEL);
+            
+            const maxCloudY = effectiveSurfaceY - minHeightAboveGround;
             const minCloudY = 5;
 
             if (maxCloudY <= minCloudY) continue;
