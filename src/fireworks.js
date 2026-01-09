@@ -20,8 +20,10 @@ const particles = {
 };
 
 const ROCKET_HUE = 361;  // Special marker for rockets (white)
+const BUBBLE_HUE = 362;  // Special marker for bubbles
 const GRAVITY = 0.00035;
 const ROCKET_SPEED = -0.33;
+const BUBBLE_SPEED = -0.15;
 
 // Camera bounds for culling (updated each draw call)
 let cullMinX = 0, cullMaxX = 0, cullMinY = 0, cullMaxY = 0;
@@ -73,6 +75,21 @@ function launchFirework(x, y) {
 function explode(x, y) {
     const hue = Math.floor(Math.random() * 360);
     createExplosionParticles(x, y, hue);
+}
+
+/**
+ * Create a single bubble particle
+ * @param {number} x - Center X position
+ * @param {number} y - Center Y position
+ */
+export function createBubble(x, y) {
+    const angle = Math.random() * Math.PI * 2;
+    // Slight horizontal jitter, mostly upward movement
+    const vx = (Math.random() - 0.5) * 0.05;
+    const vy = BUBBLE_SPEED * (0.8 + Math.random() * 0.4);
+    const life = 300 + Math.random() * 200;
+
+    addParticle(x, y, vx, vy, life, BUBBLE_HUE);
 }
 
 /**
@@ -133,8 +150,9 @@ export function tick(world, cameraX, cameraY, canvas) {
     let i = 0;
     while (i < particles.count) {
         const life = particles.life[i];
+        const hue = particles.hue[i];
 
-        if (particles.hue[i] === ROCKET_HUE) {
+        if (hue === ROCKET_HUE) {
             // Rocket: life stores negative targetY
             particles.y[i] += particles.vy[i];
             const targetY = -life;
@@ -151,7 +169,12 @@ export function tick(world, cameraX, cameraY, canvas) {
             // Regular particle
             particles.x[i] += particles.vx[i];
             particles.y[i] += particles.vy[i];
-            particles.vy[i] += GRAVITY;
+
+            // Apply gravity only if NOT a bubble (bubbles float up)
+            if (hue !== BUBBLE_HUE) {
+                particles.vy[i] += GRAVITY;
+            }
+
             particles.life[i]--;
 
             if (particles.life[i] <= 0) {
@@ -203,6 +226,12 @@ export function draw(ctx, cameraX, cameraY, viewWidth, viewHeight) {
             for (const i of indices) {
                 ctx.fillRect(particles.x[i] - 2, particles.y[i] - 2, 4, 8);
             }
+        } else if (hue === BUBBLE_HUE) {
+            // Bubbles: cyan/white, small, square
+            ctx.fillStyle = 'rgba(200, 240, 255, 0.6)';
+            for (const i of indices) {
+                ctx.fillRect(particles.x[i], particles.y[i], 3, 3);
+            }
         } else {
             // Particles: colored squares
             ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
@@ -233,6 +262,11 @@ export function drawLegacy(ctx) {
             ctx.fillStyle = '#ffffff';
             for (const i of indices) {
                 ctx.fillRect(particles.x[i] - 2, particles.y[i] - 2, 4, 8);
+            }
+        } else if (hue === BUBBLE_HUE) {
+            ctx.fillStyle = 'rgba(200, 240, 255, 0.6)';
+            for (const i of indices) {
+                ctx.fillRect(particles.x[i], particles.y[i], 3, 3);
             }
         } else {
             ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
