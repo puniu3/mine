@@ -422,8 +422,19 @@ export class World {
         for (let i = 0; i < islandCount; i++) {
             const x = 20 + Math.floor(Math.random() * (this.width - 40));
             const surface = heights[x];
-            if (surface > 50) {
-                Painters.drawFloatingIsland(paint, x, 15 + Math.floor(Math.random() * (surface - 40)));
+            
+            // Fix: Use Math.min(surface, seaLevel) to prevent spawning inside deep rifts.
+            // If the surface is a deep hole (surface > seaLevel), we treat it as if the surface is at seaLevel.
+            // If the surface is a mountain (surface < seaLevel), we use the mountain height.
+            const spawnBaseY = Math.min(surface, seaLevel);
+
+            // Ensure the island is at least 35 blocks above the calculated base
+            const maxY = spawnBaseY - 35;
+            const minY = 15; // Keep away from the ceiling
+
+            if (maxY > minY) {
+                const y = minY + Math.floor(Math.random() * (maxY - minY));
+                Painters.drawFloatingIsland(paint, x, y);
             }
         }
 
