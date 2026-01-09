@@ -325,8 +325,10 @@ export class Player {
             this._vx = WALK_SPEED_FP;
             this.facingRight = true;
         } else {
-            // Apply friction: vx = vx * FRICTION_FACTOR_FP / FP_ONE
-            this._vx = (this._vx * FRICTION_FACTOR_FP) >> FP_SHIFT;
+            // Apply friction: use division and Math.trunc to round towards zero.
+            // This prevents negative values from sticking at -1 (which >> shift does).
+            // Math.trunc is safe here because we want to decay to exactly 0.
+            this._vx = Math.trunc((this._vx * FRICTION_FACTOR_FP) / FP_ONE);
         }
 
         // 1b. Mizukiri (Water Skipping) Check
