@@ -583,9 +583,16 @@ button {
     font-size: 16px;
 }
 
-#export-btn:active, #import-btn:active {
+#export-btn:active:not(:disabled), #import-btn:active:not(:disabled) {
     border-bottom-width: 0;
     transform: translateY(4px);
+}
+
+#export-btn:disabled, #import-btn:disabled {
+    background: #ccc;
+    border-bottom-color: #aaa;
+    color: #888;
+    cursor: not-allowed;
 }
 
 #import-file {
