@@ -84,11 +84,6 @@ function resize() {
 
     ctx.scale(dpr, dpr);
     ctx.imageSmoothingEnabled = false;
-
-    if (logicalWidth <= 768) {
-        const el = document.getElementById('mobile-controls');
-        if (el) el.style.display = 'block';
-    }
 }
 window.addEventListener('resize', resize);
 

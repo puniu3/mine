@@ -6,6 +6,14 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
 
     let lastTouchTime = 0;
 
+    // Hide mobile controls on first keydown, then remove listener
+    const hideMobileControls = () => {
+        const el = document.getElementById('mobile-controls');
+        if (el) el.style.display = 'none';
+        window.removeEventListener('keydown', hideMobileControls);
+    };
+    window.addEventListener('keydown', hideMobileControls);
+
     window.addEventListener('keydown', e => {
         switch (e.code) {
             case 'KeyA': case 'ArrowLeft': input.keys.left = true; e.preventDefault(); break;
