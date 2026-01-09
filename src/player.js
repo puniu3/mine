@@ -74,6 +74,12 @@ const KNOCKBACK_STRENGTH_FP = toFP(TNT_KNOCKBACK_STRENGTH);
 const KNOCKBACK_OFFSET_FP = toFP(TNT_KNOCKBACK_DISTANCE_OFFSET * TILE_SIZE);
 const TILE_SIZE_SQ = TILE_SIZE * TILE_SIZE;
 
+// Mizukiri (Water Skipping) Constants
+const SKIP_SPEED_THRESHOLD_FP = WALK_SPEED_FP * 2;
+// tan(15 degrees) ≈ 0.267949
+// 0.267949 * 4096 ≈ 1097
+const TAN_15_DEG_FP = 1097;
+
 export class Player {
     constructor(world, addToInventory = null, onTNTJumpPad = null) {
         this.world = world;
@@ -304,6 +310,13 @@ export class Player {
      * @param {Object} input - Input state
      */
     tick(input) {
+        // Check if player center is in water
+        const centerX_FP = this._x + (this._width >> 1);
+        const centerY_FP = this._y + (this._height >> 1);
+        const centerGridX = Math.floor(centerX_FP / TILE_SIZE_FP);
+        const centerGridY = Math.floor(centerY_FP / TILE_SIZE_FP);
+        const isInWater = this.world.getBlock(centerGridX, centerGridY) === BLOCKS.WATER;
+
         // 1. Horizontal Movement & Friction (FP)
         if (input.keys.left) {
             this._vx = -WALK_SPEED_FP;
@@ -314,6 +327,42 @@ export class Player {
         } else {
             // Apply friction: vx = vx * FRICTION_FACTOR_FP / FP_ONE
             this._vx = (this._vx * FRICTION_FACTOR_FP) >> FP_SHIFT;
+        }
+
+        // 1b. Mizukiri (Water Skipping) Check
+        if (this._vy > 0) { // Only when falling
+            const feetCenterX_FP = this._x + (this._width >> 1);
+            const feetY_FP = this._y + this._height + FEET_OFFSET_FP;
+            const feetX = Math.floor(feetCenterX_FP / TILE_SIZE_FP);
+            const feetY = Math.floor(feetY_FP / TILE_SIZE_FP);
+
+            // Check if feet are in water
+            if (this.world.getBlock(feetX, feetY) === BLOCKS.WATER) {
+                // Check if we are at the surface (block above is NOT water)
+                const blockAbove = this.world.getBlock(feetX, feetY - 1);
+                if (blockAbove !== BLOCKS.WATER) {
+                    const totalVx = this._vx + this._boardVx;
+                    const absVx = totalVx > 0 ? totalVx : -totalVx;
+                    const absVy = this._vy; // Known to be > 0
+
+                    // Condition 1: Speed threshold
+                    if (absVx >= SKIP_SPEED_THRESHOLD_FP) {
+                        // Condition 2: Shallow angle ( < 15 degrees )
+                        // abs(vy) / abs(vx) < tan(15)
+                        // abs(vy) < abs(vx) * tan(15)
+                        // Use FP multiplication: absVy * FP_ONE < absVx * TAN_15_DEG_FP
+
+                        // Note: absVx * TAN_15_DEG_FP might overflow if velocity is huge, but typical max velocity is 20*4096 = 81920
+                        // 81920 * 1097 ≈ 90,000,000, fits in 32-bit integer (2 billion limit).
+                        // JS numbers are 53-bit integers anyway, so it's safe.
+
+                        if ((absVy * FP_ONE) < (absVx * TAN_15_DEG_FP)) {
+                             this._vy = toFP(JUMP_FORCE * -.5);
+                             sounds.playJump();
+                        }
+                    }
+                }
+            }
         }
 
         // 2. Check for interactions with the block below (Jump Pad)
@@ -380,25 +429,31 @@ export class Player {
         if (this._vy < TERMINAL_VELOCITY_FP) {
             let gravityToApply = GRAVITY_PER_TICK_FP;
 
-            // Apply Low Gravity (Moon Jump Mode) if active
-            // This takes precedence, or applies alongside Fastball logic.
-            if (this.lowGravityActive) {
-                gravityToApply = Math.floor(gravityToApply * GRAVITY_LOW_FACTOR);
-            }
+            if (isInWater) {
+                // Reduced gravity in water (10% of normal)
+                // 0.1 * 4096 = 409.6 -> 410
+                gravityToApply = Math.floor((gravityToApply * 410) / FP_ONE);
+            } else {
+                // Apply Low Gravity (Moon Jump Mode) if active
+                // This takes precedence, or applies alongside Fastball logic.
+                if (this.lowGravityActive) {
+                    gravityToApply = Math.floor(gravityToApply * GRAVITY_LOW_FACTOR);
+                }
 
-            // Fastball Mode: Apply lift proportional to horizontal momentum
-            if (this.fastballActive) {
-                const currentSpeedFP = Math.abs(this._boardVx);
-                
-                // If we've slowed down significantly, disable the mode
-                // (Threshold: 1/4 of accelerator boost)
-                if (currentSpeedFP < (ACCELERATOR_AMOUNT_FP >> 2)) {
-                    this.fastballActive = false;
-                } else {
-                    // Calculate Lift Ratio = CurrentSpeed / ReferenceMaxSpeed
-                    // Lift = Gravity * Ratio.
-                    const liftFP = Math.floor((gravityToApply * currentSpeedFP) / ACCELERATOR_AMOUNT_FP);
-                    gravityToApply -= liftFP;
+                // Fastball Mode: Apply lift proportional to horizontal momentum
+                if (this.fastballActive) {
+                    const currentSpeedFP = Math.abs(this._boardVx);
+
+                    // If we've slowed down significantly, disable the mode
+                    // (Threshold: 1/4 of accelerator boost)
+                    if (currentSpeedFP < (ACCELERATOR_AMOUNT_FP >> 2)) {
+                        this.fastballActive = false;
+                    } else {
+                        // Calculate Lift Ratio = CurrentSpeed / ReferenceMaxSpeed
+                        // Lift = Gravity * Ratio.
+                        const liftFP = Math.floor((gravityToApply * currentSpeedFP) / ACCELERATOR_AMOUNT_FP);
+                        gravityToApply -= liftFP;
+                    }
                 }
             }
 
@@ -406,15 +461,23 @@ export class Player {
         }
 
         // 5. Apply Movement (FP)
+        // Determine time scale: normal or scaled by 0.6 if in water
+        let timeScale_FP = TICK_TIME_SCALE_FP;
+        if (isInWater) {
+            // 0.6 * 4096 = 2457.6 -> 2458
+            const WATER_SCALE_FP = 2458;
+            timeScale_FP = (timeScale_FP * WATER_SCALE_FP) >> FP_SHIFT;
+        }
+
         // Position += velocity * timeScale (all in FP)
         const totalVx_FP = this._vx + this._boardVx;
 
         // Horizontal movement: x += totalVx * timeScale
-        this._x += (totalVx_FP * TICK_TIME_SCALE_FP) >> FP_SHIFT;
+        this._x += (totalVx_FP * timeScale_FP) >> FP_SHIFT;
         this.handleCollisions(true, totalVx_FP);
 
         // Vertical movement: y += vy * timeScale
-        this._y += (this._vy * TICK_TIME_SCALE_FP) >> FP_SHIFT;
+        this._y += (this._vy * timeScale_FP) >> FP_SHIFT;
         this.handleCollisions(false, this._vy);
 
         // 6. World Wrapping
