@@ -20,6 +20,7 @@ const particles = {
 };
 
 const ROCKET_HUE = 361;  // Special marker for rockets (white)
+const FOAM_HUE = 362;    // Special marker for foam (white, normal physics)
 const GRAVITY = 0.00035;
 const ROCKET_SPEED = -0.33;
 
@@ -113,18 +114,31 @@ export function createExplosionParticles(x, y, hueOrColor) {
  * Create water splash particles
  */
 export function createSplashParticles(x, y) {
-    const hue = 210; // Blue
-    for (let i = 0; i < 20; i++) {
-        const angle = -Math.PI / 2 + (Math.random() * 1.0 - 0.5); // Upwards with spread
+    // Blue particles (water)
+    for (let i = 0; i < 30; i++) {
+        const angle = -Math.PI / 2 + (Math.random() * 1.0 - 0.5);
         const speed = Math.random() * 0.15 + 0.05;
-        const life = 30 + Math.random() * 30;
-
+        const life = 300 + Math.random() * 300; // ~0.5 - 1.0 seconds
         addParticle(
             x, y,
             Math.cos(angle) * speed,
             Math.sin(angle) * speed,
             life,
-            hue
+            210 // Blue
+        );
+    }
+
+    // White particles (foam)
+    for (let i = 0; i < 30; i++) {
+        const angle = -Math.PI / 2 + (Math.random() * 1.4 - 0.7); // Wider spread
+        const speed = Math.random() * 0.12 + 0.03;
+        const life = 200 + Math.random() * 200; // Shorter life
+        addParticle(
+            x, y,
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed,
+            life,
+            FOAM_HUE
         );
     }
 }
@@ -223,6 +237,12 @@ export function draw(ctx, cameraX, cameraY, viewWidth, viewHeight) {
             for (const i of indices) {
                 ctx.fillRect(particles.x[i] - 2, particles.y[i] - 2, 4, 8);
             }
+        } else if (hue === FOAM_HUE) {
+            // Foam: white squares
+            ctx.fillStyle = '#ffffff';
+            for (const i of indices) {
+                ctx.fillRect(particles.x[i], particles.y[i], 4, 4);
+            }
         } else {
             // Particles: colored squares
             ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
@@ -253,6 +273,11 @@ export function drawLegacy(ctx) {
             ctx.fillStyle = '#ffffff';
             for (const i of indices) {
                 ctx.fillRect(particles.x[i] - 2, particles.y[i] - 2, 4, 8);
+            }
+        } else if (hue === FOAM_HUE) {
+            ctx.fillStyle = '#ffffff';
+            for (const i of indices) {
+                ctx.fillRect(particles.x[i], particles.y[i], 4, 4);
             }
         } else {
             ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
