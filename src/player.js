@@ -10,7 +10,7 @@ import { sounds } from './audio.js';
 import { emitBlockBreakParticles } from './block_particles.js';
 import {
     TILE_SIZE, BLOCKS, BLOCK_PROPS,
-    JUMP_FORCE, SWIM_FORCE, BIG_JUMP_FORCE, TERMINAL_VELOCITY,
+    JUMP_FORCE, SWIM_FORCE, SWIM_COOLDOWN_TICKS, BIG_JUMP_FORCE, TERMINAL_VELOCITY,
     UPWARD_COLLISION_VELOCITY_THRESHOLD, NATURAL_BLOCK_IDS,
     TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET,
     ACCELERATOR_ACCELERATION_AMOUNT,
@@ -109,6 +109,8 @@ export class Player {
         // Physics States
         this.fastballActive = false; // "Lift" mode active (Accelerator + Cloud)
         this.lowGravityActive = false; // "Moon Jump" mode active (Jump Pad + Cloud)
+
+        this.swimCooldown = 0;
 
         this.findSpawnPoint();
     }
@@ -419,11 +421,14 @@ export class Player {
             sounds.playJump();
         }
         // Priority 3: Swim
-        else if (input.keys.jump && isInWater && !this.grounded) {
+        else if (input.keys.jump && isInWater && !this.grounded && this.swimCooldown <= 0) {
             // vy = min(0, vy) - SWIM_FORCE
             this._vy = Math.min(0, this._vy) - SWIM_FORCE_FP;
+            this.swimCooldown = SWIM_COOLDOWN_TICKS;
             // No ground state change needed as we are already not grounded
         }
+
+        if (this.swimCooldown > 0) this.swimCooldown--;
 
         // 3. Board velocity decay (FP)
         if (this._boardVx !== 0) {

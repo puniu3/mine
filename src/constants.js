@@ -30,6 +30,7 @@ export const TERMINAL_VELOCITY = 20.0;
 // Jump impulse (initial velocity, applied once)
 export const JUMP_FORCE = 10;
 export const SWIM_FORCE = 2;
+export const SWIM_COOLDOWN_TICKS = 360; // 0.5 seconds at 720Hz
 export const BIG_JUMP_FORCE = 18;
 // Velocity threshold for breaking blocks from below
 export const UPWARD_COLLISION_VELOCITY_THRESHOLD = -20;
