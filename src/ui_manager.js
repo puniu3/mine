@@ -135,7 +135,7 @@ export function initUI(callbacks) {
                 onImportWorld(worldMap);
 
             } catch (err) {
-                alert(strings.msg_import_err + err.message);
+                alert(strings.msg_import_err);
             }
         });
     }
