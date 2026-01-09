@@ -41,7 +41,13 @@ mine/
     │   ├── vegetation.js # Trees (oak, pine, jungle, acacia, swamp, dead), bush, cactus, boulder
     │   ├── structures.js # Oasis, monolith, bunker, world tree, islands, ruins, mineshaft
     │   └── clouds.js   # Cloud shapes (puffy, long, layered, cluster)
-    ├── player.js       # Player class: movement, physics, collision, rendering
+    ├── player/         # Player system (modular, Q20.12 fixed-point physics)
+    │   ├── index.js    # Player class orchestrator (state, tick, spawn, wrap)
+    │   ├── fixed_point.js # Q20.12 arithmetic, physics constants in FP format
+    │   ├── physics.js  # Gravity, friction, board decay, explosion impulse
+    │   ├── collision.js # Collision detection/resolution, block breaking
+    │   ├── movement.js # Input processing, jump, mizukiri, jump pad logic
+    │   └── render.js   # Player character drawing
     ├── camera.js       # Camera state, smoothing, and world wrapping logic
     ├── input.js        # Keyboard, mouse, touch input bindings
     ├── inventory.js    # Hotbar UI, item counts, crafting consumption
@@ -84,7 +90,12 @@ main.js
 │       ├── painters/vegetation.js
 │       ├── painters/structures.js (imports: painters/vegetation)
 │       └── painters/clouds.js
-├── player.js (imports: block_particles)
+├── player/index.js
+│   ├── player/fixed_point.js (imports: constants)
+│   ├── player/physics.js (imports: fixed_point)
+│   ├── player/collision.js (imports: fixed_point, utils, constants, audio, block_particles)
+│   ├── player/movement.js (imports: fixed_point, constants, audio, collision)
+│   └── player/render.js (no imports)
 ├── camera.js (imports: utils, constants)
 ├── renderer.js (imports: block_particles)
 ├── jackpot.js
@@ -115,12 +126,27 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 
 ## Core Systems
 
-### Player (player.js)
-- Physics: gravity, velocity, grounded state
-- Collision: tile-based AABB resolution
-- Movement: left/right with friction, jump
-- Special: jump pad detection (1.8x jump force)
-- Vertical wrap: player wraps around world vertically
+### Player (player/)
+- **Role**: Physics Engine & Character Controller.
+- Modular structure for AI-efficient editing (touch only relevant files).
+- Uses Q20.12 fixed-point arithmetic for deterministic physics at 720Hz.
+
+| File | Lines | Responsibility |
+|------|-------|----------------|
+| `index.js` | ~150 | Player class orchestrator (state, tick loop, spawn, wrap) |
+| `fixed_point.js` | ~90 | Q20.12 constants, conversion functions, physics lookup tables |
+| `physics.js` | ~80 | Gravity, friction, board decay, explosion impulse (pure functions) |
+| `collision.js` | ~100 | Collision detection/resolution, block breaking from below |
+| `movement.js` | ~120 | Input processing, jump, mizukiri (water skip), jump pad logic |
+| `render.js` | ~25 | Player character drawing (pure function) |
+
+**Editing guide**:
+- Gravity/friction tuning: `physics.js` only
+- Jump/movement mechanics: `movement.js` only
+- Collision bugs: `collision.js` only
+- Visual appearance: `render.js` only
+- Fixed-point precision: `fixed_point.js` only
+- New player state/mode: `index.js` + relevant module
 
 ### World (world/)
 - **Role**: Logic Orchestrator & State Container.
