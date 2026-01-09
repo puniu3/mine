@@ -1,4 +1,4 @@
-import { coordToIndex, isBlockSolid, generateBiomeHeights } from './utils.js';
+import { coordToIndex, isBlockSolid, generateBiomeHeights, calculateTerrainHeight } from './utils.js';
 import { TILE_SIZE, BLOCKS, BLOCK_PROPS } from './constants.js';
 import * as Painters from './painters.js';
 
@@ -96,9 +96,11 @@ export class World {
                 // Fix: Force the terrain height to match the forced biome.
                 // This ensures Oceans are deep enough for water, and Mountains are high enough.
                 if (config) {
-                    // Add slight random variation to avoid perfectly flat unnatural segments
-                    const variation = Math.floor(Math.random() * 5) - 2; 
-                    heights[x] = config.baseHeight + variation;
+                    // 【修正】ランダムノイズをやめ、滑らかな地形計算関数を使用する
+                    // 以前のコード: const variation = Math.floor(Math.random() * 5) - 2; 
+                    // 以前のコード: heights[x] = config.baseHeight + variation;
+                    
+                    heights[x] = calculateTerrainHeight(x, config.baseHeight, config.terrain);
                 }
             }
         }
