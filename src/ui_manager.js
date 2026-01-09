@@ -1,5 +1,6 @@
 import { loadGameState } from './save.js';
 import { exportWorldToImage, importWorldFromImage, downloadBlob } from './world_share.js';
+import { strings } from './i18n.js';
 
 /**
  * Initializes UI event listeners and DOM interactions.
@@ -85,7 +86,7 @@ export function initUI(callbacks) {
         exportBtn.addEventListener('click', async () => {
             const savedState = loadGameState();
             if (!savedState || !savedState.world || !savedState.world.map) {
-                alert('セーブデータがありません');
+                alert(strings.msg_no_save);
                 return;
             }
 
@@ -107,7 +108,7 @@ export function initUI(callbacks) {
         importBtn.addEventListener('click', async () => {
             const file = importFile.files[0];
             if (!file) {
-                alert('えを えらんでね');
+                alert(strings.msg_select_img);
                 return;
             }
 
@@ -122,7 +123,7 @@ export function initUI(callbacks) {
                 onImportWorld(worldMap);
 
             } catch (err) {
-                alert('この えでは ワールドを つくれないよ' + err.message);
+                alert(strings.msg_import_err + err.message);
             }
         });
     }

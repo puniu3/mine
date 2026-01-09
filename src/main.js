@@ -41,6 +41,9 @@ import { drawGame } from './renderer.js';
 import { createSaplingManager } from './sapling_manager.js';
 import { initUI } from './ui_manager.js';
 import { createCamera } from './camera.js';
+import { initI18n } from './i18n.js';
+
+initI18n();
 
 // --- Texture Generator ---
 let textures = {};

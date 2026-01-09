@@ -1,6 +1,7 @@
 import { BLOCKS, BLOCK_PROPS, TILE_SIZE } from './constants.js';
 import { sounds } from './audio.js';
 import { inventory, updateInventoryUI } from './inventory.js';
+import { strings } from './i18n.js';
 
 const CRAFTING_RECIPES = [
     {
@@ -135,7 +136,7 @@ function craftItem(recipe) {
     for (let [blockId, amount] of Object.entries(recipe.cost)) {
         if ((inventory[blockId] || 0) < amount) {
             const status = document.getElementById('crafting-status');
-            if (status) status.innerText = 'ざいりょうがたりないよ';
+            if (status) status.innerText = strings.craft_missing;
             return;
         }
     }
@@ -152,7 +153,7 @@ function craftItem(recipe) {
     updateInventoryUI();
     sounds.playPop(); // Craft sound
     const status = document.getElementById('crafting-status');
-    if (status) status.innerText = 'できたよ！';
+    if (status) status.innerText = strings.craft_done;
 }
 
 function createIconCanvas(blockId, size, textures) {
