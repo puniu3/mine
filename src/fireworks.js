@@ -81,13 +81,18 @@ function explode(x, y) {
  * Create a single bubble particle
  * @param {number} x - Center X position
  * @param {number} y - Center Y position
+ * @param {number} distanceToSurface - Distance in pixels to the water surface
  */
-export function createBubble(x, y) {
-    const angle = Math.random() * Math.PI * 2;
+export function createBubble(x, y, distanceToSurface = TILE_SIZE * 2) {
     // Slight horizontal jitter, mostly upward movement
     const vx = (Math.random() - 0.5) * 0.05;
     const vy = BUBBLE_SPEED * (0.8 + Math.random() * 0.4);
-    const life = 300 + Math.random() * 200;
+
+    // Calculate life based on distance to surface
+    // Allow bubble to rise slightly above water surface (add small margin)
+    const avgSpeed = Math.abs(vy);
+    const marginTicks = 20 + Math.random() * 40; // Small overshoot above surface
+    const life = Math.max(50, (distanceToSurface / avgSpeed) + marginTicks);
 
     addParticle(x, y, vx, vy, life, BUBBLE_HUE);
 }
