@@ -8,6 +8,7 @@
 import { isBlockSolid, isBlockBreakable, getBlockMaterialType, isNaturalBlock } from './utils.js';
 import { sounds } from './audio.js';
 import { emitBlockBreakParticles } from './block_particles.js';
+import { createBubble } from './fireworks.js';
 import {
     TILE_SIZE, BLOCKS, BLOCK_PROPS,
     JUMP_FORCE, BIG_JUMP_FORCE, TERMINAL_VELOCITY,
@@ -112,6 +113,9 @@ export class Player {
         // Physics States
         this.fastballActive = false; // "Lift" mode active (Accelerator + Cloud)
         this.lowGravityActive = false; // "Moon Jump" mode active (Jump Pad + Cloud)
+
+        // Bubble breath timer (when head is in water)
+        this.bubbleTimer = 0;
 
         this.findSpawnPoint();
     }
@@ -493,6 +497,25 @@ export class Player {
         // 7. Animation Timer (rendering only - float is acceptable)
         if (this._vx > ANIM_VX_THRESHOLD_FP || this._vx < -ANIM_VX_THRESHOLD_FP) {
             this.animTimer += PHYSICS_DT;
+        }
+
+        // 8. Bubble Breath Logic (Head in Water)
+        // Player Y is top of hitbox (head). Check slightly inside (e.g. +4 pixels).
+        const headX = this.getCenterX();
+        const headY = this.y + 4;
+        const headGridX = Math.floor(headX / TILE_SIZE);
+        const headGridY = Math.floor(headY / TILE_SIZE);
+
+        if (this.world.getBlock(headGridX, headGridY) === BLOCKS.WATER) {
+            this.bubbleTimer++;
+            // Spawn bubble every ~40 ticks with randomness
+            if (this.bubbleTimer > 40) {
+                createBubble(headX, headY);
+                // Reset with randomness for next interval (between -30 and 0)
+                this.bubbleTimer = Math.floor(Math.random() * -30);
+            }
+        } else {
+            this.bubbleTimer = 0;
         }
     }
 
