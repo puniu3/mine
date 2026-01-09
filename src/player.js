@@ -510,7 +510,16 @@ export class Player {
             this.bubbleTimer++;
             // Spawn bubble every ~40 ticks with randomness
             if (this.bubbleTimer > 40) {
-                createBubble(headX, headY);
+                // Calculate distance to water surface (search upward)
+                let distanceToSurface = TILE_SIZE; // Default: 1 tile
+                for (let checkY = headGridY - 1; checkY >= 0; checkY--) {
+                    if (this.world.getBlock(headGridX, checkY) !== BLOCKS.WATER) {
+                        // Found surface: distance from head to the bottom of this non-water tile
+                        distanceToSurface = headY - (checkY + 1) * TILE_SIZE;
+                        break;
+                    }
+                }
+                createBubble(headX, headY, Math.max(TILE_SIZE, distanceToSurface));
                 // Reset with randomness for next interval (between -30 and 0)
                 this.bubbleTimer = Math.floor(Math.random() * -30);
             }
