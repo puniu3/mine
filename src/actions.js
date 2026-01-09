@@ -55,11 +55,12 @@ export function createActions({
     } = utils;
 
     /**
-     * Checks if a target tile has at least one solid (non-transparent) neighbor.
-     * This enforces the rule that blocks cannot be attached to Water or Air.
-     * * @param {number} tx - Target tile X.
+     * Checks if a target tile has at least one valid supporting neighbor.
+     * Valid supports are any block except Air and Water.
+     * This allows placing blocks on transparent blocks like Workbench or Sapling, but not Water.
+     * @param {number} tx - Target tile X.
      * @param {number} ty - Target tile Y.
-     * @returns {boolean} True if a solid neighbor exists.
+     * @returns {boolean} True if a valid supporting neighbor exists.
      */
     function hasSolidNeighbor(tx, ty) {
         const offsets = [
@@ -71,9 +72,9 @@ export function createActions({
 
         for (const { dx, dy } of offsets) {
             const nb = world.getBlock(tx + dx, ty + dy);
-            // A neighbor is valid support only if it is NOT transparent.
-            // This implicitly excludes BLOCKS.AIR and BLOCKS.WATER.
-            if (!isBlockTransparent(nb, BLOCK_PROPS)) {
+            // Logic updated: Valid support is any block that is not AIR and not WATER.
+            // This allows other transparent blocks (e.g. Workbench, Sapling) to serve as support.
+            if (nb !== BLOCKS.AIR && nb !== BLOCKS.WATER) {
                 return true;
             }
         }
