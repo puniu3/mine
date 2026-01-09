@@ -309,10 +309,10 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
     const biomeKeys = Object.keys(biomeConfigs);
     let lastSegmentStart = 0;
 
-    // 【修正点】重み付きランダム選択の準備
+    // Prepare weighted random selection
     let totalWeight = 0;
     const selectionMap = biomeKeys.map(key => {
-        // weightが設定されていない場合はデフォルトで1とする
+        // If weight is not set, default to 1
         const weight = biomeConfigs[key].weight !== undefined ? biomeConfigs[key].weight : 1;
         totalWeight += weight;
         return { key, threshold: totalWeight };
@@ -320,7 +320,7 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
 
     let x = 0;
     while (x < width) {
-        // 【修正点】単純なランダムではなく、重みに基づいてバイオームを選択
+        // Select biome based on weight
         const r = Math.random() * totalWeight;
         const selected = selectionMap.find(item => r < item.threshold);
         const biome = selected ? selected.key : biomeKeys[0]; // fallback
@@ -339,15 +339,31 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
             const firstHeight = segmentHeights[0];
 
             if (firstHeight !== previousHeight) {
+                // Determine slope length dynamically based on height difference
+                // Example: 1.5 blocks of distance for every 1 block of height difference.
+                // This ensures large cliffs get longer slopes.
+                const diff = Math.abs(firstHeight - previousHeight);
+                const requiredLength = Math.ceil(diff * 1.5);
+                
+                // Ensure slope is at least 8 (if space allows), but scale up for big drops.
+                // We use Math.max(8, requiredLength) to keep small bumps smooth too.
+                const dynamicSlopeLength = Math.max(8, requiredLength);
+
                 if (firstHeight > previousHeight) {
-                    const slopeLength = Math.min(8, length);
+                    // New segment is lower (higher Y value) -> Slope Down
+                    // Constrain slope length to the length of the new segment
+                    const slopeLength = Math.min(dynamicSlopeLength, length);
+                    
                     for (let i = 0; i < slopeLength; i++) {
                         const t = (i + 1) / slopeLength;
                         segmentHeights[i] = Math.round(lerp(previousHeight, segmentHeights[i], t));
                     }
                 } else {
-                    const slopeLength = Math.min(8, x - lastSegmentStart);
+                    // New segment is higher (lower Y value) -> Slope Up
+                    // Constrain slope length to the length of the previous segment
+                    const slopeLength = Math.min(dynamicSlopeLength, x - lastSegmentStart);
                     const prevSlice = heights.slice(x - slopeLength, x);
+
                     for (let i = 0; i < slopeLength; i++) {
                         const t = (i + 1) / slopeLength;
                         const idx = x - slopeLength + i;
@@ -371,17 +387,24 @@ export function generateBiomeHeights(width, biomeConfigs, minSize, maxSize) {
     const lastHeight = heights[width - 1];
 
     if (firstHeight !== lastHeight) {
-        const slopeLength = Math.min(8, width / 2); // Max 8 tiles slope
+        // Also apply dynamic slope length to the world wrap
+        const diff = Math.abs(firstHeight - lastHeight);
+        const requiredLength = Math.ceil(diff * 1.5);
+        const dynamicSlopeLength = Math.max(8, requiredLength);
+        
+        // Limit slope length to half the world width to be safe
+        const slopeLength = Math.min(dynamicSlopeLength, Math.floor(width / 2)); 
 
         if (lastHeight > firstHeight) {
-            // Slope down at the end
+            // Slope down at the end (end is lower than start)
             for (let i = 0; i < slopeLength; i++) {
                 const idx = width - slopeLength + i;
                 const t = (i + 1) / slopeLength;
                 heights[idx] = Math.round(lerp(heights[idx], firstHeight, t));
             }
         } else {
-            // Slope up at the beginning
+            // Slope up at the beginning (end is higher than start)
+            // Note: This modifies the start of the map to match the end
             for (let i = 0; i < slopeLength; i++) {
                 const t = (i + 1) / slopeLength;
                 heights[i] = Math.round(lerp(lastHeight, heights[i], t));
