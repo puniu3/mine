@@ -28,7 +28,7 @@ import { isCraftingOpen, updateCrafting } from './crafting.js';
 import { tick as tickFireworks, createExplosionParticles } from './fireworks.js';
 import { tick as tickBlockParticles, initBlockParticles } from './block_particles.js';
 import { createActions } from './actions.js';
-import { World } from './world.js';
+import { World } from './world/index.js';
 import { Player } from './player.js';
 import { drawJackpotParticles, handleJackpotOverlap, tick as tickJackpots } from './jackpot.js';
 import { handleAcceleratorOverlap, tick as tickAccelerators, initAccelerator } from './accelerator.js';

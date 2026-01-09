@@ -4,7 +4,7 @@
  */
 
 import { BLOCKS, BLOCK_PROPS, WORLD_WIDTH, WORLD_HEIGHT } from './constants.js';
-import { World } from './world.js';
+import { World } from './world/index.js';
 
 // Color mapping for export (WOOD uses different color to avoid collision with DIRT)
 const EXPORT_COLORS = {
