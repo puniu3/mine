@@ -51,9 +51,34 @@ export function createActions({
         isBlockBreakable,
         isBlockTransparent,
         getBlockMaterialType,
-        rectsIntersect,
-        hasAdjacentBlock
+        rectsIntersect
     } = utils;
+
+    /**
+     * Checks if a target tile has at least one solid (non-transparent) neighbor.
+     * This enforces the rule that blocks cannot be attached to Water or Air.
+     * * @param {number} tx - Target tile X.
+     * @param {number} ty - Target tile Y.
+     * @returns {boolean} True if a solid neighbor exists.
+     */
+    function hasSolidNeighbor(tx, ty) {
+        const offsets = [
+            { dx: 0, dy: -1 }, // Top
+            { dx: 0, dy: 1 },  // Bottom
+            { dx: -1, dy: 0 }, // Left
+            { dx: 1, dy: 0 }   // Right
+        ];
+
+        for (const { dx, dy } of offsets) {
+            const nb = world.getBlock(tx + dx, ty + dy);
+            // A neighbor is valid support only if it is NOT transparent.
+            // This implicitly excludes BLOCKS.AIR and BLOCKS.WATER.
+            if (!isBlockTransparent(nb, BLOCK_PROPS)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * Executes the climb action: places selected block at player's feet and moves player up.
@@ -70,13 +95,11 @@ export function createActions({
 
         // Validation: Is the feet block replaceable (Air/Water/Grass)?
         // Must be transparent AND (AIR or breakable). 
-        // Note: AIR is transparent, so checking isBlockTransparent covers the first requirement for AIR.
         const blockAtFeet = world.getBlock(targetTx, targetTy);
         const isFeetReplaceable = isBlockTransparent(blockAtFeet, BLOCK_PROPS) && 
             (blockAtFeet === BLOCKS.AIR || isBlockBreakable(blockAtFeet, BLOCK_PROPS));
 
         // Validation: Is the space ABOVE the new block free for the player to stand?
-        // The player will be moved to: (targetTy * TILE_SIZE) - player.height
         const newPlayerY = (targetTy * TILE_SIZE) - player.height;
         const isAreaAboveFree = world.checkAreaFree(player.x, newPlayerY, player.width, player.height);
 
@@ -84,33 +107,10 @@ export function createActions({
             const selectedBlock = inventory.getSelectedBlockId();
             const isCloud = selectedBlock === BLOCKS.CLOUD;
 
-            // Allow placement if there is a neighbor (normal rules) OR if it's a cloud.
-            // STRICT CHECK: For climbing, we do NOT consider transparent blocks (like Water) 
-            // as valid support, unless we are placing a Cloud (which can float/attach loosely).
-            let hasNeighbor = isCloud;
-            
-            if (!hasNeighbor) {
-                // Manually check neighbors to ensure we attach to something SOLID.
-                // We do not use hasAdjacentBlock(..., BLOCKS.AIR) because it would accept Water as support.
-                const offsets = [
-                    { dx: 0, dy: -1 }, // Top
-                    { dx: 0, dy: 1 },  // Bottom
-                    { dx: -1, dy: 0 }, // Left
-                    { dx: 1, dy: 0 }   // Right
-                ];
+            // Strict Rule: Must attach to a solid block (not Water), unless it's a Cloud.
+            const hasSupport = isCloud || hasSolidNeighbor(targetTx, targetTy);
 
-                for (const { dx, dy } of offsets) {
-                    const nb = world.getBlock(targetTx + dx, targetTy + dy);
-                    // A neighbor is valid support if it is NOT transparent.
-                    // (Air is transparent, so this implicitly checks !== AIR)
-                    if (!isBlockTransparent(nb, BLOCK_PROPS)) {
-                        hasNeighbor = true;
-                        break;
-                    }
-                }
-            }
-
-            if (hasNeighbor) {
+            if (hasSupport) {
                 if (inventory.consumeFromInventory(selectedBlock)) {
                     // If replacing a non-air transparent block (e.g. Water/Sapling), add it to inventory
                     if (blockAtFeet !== BLOCKS.AIR) {
@@ -122,7 +122,6 @@ export function createActions({
                     if (onBlockPlaced) onBlockPlaced(targetTx, targetTy, selectedBlock);
 
                     // Teleport player on top ONLY if the placed block is NOT transparent
-                    // (e.g. don't climb on top of a sapling or water)
                     if (!isBlockTransparent(selectedBlock, BLOCK_PROPS)) {
                         player.y = newPlayerY - 0.1;
                         player.vy = 0;
@@ -161,10 +160,6 @@ export function createActions({
         // ========================================================================
         // 1. Auto-Climb Trigger Detection (Top Priority)
         // ========================================================================
-        // We check this BEFORE looking at what block is at the clicked position.
-        // This ensures that clicking the player/zone always triggers the climb logic,
-        // even if there is a breakable block behind the player.
-
         const pCenterX = player.getCenterX();
         const pHeadTileX = Math.floor(pCenterX / TILE_SIZE);
         const pHeadTileY = Math.floor(player.y / TILE_SIZE);
@@ -173,7 +168,6 @@ export function createActions({
         const isHeadTile = (bx === pHeadTileX && by === pHeadTileY);
 
         // Condition 2: Upper half of the tile directly below the head tile
-        // We use pixel math here for precision
         const isBelowHead = (bx === pHeadTileX && by === pHeadTileY + 1);
         const isUpperHalf = (worldPos.y % TILE_SIZE) < (TILE_SIZE / 2);
         const isBelowHeadUpperHalf = isBelowHead && isUpperHalf;
@@ -191,10 +185,7 @@ export function createActions({
         );
 
         if (isHeadTile || isBelowHeadUpperHalf || isInsideRect) {
-            // Execute climb via shared function
             executeClimb();
-            // If we matched the trigger zone, we return immediately.
-            // We do NOT fall through to break/place logic.
             return;
         }
 
@@ -224,9 +215,12 @@ export function createActions({
             if (!isIntersecting) {
                 const selectedBlock = inventory.getSelectedBlockId();
                 const isCloud = selectedBlock === BLOCKS.CLOUD;
-                const hasNeighbor = isCloud || hasAdjacentBlock(bx, by, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
+                
+                // Strict Rule: Must attach to a solid block (not Water), unless it's a Cloud.
+                // Replaces previous lenient hasAdjacentBlock check.
+                const hasSupport = isCloud || hasSolidNeighbor(bx, by);
 
-                if (hasNeighbor) {
+                if (hasSupport) {
                     if (inventory.consumeFromInventory(selectedBlock)) {
                         // If replacing a non-air transparent block (e.g. Water/Sapling), add it to inventory
                         if (currentBlock !== BLOCKS.AIR) {
