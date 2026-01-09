@@ -12,7 +12,8 @@ const BIOMES = {
     DEEP_FOREST: 'deep_forest',
     SAVANNA: 'savanna',
     PLATEAU: 'plateau',
-    OCEAN: 'ocean'
+    OCEAN: 'ocean',
+    SWAMP: 'swamp'
 };
 
 export class World {
@@ -483,7 +484,8 @@ export class World {
             [BIOMES.DEEP_FOREST]: { weight: 10, baseHeight: halfHeight + 5, terrain: { largeAmplitude: 15, smallAmplitude: 4, largeFrequency: 25, smallFrequency: 8 } },
             [BIOMES.SAVANNA]: { weight: 15, baseHeight: halfHeight, terrain: { largeAmplitude: 5, smallAmplitude: 1, largeFrequency: 50, smallFrequency: 15 } },
             [BIOMES.PLATEAU]: { weight: 10, baseHeight: halfHeight - 10, terrain: { largeAmplitude: 25, smallAmplitude: 2, largeFrequency: 60, smallFrequency: 5 } },
-            [BIOMES.OCEAN]: { weight: 12, baseHeight: halfHeight + 25, terrain: { largeAmplitude: 15, smallAmplitude: 5, largeFrequency: 45, smallFrequency: 10 } }
+            [BIOMES.OCEAN]: { weight: 12, baseHeight: halfHeight + 25, terrain: { largeAmplitude: 15, smallAmplitude: 5, largeFrequency: 45, smallFrequency: 10 } },
+            [BIOMES.SWAMP]: { weight: 5, baseHeight: halfHeight + 2, terrain: { largeAmplitude: 6, smallAmplitude: 2, largeFrequency: 40, smallFrequency: 8 } }
         };
     }
 
@@ -500,6 +502,7 @@ export class World {
         }
         if (biome === BIOMES.SAVANNA) return (x % 7 < 3 || Math.random() < 0.2) ? BLOCKS.DIRT : BLOCKS.GRASS;
         if (biome === BIOMES.PLATEAU) return (surfaceY % 4 === 0) ? BLOCKS.SAND : BLOCKS.STONE;
+        if (biome === BIOMES.SWAMP) return (Math.random() < 0.3) ? BLOCKS.DIRT : BLOCKS.GRASS;
         return BLOCKS.GRASS;
     }
 
@@ -771,6 +774,11 @@ export class World {
                 break;
             case BIOMES.PLATEAU:
                 if (r < 0.02) Painters.drawTreeDead(paint, x, y);
+                break;
+            case BIOMES.SWAMP:
+                if (r < 0.1) Painters.drawTreeSwamp(paint, x, y);
+                else if (r < 0.2) Painters.drawPond(paint, x, y, 2);
+                else if (r < 0.4 && Math.random() < 0.5) Painters.drawBush(paint, x, y);
                 break;
         }
     }

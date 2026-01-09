@@ -545,3 +545,35 @@ export function drawCloudByShapeId(accessor, x, y, shapeType) {
             break;
     }
 }
+
+export function drawTreeSwamp(accessor, x, y) {
+    const height = 6 + Math.floor(Math.random() * 4);
+
+    // Trunk
+    for (let i = 0; i < height; i++) {
+        accessor.set(x, y - i, BLOCKS.WOOD);
+    }
+
+    // Drooping leaves (Willow style)
+    const radius = 3;
+    for (let dy = 0; dy <= 2; dy++) { // Canopy height
+        for (let dx = -radius; dx <= radius; dx++) {
+            if (Math.abs(dx) + dy < 5) {
+                const leafY = y - height + 1 - dy;
+                if (accessor.get(x + dx, leafY) === BLOCKS.AIR) {
+                    accessor.set(x + dx, leafY, BLOCKS.LEAVES);
+                }
+
+                // Vines/Drooping leaves
+                if (Math.abs(dx) >= 2 && Math.random() < 0.6) {
+                    const vineLength = 1 + Math.floor(Math.random() * 3);
+                    for (let v = 1; v <= vineLength; v++) {
+                         if (accessor.get(x + dx, leafY + v) === BLOCKS.AIR) {
+                            accessor.set(x + dx, leafY + v, BLOCKS.LEAVES);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
