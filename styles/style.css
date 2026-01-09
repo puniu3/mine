@@ -524,22 +524,35 @@ button {
     color: #ffeb3b;
 }
 
-/* World Share Modal */
+/* World Share Modal - Overlay */
 #world-modal {
     display: none;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2100;
+    /* Center the content */
+    justify-content: center;
+    align-items: center;
+}
+
+#world-modal.visible {
+    display: flex;
+}
+
+/* World Share Modal - Content */
+.world-modal-content {
     /* Light background - White */
-    background: #ffffff; 
+    background: #ffffff;
     /* Orange border to match the World button */
     border: 4px solid #FF9800;
     padding: 24px;
     /* Dark text for contrast against light background */
     color: #333;
     font-family: monospace;
-    z-index: 2100;
     border-radius: 16px;
     text-align: center;
     min-width: 280px;
