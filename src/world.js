@@ -281,44 +281,164 @@ export class World {
     }
 
     createExtremeTerrain(heights) {
-        const minGap = 100;
-        let lastFeatureX = -minGap;
+        // Strategy: Use a weighted list of feature generators to add variety.
+        // We look for gaps between features to ensure they don't overlap too chaotically.
+        
+        const MIN_FEATURE_GAP = 80;
+        let lastFeatureX = -MIN_FEATURE_GAP;
 
+        // Iterate through the map, trying to spawn features
         for (let x = 20; x < this.width - 20; x++) {
-            if (x - lastFeatureX < minGap) continue;
+            if (x - lastFeatureX < MIN_FEATURE_GAP) continue;
+
             const rand = Math.random();
-
-            if (rand < 0.003) { // Rift
-                const width = 12 + Math.floor(Math.random() * 16);
-                const depth = 25 + Math.floor(Math.random() * 35);
-                if (heights[x] + depth >= this.height - 10) continue;
-
-                for (let dx = -Math.floor(width / 2); dx <= Math.floor(width / 2); dx++) {
-                    const tx = x + dx;
-                    if (tx >= 0 && tx < this.width) {
-                        const dist = Math.abs(dx) / (width / 2);
-                        const shapeFactor = Math.pow(Math.cos(dist * Math.PI / 2), 0.5); 
-                        heights[tx] += Math.floor(depth * shapeFactor);
-                        heights[tx] = Math.min(this.height - 5, heights[tx]);
-                    }
-                }
+            const currentHeight = heights[x];
+            
+            // 1. Great Canyon (Terraced deep cut) - Rare
+            if (rand < 0.003) {
+                const width = 25 + Math.floor(Math.random() * 20);
+                this.generateCanyon(heights, x, width);
                 lastFeatureX = x + width;
             }
-            else if (rand > 0.997) { // Plateau
-                const width = 20 + Math.floor(Math.random() * 30);
-                const heightRise = 20 + Math.floor(Math.random() * 25);
-                if (heights[x] - heightRise <= 20) continue;
-
-                for (let dx = -Math.floor(width / 2); dx <= Math.floor(width / 2); dx++) {
-                    const tx = x + dx;
-                    if (tx >= 0 && tx < this.width) {
-                        const dist = Math.abs(dx) / (width / 2);
-                        if (dist < 0.8) heights[tx] -= heightRise;
-                        else heights[tx] -= Math.floor(heightRise * (1 - dist) * 5);
-                        heights[tx] = Math.max(10, heights[tx]);
-                    }
+            // 2. Volcano / Crater Peak (Rise with a hole) - Very Rare
+            else if (rand < 0.0045) { // 0.003 to 0.0045 range
+                const width = 30 + Math.floor(Math.random() * 20);
+                // Avoid spawning volcanoes too high (limit sky limit)
+                if (currentHeight > 50) {
+                    this.generateVolcano(heights, x, width);
+                    lastFeatureX = x + width;
                 }
+            }
+            // 3. Mesa / Plateau (Flat top, steep sides) - Occasional
+            else if (rand > 0.995) {
+                const width = 20 + Math.floor(Math.random() * 25);
+                this.generatePlateau(heights, x, width);
                 lastFeatureX = x + width;
+            }
+            // 4. Rolling Hills (Gentle sine waves added to flat areas) - Common filler
+            else if (rand > 0.985) {
+                const width = 40 + Math.floor(Math.random() * 30);
+                this.generateRollingHills(heights, x, width);
+                lastFeatureX = x + width;
+            }
+        }
+    }
+
+    // Helper: Terraced Canyon (More natural than a simple Cosine cut)
+    generateCanyon(heights, centerX, width) {
+        const depth = 25 + Math.floor(Math.random() * 20);
+        const halfWidth = Math.floor(width / 2);
+        
+        for (let dx = -halfWidth; dx <= halfWidth; dx++) {
+            const tx = centerX + dx;
+            if (tx < 0 || tx >= this.width) continue;
+
+            const dist = Math.abs(dx) / halfWidth; // 0.0 (center) to 1.0 (edge)
+            
+            // Use a "stepped" shape logic for terraces
+            // We mix a smooth curve with a step function
+            const smoothShape = Math.pow(Math.cos(dist * Math.PI / 2), 0.5);
+            const stepShape = Math.floor(smoothShape * 4) / 4; // Creates 4 distinct terrace levels
+            
+            // Blend smooth and step for "eroded" look
+            const shapeFactor = (smoothShape * 0.3) + (stepShape * 0.7);
+
+            // Add some noise to the bottom so it's not perfectly flat
+            const noise = (Math.sin(tx * 0.5) * 2); 
+
+            let change = Math.floor(depth * shapeFactor) + noise;
+            
+            // Apply
+            heights[tx] += change;
+            heights[tx] = Math.min(this.height - 5, heights[tx]); // Don't break bedrock
+        }
+        this.smoothTerrain(heights, centerX - halfWidth, centerX + halfWidth);
+    }
+
+    // Helper: Volcano (Rise then dip)
+    generateVolcano(heights, centerX, width) {
+        const heightRise = 30 + Math.floor(Math.random() * 15);
+        const halfWidth = Math.floor(width / 2);
+        const craterWidth = width * 0.25;
+
+        for (let dx = -halfWidth; dx <= halfWidth; dx++) {
+            const tx = centerX + dx;
+            if (tx < 0 || tx >= this.width) continue;
+
+            const dist = Math.abs(dx);
+            
+            // Cone shape: Gaussian-ish curve
+            let shapeFactor = Math.exp(-Math.pow(dist / (width * 0.35), 2));
+
+            // Crater logic: If near center, subtract height
+            if (dist < craterWidth) {
+                const craterDepth = Math.pow((craterWidth - dist) / craterWidth, 2);
+                shapeFactor -= craterDepth * 1.5; // Dig deep in middle
+            }
+
+            let change = Math.floor(heightRise * shapeFactor);
+            heights[tx] -= change; // Moving UP (smaller y)
+            heights[tx] = Math.max(10, heights[tx]);
+        }
+    }
+
+    // Helper: Natural Plateau
+    generatePlateau(heights, centerX, width) {
+        const heightRise = 15 + Math.floor(Math.random() * 15);
+        const halfWidth = Math.floor(width / 2);
+
+        for (let dx = -halfWidth; dx <= halfWidth; dx++) {
+            const tx = centerX + dx;
+            if (tx < 0 || tx >= this.width) continue;
+
+            const dist = Math.abs(dx) / halfWidth;
+            let factor = 0;
+
+            if (dist < 0.6) {
+                // Top is mostly flat with slight noise
+                factor = 1.0 + (Math.random() * 0.1); 
+            } else {
+                // Sides fall off smoothly (Sigmoid-like ease out)
+                const falloff = (1 - dist) / 0.4; // 1.0 down to 0.0
+                factor = falloff * falloff; // Quadratic ease
+            }
+
+            heights[tx] -= Math.floor(heightRise * factor);
+            heights[tx] = Math.max(10, heights[tx]);
+        }
+    }
+
+    // Helper: Rolling Hills (Gentle bumps)
+    generateRollingHills(heights, centerX, width) {
+        const halfWidth = Math.floor(width / 2);
+        for (let dx = -halfWidth; dx <= halfWidth; dx++) {
+            const tx = centerX + dx;
+            if (tx < 0 || tx >= this.width) continue;
+
+            const rad = (dx / width) * Math.PI * 4; // 2 full sine waves
+            const change = Math.sin(rad) * 6; // +/- 6 blocks
+            
+            // Fade out at edges
+            const dist = Math.abs(dx) / halfWidth;
+            const blend = 1 - Math.pow(dist, 3); 
+
+            heights[tx] -= Math.floor(change * blend);
+        }
+    }
+
+    // Post-processing to remove single-block spikes after extreme terrain operations
+    smoothTerrain(heights, startX, endX) {
+        const safeStart = Math.max(1, startX);
+        const safeEnd = Math.min(this.width - 2, endX);
+
+        for (let x = safeStart; x <= safeEnd; x++) {
+            const prev = heights[x - 1];
+            const curr = heights[x];
+            const next = heights[x + 1];
+
+            // Simple 3-point average if the spike is too sharp
+            if (Math.abs(prev - curr) > 3 && Math.abs(next - curr) > 3) {
+                heights[x] = Math.floor((prev + curr + next) / 3);
             }
         }
     }
