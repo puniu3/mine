@@ -25,7 +25,7 @@ import {
     getInventoryState, loadInventoryState
 } from './inventory.js';
 import { isCraftingOpen, updateCrafting } from './crafting.js';
-import { tick as tickFireworks, createExplosionParticles, createBubble } from './fireworks.js';
+import { tick as tickFireworks, createExplosionParticles } from './fireworks.js';
 import { tick as tickBlockParticles, initBlockParticles } from './block_particles.js';
 import { createActions } from './actions.js';
 import { World } from './world.js';
@@ -56,7 +56,6 @@ let actions;
 let tntManager = null;
 let saplingManager = null;
 let saveManager = null;
-let bubbleTimer = 0;
 
 // Physics Settings (720Hz High-Frequency Step)
 // - Syncs perfectly with 144Hz monitors (5 steps per frame).
@@ -307,28 +306,6 @@ function init(savedState = null) {
 function tick() {
     if (!player) return;
     player.tick(input);
-
-    // Bubble Breath Logic (Head in Water)
-    // Player Y is top of hitbox (head). Check slightly inside (e.g. +4 pixels).
-    const headX = player.getCenterX();
-    const headY = player.y + 4;
-    const headGridX = Math.floor(headX / TILE_SIZE);
-    const headGridY = Math.floor(headY / TILE_SIZE);
-
-    if (world.getBlock(headGridX, headGridY) === BLOCKS.WATER) {
-        bubbleTimer++;
-        // Spawn bubble every ~40 ticks (approx 18 times/sec at 720Hz? No wait)
-        // 720Hz / 40 = 18. That's a lot of bubbles.
-        // Let's try every 20-60 ticks randomly.
-        if (bubbleTimer > 40) {
-            createBubble(headX, headY);
-            bubbleTimer = 0;
-            // Add randomness to next interval (managed by check > 40? No, resetting to random value is better)
-            bubbleTimer = Math.floor(Math.random() * -30); // Reset to between -30 and 0
-        }
-    } else {
-        bubbleTimer = 0;
-    }
 
     // Input Handling
     if (input.mouse.leftDown) {

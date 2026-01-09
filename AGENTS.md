@@ -35,7 +35,7 @@ mine/
     ├── crafting.js     # Crafting modal UI and recipe validation
     ├── texture_gen.js  # Procedural block texture generation via canvas
     ├── audio.js        # Web Audio API sound effects (jump, mining, UI, coin, explosion)
-    ├── fireworks.js    # Firework particle effects for celebrations
+    ├── fireworks.js    # Firework particle effects for celebrations; also handles bubble generation
     ├── jackpot.js      # Jackpot block: coin burst particles on player overlap
     ├── block_particles.js # Block destruction particle effects (texture color sampling)
     ├── sky.js          # Dynamic sky colors, sun/moon orbit, and star rendering
