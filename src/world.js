@@ -339,7 +339,7 @@ export class World {
             [BIOMES.DEEP_FOREST]: { weight: 10, baseHeight: halfHeight + 5, terrain: { largeAmplitude: 15, smallAmplitude: 4, largeFrequency: 25, smallFrequency: 8 } },
             [BIOMES.SAVANNA]: { weight: 15, baseHeight: halfHeight, terrain: { largeAmplitude: 5, smallAmplitude: 1, largeFrequency: 50, smallFrequency: 15 } },
             [BIOMES.PLATEAU]: { weight: 10, baseHeight: halfHeight - 10, terrain: { largeAmplitude: 25, smallAmplitude: 2, largeFrequency: 60, smallFrequency: 5 } },
-            [BIOMES.OCEAN]: { weight: 18, baseHeight: halfHeight + 25, terrain: { largeAmplitude: 15, smallAmplitude: 5, largeFrequency: 45, smallFrequency: 10 } }
+            [BIOMES.OCEAN]: { weight: 12, baseHeight: halfHeight + 25, terrain: { largeAmplitude: 15, smallAmplitude: 5, largeFrequency: 45, smallFrequency: 10 } }
         };
     }
 
