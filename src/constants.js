@@ -34,6 +34,8 @@ export const BIG_JUMP_FORCE = 18;
 export const UPWARD_COLLISION_VELOCITY_THRESHOLD = -20;
 // Maximum block ID for natural blocks (0-12)
 export const MAX_NATURAL_BLOCK_ID = 12;
+// Natural block IDs set (includes WATER which has higher ID but is still natural)
+export const NATURAL_BLOCK_IDS = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 20]); // AIR-CLOUD + WATER
 
 // --- TNT Constants ---
 export const TNT_FUSE_TICKS = 2160; // 3 seconds at 720Hz (3000ms * 720 / 1000)
@@ -116,6 +118,7 @@ export const HOTBAR_ITEMS = [
     BLOCKS.SAND,
     BLOCKS.SNOW,
     BLOCKS.CLOUD,
+    BLOCKS.WATER,
     // Craftable blocks below
     BLOCKS.FIREWORK,
     BLOCKS.JUMP_PAD,
@@ -123,6 +126,5 @@ export const HOTBAR_ITEMS = [
     BLOCKS.SAPLING,
     BLOCKS.JACKPOT,
     BLOCKS.ACCELERATOR_LEFT,
-    BLOCKS.ACCELERATOR_RIGHT,
-    BLOCKS.WATER
+    BLOCKS.ACCELERATOR_RIGHT
 ];
