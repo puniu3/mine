@@ -74,6 +74,12 @@ const KNOCKBACK_STRENGTH_FP = toFP(TNT_KNOCKBACK_STRENGTH);
 const KNOCKBACK_OFFSET_FP = toFP(TNT_KNOCKBACK_DISTANCE_OFFSET * TILE_SIZE);
 const TILE_SIZE_SQ = TILE_SIZE * TILE_SIZE;
 
+// Mizukiri (Water Skipping) Constants
+const SKIP_SPEED_THRESHOLD_FP = WALK_SPEED_FP * 2;
+// tan(15 degrees) ≈ 0.267949
+// 0.267949 * 4096 ≈ 1097
+const TAN_15_DEG_FP = 1097;
+
 export class Player {
     constructor(world, addToInventory = null, onTNTJumpPad = null) {
         this.world = world;
@@ -321,6 +327,41 @@ export class Player {
         } else {
             // Apply friction: vx = vx * FRICTION_FACTOR_FP / FP_ONE
             this._vx = (this._vx * FRICTION_FACTOR_FP) >> FP_SHIFT;
+        }
+
+        // 1b. Mizukiri (Water Skipping) Check
+        if (this._vy > 0) { // Only when falling
+            const feetCenterX_FP = this._x + (this._width >> 1);
+            const feetY_FP = this._y + this._height + FEET_OFFSET_FP;
+            const feetX = Math.floor(feetCenterX_FP / TILE_SIZE_FP);
+            const feetY = Math.floor(feetY_FP / TILE_SIZE_FP);
+
+            // Check if feet are in water
+            if (this.world.getBlock(feetX, feetY) === BLOCKS.WATER) {
+                // Check if we are at the surface (block above is NOT water)
+                const blockAbove = this.world.getBlock(feetX, feetY - 1);
+                if (blockAbove !== BLOCKS.WATER) {
+                    const totalVx = this._vx + this._boardVx;
+                    const absVx = totalVx > 0 ? totalVx : -totalVx;
+                    const absVy = this._vy; // Known to be > 0
+
+                    // Condition 1: Speed threshold
+                    if (absVx >= SKIP_SPEED_THRESHOLD_FP) {
+                        // Condition 2: Shallow angle ( < 15 degrees )
+                        // abs(vy) / abs(vx) < tan(15)
+                        // abs(vy) < abs(vx) * tan(15)
+                        // Use FP multiplication: absVy * FP_ONE < absVx * TAN_15_DEG_FP
+
+                        // Note: absVx * TAN_15_DEG_FP might overflow if velocity is huge, but typical max velocity is 20*4096 = 81920
+                        // 81920 * 1097 ≈ 90,000,000, fits in 32-bit integer (2 billion limit).
+                        // JS numbers are 53-bit integers anyway, so it's safe.
+
+                        if ((absVy * FP_ONE) < (absVx * TAN_15_DEG_FP)) {
+                             this._vy = -this._vy;
+                        }
+                    }
+                }
+            }
         }
 
         // 2. Check for interactions with the block below (Jump Pad)
