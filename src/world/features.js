@@ -90,6 +90,12 @@ export function generateHiddenFeatures(world, heights, biomeByColumn) {
     const ruinX = 100 + Math.floor(Math.random() * (world.width - 200));
     const ruinFloorY = world.height - 10 - Math.floor(Math.random() * 10); // Deep underground
     Painters.drawAncientRuins(paint, ruinX, ruinFloorY);
+
+    // 5. Laputa (Giant Floating Island Ruins) - Only ONE per world
+    // High in the sky
+    const laputaX = 150 + Math.floor(Math.random() * (world.width - 300));
+    const laputaY = 30 + Math.floor(Math.random() * 10); // Y: 30-40 (High Sky)
+    Painters.drawLaputa(paint, laputaX, laputaY);
 }
 
 export function generateSurfacePonds(world, heights, biomeByColumn, seaLevel) {
