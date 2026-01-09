@@ -30,6 +30,11 @@ export const TERMINAL_VELOCITY = 20.0;
 // Jump impulse (initial velocity, applied once)
 export const JUMP_FORCE = 10;
 export const BIG_JUMP_FORCE = 18;
+
+// --- Water Physics Constants ---
+export const WATER_GRAVITY_FACTOR = 0.1; // 10% of normal gravity
+export const WATER_JUMP_FORCE = 8; // Jump force when underwater
+export const WATER_JUMP_VY_THRESHOLD = 0; // vy must be > this to allow underwater jump
 // Velocity threshold for breaking blocks from below
 export const UPWARD_COLLISION_VELOCITY_THRESHOLD = -20;
 // Maximum block ID for natural blocks (0-12)

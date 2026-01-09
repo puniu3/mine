@@ -14,7 +14,8 @@ import {
     UPWARD_COLLISION_VELOCITY_THRESHOLD, NATURAL_BLOCK_IDS,
     TNT_KNOCKBACK_STRENGTH, TNT_KNOCKBACK_DISTANCE_OFFSET,
     ACCELERATOR_ACCELERATION_AMOUNT,
-    TICK_TIME_SCALE, GRAVITY_PER_TICK, GRAVITY_LOW_FACTOR, PHYSICS_TPS, PHYSICS_DT
+    TICK_TIME_SCALE, GRAVITY_PER_TICK, GRAVITY_LOW_FACTOR, PHYSICS_TPS, PHYSICS_DT,
+    WATER_GRAVITY_FACTOR, WATER_JUMP_FORCE, WATER_JUMP_VY_THRESHOLD
 } from './constants.js';
 
 // --- Q20.12 Fixed-point arithmetic ---
@@ -43,6 +44,9 @@ const TICK_TIME_SCALE_FP = toFP(TICK_TIME_SCALE);
 const WALK_SPEED_FP = toFP(5);
 const JUMP_FORCE_FP = toFP(JUMP_FORCE);
 const BIG_JUMP_FORCE_FP = toFP(BIG_JUMP_FORCE);
+const WATER_JUMP_FORCE_FP = toFP(WATER_JUMP_FORCE);
+const WATER_JUMP_VY_THRESHOLD_FP = toFP(WATER_JUMP_VY_THRESHOLD);
+const WATER_GRAVITY_FACTOR_FP = toFP(WATER_GRAVITY_FACTOR);
 const TERMINAL_VELOCITY_FP = toFP(TERMINAL_VELOCITY);
 const UPWARD_COLLISION_THRESHOLD_FP = toFP(UPWARD_COLLISION_VELOCITY_THRESHOLD);
 const VELOCITY_BOOST_ON_BREAK_FP = toFP(2);
@@ -411,9 +415,10 @@ export class Player {
                 sounds.playBigJump();
             }
         }
-        // Priority 2: Normal Jump
-        else if (input.keys.jump && this.grounded) {
-            this._vy = -JUMP_FORCE_FP;
+        // Priority 2: Normal Jump (also allow underwater jump when vy > threshold)
+        else if (input.keys.jump && (this.grounded || (isInWater && this._vy > WATER_JUMP_VY_THRESHOLD_FP))) {
+            // Use water jump force when underwater, normal jump force otherwise
+            this._vy = isInWater ? -WATER_JUMP_FORCE_FP : -JUMP_FORCE_FP;
             this.grounded = false;
             sounds.playJump();
         }
@@ -432,9 +437,8 @@ export class Player {
             let gravityToApply = GRAVITY_PER_TICK_FP;
 
             if (isInWater) {
-                // Reduced gravity in water (10% of normal)
-                // 0.1 * 4096 = 409.6 -> 410
-                gravityToApply = Math.floor((gravityToApply * 410) / FP_ONE);
+                // Reduced gravity in water
+                gravityToApply = Math.floor((gravityToApply * WATER_GRAVITY_FACTOR_FP) / FP_ONE);
             } else {
                 // Apply Low Gravity (Moon Jump Mode) if active
                 // This takes precedence, or applies alongside Fastball logic.
