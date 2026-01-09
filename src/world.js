@@ -96,10 +96,6 @@ export class World {
                 // Fix: Force the terrain height to match the forced biome.
                 // This ensures Oceans are deep enough for water, and Mountains are high enough.
                 if (config) {
-                    // 【修正】ランダムノイズをやめ、滑らかな地形計算関数を使用する
-                    // 以前のコード: const variation = Math.floor(Math.random() * 5) - 2; 
-                    // 以前のコード: heights[x] = config.baseHeight + variation;
-                    
                     heights[x] = calculateTerrainHeight(x, config.baseHeight, config.terrain);
                 }
             }
@@ -245,7 +241,29 @@ export class World {
                             const canGoRight = right < this.width && this.getBlock(right, y) === BLOCKS.AIR;
 
                             if (canGoLeft || canGoRight) {
-                                const goLeft = (canGoLeft && canGoRight) ? Math.random() < 0.5 : canGoLeft;
+                                let goLeft;
+
+                                if (canGoLeft && canGoRight) {
+                                    // [Improved Logic]
+                                    // Instead of purely random choice, check if moving in a direction 
+                                    // helps join existing water or fill against a wall (cohesion).
+                                    // We look 2 blocks away (neighbor of the target) to see if it attracts.
+                                    const leftNeighbor = (x - 2 >= 0) ? this.getBlock(x - 2, y) : BLOCKS.AIR;
+                                    const rightNeighbor = (x + 2 < this.width) ? this.getBlock(x + 2, y) : BLOCKS.AIR;
+
+                                    const isLeftAttractive = leftNeighbor === BLOCKS.WATER || isBlockSolid(leftNeighbor, BLOCK_PROPS);
+                                    const isRightAttractive = rightNeighbor === BLOCKS.WATER || isBlockSolid(rightNeighbor, BLOCK_PROPS);
+
+                                    if (isLeftAttractive && !isRightAttractive) {
+                                        goLeft = true;
+                                    } else if (!isLeftAttractive && isRightAttractive) {
+                                        goLeft = false;
+                                    } else {
+                                        goLeft = Math.random() < 0.5;
+                                    }
+                                } else {
+                                    goLeft = canGoLeft;
+                                }
                                 
                                 const targetX = goLeft ? left : right;
                                 this.setBlock(targetX, y, BLOCKS.WATER);
