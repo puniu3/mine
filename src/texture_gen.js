@@ -146,7 +146,7 @@ export function generateTextures() {
         ctx.clearRect(0, 0, s, s);
 
         // Semi-transparent blue base
-        ctx.fillStyle = 'rgba(33, 150, 243, 0.3)';
+        ctx.fillStyle = 'rgba(33, 150, 243, 0.5)';
         ctx.fillRect(0, 0, s, s);
 
         // Water ripple/wave effect
