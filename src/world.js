@@ -135,7 +135,7 @@ export class World {
                     }
                 } else {
                     // Sky / Water
-                    if (y > SEA_LEVEL) {
+                    if (y > SEA_LEVEL && biome === BIOMES.OCEAN) {
                         this.setBlock(x, y, BLOCKS.WATER);
                     }
                 }
@@ -158,7 +158,85 @@ export class World {
             }
         }
 
+        // Water Physics Simulation (Fixes walls and floating water)
+        this.simulateWaterSettling();
+
         this.generateClouds(heights);
+    }
+
+    /**
+     * Simulates water physics to fix generation artifacts.
+     * Rules applied in order:
+     * 1. Gravity: Fall down into AIR.
+     * 2. Diagonal Flow: Slide down-left or down-right into AIR (fixes vertical walls).
+     * 3. Spreading: Flow sideways if supported by solid/water.
+     */
+    simulateWaterSettling() {
+        const passes = 12; // Sufficient passes to settle deep bodies of water
+        
+        for (let pass = 0; pass < passes; pass++) {
+            let changes = 0;
+            
+            // Scan top-down to propagate gravity efficiently
+            // Alternating scan direction (left-right / right-left) avoids flow bias
+            const scanLeftToRight = pass % 2 === 0;
+            const startX = scanLeftToRight ? 1 : this.width - 2;
+            const endX = scanLeftToRight ? this.width - 1 : 0;
+            const stepX = scanLeftToRight ? 1 : -1;
+
+            for (let y = 0; y < this.height - 1; y++) {
+                for (let x = startX; x !== endX; x += stepX) {
+                    if (this.getBlock(x, y) === BLOCKS.WATER) {
+                        
+                        // Rule 1: Gravity (Straight Down)
+                        if (this.getBlock(x, y + 1) === BLOCKS.AIR) {
+                            this.setBlock(x, y + 1, BLOCKS.WATER);
+                            this.setBlock(x, y, BLOCKS.AIR);
+                            changes++;
+                            continue; // Block moved, process next
+                        }
+
+                        // Rule 2: Diagonal Flow (Slide Down)
+                        // Allows water to cascade over edges, breaking vertical walls
+                        const left = x - 1;
+                        const right = x + 1;
+                        const down = y + 1;
+                        
+                        const canGoLeftDown = left >= 0 && this.getBlock(left, y) === BLOCKS.AIR && this.getBlock(left, down) === BLOCKS.AIR;
+                        const canGoRightDown = right < this.width && this.getBlock(right, y) === BLOCKS.AIR && this.getBlock(right, down) === BLOCKS.AIR;
+
+                        if (canGoLeftDown || canGoRightDown) {
+                            // If both are open, pick randomly to avoid patterns
+                            const goLeft = (canGoLeftDown && canGoRightDown) ? Math.random() < 0.5 : canGoLeftDown;
+                            
+                            const targetX = goLeft ? left : right;
+                            this.setBlock(targetX, down, BLOCKS.WATER);
+                            this.setBlock(x, y, BLOCKS.AIR);
+                            changes++;
+                            continue;
+                        }
+
+                        // Rule 3: Spreading (Sideways)
+                        // Only spread if supported below (don't fly), but fill gaps
+                        const below = this.getBlock(x, y + 1);
+                        if (below === BLOCKS.WATER || isBlockSolid(below, BLOCK_PROPS)) {
+                            const canGoLeft = left >= 0 && this.getBlock(left, y) === BLOCKS.AIR;
+                            const canGoRight = right < this.width && this.getBlock(right, y) === BLOCKS.AIR;
+
+                            if (canGoLeft || canGoRight) {
+                                const goLeft = (canGoLeft && canGoRight) ? Math.random() < 0.5 : canGoLeft;
+                                
+                                const targetX = goLeft ? left : right;
+                                this.setBlock(targetX, y, BLOCKS.WATER);
+                                this.setBlock(x, y, BLOCKS.AIR);
+                                changes++;
+                            }
+                        }
+                    }
+                }
+            }
+            if (changes === 0) break;
+        }
     }
 
     createExtremeTerrain(heights) {
@@ -229,14 +307,12 @@ export class World {
         const cloudCount = Math.floor(this.width / 25);
         const accessor = this.getAccessor();
         
-        // Define Sea Level to ensure clouds don't spawn underwater
         const SEA_LEVEL = Math.floor(this.height / 2) + 2;
 
         for (let i = 0; i < cloudCount; i++) {
             const startX = Math.floor(Math.random() * (this.width - 30));
             const groundHeight = heights[Math.min(startX, this.width - 1)];
             
-            // Use the higher surface (smaller Y value) between ground and sea level
             const effectiveSurfaceY = Math.min(groundHeight, SEA_LEVEL);
             
             const maxCloudY = effectiveSurfaceY - minHeightAboveGround;
