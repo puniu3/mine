@@ -261,7 +261,7 @@ export class Player {
 
         // Start searching from the middle of the world height instead of the top.
         // This helps avoid spawning on floating islands which are typically generated in the sky.
-        const searchStartY = Math.floor(this.world.height / 2);
+        const searchStartY = Math.floor(this.world.height * .4);
 
         // Check the block at the search start height
         const startBlock = this.world.getBlock(sx, searchStartY);
