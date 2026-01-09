@@ -84,8 +84,31 @@ export function createActions({
             const selectedBlock = inventory.getSelectedBlockId();
             const isCloud = selectedBlock === BLOCKS.CLOUD;
 
-            // Allow placement if there is a neighbor (normal rules) OR if it's a cloud
-            const hasNeighbor = isCloud || hasAdjacentBlock(targetTx, targetTy, (x, y) => world.getBlock(x, y), BLOCKS.AIR);
+            // Allow placement if there is a neighbor (normal rules) OR if it's a cloud.
+            // STRICT CHECK: For climbing, we do NOT consider transparent blocks (like Water) 
+            // as valid support, unless we are placing a Cloud (which can float/attach loosely).
+            let hasNeighbor = isCloud;
+            
+            if (!hasNeighbor) {
+                // Manually check neighbors to ensure we attach to something SOLID.
+                // We do not use hasAdjacentBlock(..., BLOCKS.AIR) because it would accept Water as support.
+                const offsets = [
+                    { dx: 0, dy: -1 }, // Top
+                    { dx: 0, dy: 1 },  // Bottom
+                    { dx: -1, dy: 0 }, // Left
+                    { dx: 1, dy: 0 }   // Right
+                ];
+
+                for (const { dx, dy } of offsets) {
+                    const nb = world.getBlock(targetTx + dx, targetTy + dy);
+                    // A neighbor is valid support if it is NOT transparent.
+                    // (Air is transparent, so this implicitly checks !== AIR)
+                    if (!isBlockTransparent(nb, BLOCK_PROPS)) {
+                        hasNeighbor = true;
+                        break;
+                    }
+                }
+            }
 
             if (hasNeighbor) {
                 if (inventory.consumeFromInventory(selectedBlock)) {
