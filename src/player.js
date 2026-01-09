@@ -411,8 +411,8 @@ export class Player {
                 sounds.playBigJump();
             }
         }
-        // Priority 2: Normal Jump
-        else if (input.keys.jump && this.grounded) {
+        // Priority 2: Normal Jump (also allow underwater jump when falling)
+        else if (input.keys.jump && (this.grounded || (isInWater && this._vy > 0))) {
             this._vy = -JUMP_FORCE_FP;
             this.grounded = false;
             sounds.playJump();
