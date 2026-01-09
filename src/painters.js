@@ -577,3 +577,61 @@ export function drawTreeSwamp(accessor, x, y) {
         }
     }
 }
+
+export function drawAncientRuins(accessor, cx, floorY) {
+    // Randomize shape and size
+    const caveRadiusX = 20 + Math.floor(Math.random() * 10); // 20 - 29
+    const caveRadiusY = 16 + Math.floor(Math.random() * 5);  // 16 - 20
+    
+    // 1. Excavate the Great Void (Oval Cave)
+    // We iterate over the bounding box
+    for (let dy = -caveRadiusY; dy <= 2; dy++) { // Go a bit below 0 to ensure flat floor
+        for (let dx = -caveRadiusX; dx <= caveRadiusX; dx++) {
+            // Ellipse equation check for cave shape
+            if ((dx * dx) / (caveRadiusX * caveRadiusX) + (dy * dy) / (caveRadiusY * caveRadiusY) <= 1.0) {
+                const tx = cx + dx;
+                const ty = floorY + dy - Math.floor(caveRadiusY * 0.6); // Shift cave up slightly so floorY is bottom
+                if (ty > 0 && ty < accessor.height - 1) {
+                    accessor.set(tx, ty, BLOCKS.AIR);
+                }
+            }
+        }
+    }
+
+    // 2. The Artificial Sun (Floating Gold Sphere)
+    const sunX = cx;
+    const sunY = floorY - caveRadiusY - 2; // Floating near top of void
+    const sunRad = 3;
+    
+    for (let dx = -sunRad; dx <= sunRad; dx++) {
+        for (let dy = -sunRad; dy <= sunRad; dy++) {
+            if (dx * dx + dy * dy <= sunRad * sunRad) {
+                accessor.set(sunX + dx, sunY + dy, BLOCKS.GOLD);
+            }
+        }
+    }
+    // The Core of the Sun
+    accessor.set(sunX, sunY, BLOCKS.JACKPOT); 
+
+    // 3. The Pyramid (Sandstone style)
+    const pyrBase = 16 + Math.floor(Math.random() * 8); // 16 - 23
+    const pyrHeight = Math.ceil(pyrBase / 2);
+    
+    for (let h = 0; h < pyrHeight; h++) {
+        const width = pyrBase - (h * 2);
+        const py = floorY - h;
+        
+        const startX = cx - Math.floor(width / 2);
+        for (let w = 0; w < width; w++) {
+            accessor.set(startX + w, py, BLOCKS.SAND);
+        }
+    }
+    
+    // Pyramid Capstone (Updated to SAND)
+    accessor.set(cx, floorY - pyrHeight, BLOCKS.SAND);
+    
+    // Hidden Treasure inside Pyramid
+    accessor.set(cx, floorY - 1, BLOCKS.JACKPOT);
+    accessor.set(cx - 1, floorY - 1, BLOCKS.GOLD);
+    accessor.set(cx + 1, floorY - 1, BLOCKS.GOLD);
+}

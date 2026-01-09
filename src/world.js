@@ -706,6 +706,12 @@ export class World {
                 x += 15; continue;
             }
         }
+
+        // 4. Super Ancient Civilization (Pyramid in Deep Void) - Only ONE per world
+        // Place it somewhere in the middle-ish 80% of the map to avoid edges
+        const ruinX = 100 + Math.floor(Math.random() * (this.width - 200));
+        const ruinFloorY = this.height - 10 - Math.floor(Math.random() * 10); // Deep underground
+        Painters.drawAncientRuins(paint, ruinX, ruinFloorY);
     }
 
     generateCaves(heights) {
