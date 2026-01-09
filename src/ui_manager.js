@@ -1,6 +1,5 @@
 import { loadGameState } from './save.js';
 import { exportWorldToImage, importWorldFromImage, downloadBlob } from './world_share.js';
-import { strings } from './i18n.js';
 
 /**
  * Initializes UI event listeners and DOM interactions.
@@ -75,20 +74,38 @@ export function initUI(callbacks) {
     const importBtn = document.getElementById('import-btn');
     const importFile = document.getElementById('import-file');
 
-    function showWorldModal() { if(worldModal) worldModal.style.display = 'block'; }
+    function updateExportBtnState() {
+        if (!exportBtn) return;
+        const savedState = loadGameState();
+        const hasSave = savedState && savedState.world && savedState.world.map;
+        exportBtn.disabled = !hasSave;
+    }
+
+    function updateImportBtnState() {
+        if (!importBtn || !importFile) return;
+        importBtn.disabled = !importFile.files[0];
+    }
+
+    function showWorldModal() {
+        if(worldModal) worldModal.style.display = 'block';
+        updateExportBtnState();
+        updateImportBtnState();
+    }
     function hideWorldModal() { if(worldModal) worldModal.style.display = 'none'; }
 
     if(worldBtn) worldBtn.addEventListener('click', showWorldModal);
     if(worldCloseBtn) worldCloseBtn.addEventListener('click', hideWorldModal);
 
+    // Event: File selection change - update import button state
+    if(importFile) {
+        importFile.addEventListener('change', updateImportBtnState);
+    }
+
     // Event: Export World
     if(exportBtn) {
         exportBtn.addEventListener('click', async () => {
             const savedState = loadGameState();
-            if (!savedState || !savedState.world || !savedState.world.map) {
-                alert(strings.msg_no_save);
-                return;
-            }
+            if (!savedState || !savedState.world || !savedState.world.map) return;
 
             // Decode base64 to Uint8Array
             const binary = atob(savedState.world.map);
@@ -107,14 +124,11 @@ export function initUI(callbacks) {
     if(importBtn && importFile) {
         importBtn.addEventListener('click', async () => {
             const file = importFile.files[0];
-            if (!file) {
-                alert(strings.msg_select_img);
-                return;
-            }
+            if (!file) return;
 
             try {
                 const worldMap = await importWorldFromImage(file);
-                
+
                 // Hide UIs
                 hideWorldModal();
                 hideStartScreen();
@@ -123,7 +137,7 @@ export function initUI(callbacks) {
                 onImportWorld(worldMap);
 
             } catch (err) {
-                alert(strings.msg_import_err + err.message);
+                alert(err.message);
             }
         });
     }
