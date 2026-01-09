@@ -376,6 +376,14 @@ export class Player {
             }
         }
 
+        // Check if player center is in water
+        const centerX_FP = this._x + (this._width >> 1);
+        const centerY_FP = this._y + (this._height >> 1);
+        const centerBlockX = Math.floor(centerX_FP / TILE_SIZE_FP);
+        const centerBlockY = Math.floor(centerY_FP / TILE_SIZE_FP);
+        const centerBlock = this.world.getBlock(centerBlockX, centerBlockY);
+        const isInWater = (centerBlock === BLOCKS.WATER);
+
         // 4. Gravity Application (FP)
         if (this._vy < TERMINAL_VELOCITY_FP) {
             let gravityToApply = GRAVITY_PER_TICK_FP;
@@ -384,6 +392,11 @@ export class Player {
             // This takes precedence, or applies alongside Fastball logic.
             if (this.lowGravityActive) {
                 gravityToApply = Math.floor(gravityToApply * GRAVITY_LOW_FACTOR);
+            }
+
+            // Water Gravity (0.1x)
+            if (isInWater) {
+                gravityToApply = Math.floor(gravityToApply * 0.1);
             }
 
             // Fastball Mode: Apply lift proportional to horizontal momentum
@@ -409,12 +422,20 @@ export class Player {
         // Position += velocity * timeScale (all in FP)
         const totalVx_FP = this._vx + this._boardVx;
 
-        // Horizontal movement: x += totalVx * timeScale
-        this._x += (totalVx_FP * TICK_TIME_SCALE_FP) >> FP_SHIFT;
+        // Water Movement Scale (0.6x position updates)
+        let moveScale_FP = FP_ONE;
+        if (isInWater) {
+            moveScale_FP = Math.floor(FP_ONE * 0.6);
+        }
+
+        // Horizontal movement: x += totalVx * timeScale * moveScale
+        const deltaX_FP = (totalVx_FP * TICK_TIME_SCALE_FP) >> FP_SHIFT;
+        this._x += (deltaX_FP * moveScale_FP) >> FP_SHIFT;
         this.handleCollisions(true, totalVx_FP);
 
-        // Vertical movement: y += vy * timeScale
-        this._y += (this._vy * TICK_TIME_SCALE_FP) >> FP_SHIFT;
+        // Vertical movement: y += vy * timeScale * moveScale
+        const deltaY_FP = (this._vy * TICK_TIME_SCALE_FP) >> FP_SHIFT;
+        this._y += (deltaY_FP * moveScale_FP) >> FP_SHIFT;
         this.handleCollisions(false, this._vy);
 
         // 6. World Wrapping

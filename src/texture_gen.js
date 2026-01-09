@@ -346,6 +346,23 @@ export function generateTextures() {
         addNoise(ctx, 0.05);
     });
 
+    createTexture(BLOCKS.WATER, (ctx, s) => {
+        // Semi-transparent blue base
+        ctx.fillStyle = 'rgba(33, 150, 243, 0.6)';
+        ctx.fillRect(0, 0, s, s);
+
+        // Wave patterns
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+
+        // Simple wave strips
+        for (let y = 4; y < s; y += 8) {
+            const offset = (y % 16 === 0) ? 0 : 4;
+            for (let x = offset; x < s; x += 12) {
+                 ctx.fillRect(x, y, 6, 2);
+            }
+        }
+    });
+
     createTexture(BLOCKS.ACCELERATOR_RIGHT, (ctx, s) => {
         // Clear background
         ctx.clearRect(0, 0, s, s);

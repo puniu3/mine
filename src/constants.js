@@ -77,11 +77,13 @@ export const BLOCKS = {
     SAPLING: 16,
     JACKPOT: 17,
     ACCELERATOR_LEFT: 18,
-    ACCELERATOR_RIGHT: 19
+    ACCELERATOR_RIGHT: 19,
+    WATER: 20
 };
 
 export const BLOCK_PROPS = {
     [BLOCKS.AIR]: { name: 'Air', solid: false, transparent: true },
+    [BLOCKS.WATER]: { name: 'Water', solid: false, transparent: true, color: '#2196f3', type: 'water', drop: BLOCKS.WATER },
     [BLOCKS.DIRT]: { name: 'Dirt', solid: true, color: '#5d4037', type: 'soil' },
     [BLOCKS.GRASS]: { name: 'Grass', solid: true, color: '#388e3c', type: 'soil', drop: BLOCKS.DIRT },
     [BLOCKS.STONE]: { name: 'Stone', solid: true, color: '#757575', type: 'stone' },
@@ -121,5 +123,6 @@ export const HOTBAR_ITEMS = [
     BLOCKS.SAPLING,
     BLOCKS.JACKPOT,
     BLOCKS.ACCELERATOR_LEFT,
-    BLOCKS.ACCELERATOR_RIGHT
+    BLOCKS.ACCELERATOR_RIGHT,
+    BLOCKS.WATER
 ];
