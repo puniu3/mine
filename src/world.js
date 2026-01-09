@@ -10,7 +10,8 @@ const BIOMES = {
     WASTELAND: 'wasteland',
     DEEP_FOREST: 'deep_forest',
     SAVANNA: 'savanna',
-    PLATEAU: 'plateau'
+    PLATEAU: 'plateau',
+    OCEAN: 'ocean'
 };
 
 export class World {
@@ -83,6 +84,9 @@ export class World {
         // Generate base noise heights
         const { heights, biomeByColumn } = generateBiomeHeights(this.width, biomeConfigs, 96, 192);
 
+        // Define Sea Level (slightly below the visual middle to create depth)
+        const SEA_LEVEL = Math.floor(this.height / 2) + 2;
+
         // Apply deep valleys and steep cliffs
         this.createExtremeTerrain(heights);
 
@@ -92,7 +96,7 @@ export class World {
         for (let x = 0; x < this.width; x++) {
             const h = heights[x];
             const biome = biomeByColumn[x];
-            const surfaceBlock = this.getSurfaceBlock(biome, h, x);
+            let surfaceBlock = this.getSurfaceBlock(biome, h, x);
 
             for (let y = 0; y < this.height; y++) {
                 if (y > h) {
@@ -108,35 +112,50 @@ export class World {
                         this.setBlock(x, y, this.getSubSurfaceBlock(biome, y, h));
                     }
                 } else if (y === h) {
-                    // Surface block
-                    this.setBlock(x, y, surfaceBlock);
+                    // Surface block logic
+                    // If the terrain is below sea level, it's underwater (Seabed)
+                    if (y > SEA_LEVEL) {
+                        // Override surface block for ocean floor
+                        this.setBlock(x, y, BLOCKS.SAND);
+                    } else {
+                        // Normal land surface
+                        this.setBlock(x, y, surfaceBlock);
 
-                    const isVegetationGround =
-                        surfaceBlock === BLOCKS.GRASS ||
-                        (biome === BIOMES.SNOWFIELD && surfaceBlock === BLOCKS.SNOW) ||
-                        (biome === BIOMES.DESERT && surfaceBlock === BLOCKS.SAND) ||
-                        (biome === BIOMES.WASTELAND && surfaceBlock === BLOCKS.STONE) ||
-                        (biome === BIOMES.SAVANNA && (surfaceBlock === BLOCKS.GRASS || surfaceBlock === BLOCKS.DIRT)) ||
-                        (biome === BIOMES.PLATEAU && surfaceBlock === BLOCKS.STONE);
+                        // Vegetation logic (only on land)
+                        const isVegetationGround =
+                            surfaceBlock === BLOCKS.GRASS ||
+                            (biome === BIOMES.SNOWFIELD && surfaceBlock === BLOCKS.SNOW) ||
+                            (biome === BIOMES.DESERT && surfaceBlock === BLOCKS.SAND) ||
+                            (biome === BIOMES.WASTELAND && surfaceBlock === BLOCKS.STONE) ||
+                            (biome === BIOMES.SAVANNA && (surfaceBlock === BLOCKS.GRASS || surfaceBlock === BLOCKS.DIRT)) ||
+                            (biome === BIOMES.PLATEAU && surfaceBlock === BLOCKS.STONE);
 
-                    if (isVegetationGround && x > 5 && x < this.width - 5) {
-                        this.generateVegetation(x, y - 1, biome);
+                        if (isVegetationGround && x > 5 && x < this.width - 5) {
+                            this.generateVegetation(x, y - 1, biome);
+                        }
+                    }
+                } else {
+                    // Sky / Air
+                    if (y > SEA_LEVEL) {
+                        this.setBlock(x, y, BLOCKS.WATER);
                     }
                 }
             }
         }
 
-        // Post-processing to make cliffs look rocky
+        // Post-processing
         this.paintCliffFaces(heights);
-
         this.generateGeology(heights);
         this.generateCaves(heights);
-        this.generateStructures(heights, biomeByColumn);
+        this.generateSurfacePonds(heights, SEA_LEVEL); // New: Surface Ponds
+        this.generateStructures(heights, biomeByColumn, SEA_LEVEL); // Passed SEA_LEVEL
         this.generateHiddenFeatures(heights, biomeByColumn);
 
+        // Workbench placement
         for (let x = 10; x < this.width - 10; x += 50 + Math.floor(Math.random() * 20)) {
             const h = heights[x];
-            if (this.getBlock(x, h - 1) === BLOCKS.AIR) {
+            // Only place workbench if above water
+            if (h <= SEA_LEVEL && this.getBlock(x, h - 1) === BLOCKS.AIR) {
                 this.setBlock(x, h - 1, BLOCKS.WORKBENCH);
             }
         }
@@ -209,24 +228,13 @@ export class World {
         }
     }
 
-    /**
-     * Converts the exposed side walls of steep cliffs from Dirt to Stone.
-     */
     paintCliffFaces(heights) {
         for (let x = 1; x < this.width - 1; x++) {
             const h = heights[x];
             const hLeft = heights[x - 1];
             const hRight = heights[x + 1];
 
-            // Note: Larger 'h' means deeper/lower y-coordinate. Smaller 'h' means higher up.
-            
-            // Check Left Neighbor: If current column is significantly lower (larger y) than left
             if (h > hLeft + 2) {
-                // We have a wall on the LEFT side (at x-1) exposed to this column
-                // But specifically, the current column 'x' has air where 'x-1' has blocks.
-                // Wait, logic is: We are at x. x is LOW (Deep). x-1 is HIGH (Peak).
-                // The blocks at x-1 from y=hLeft to y=h are exposed to the right.
-                // We should paint the blocks at x-1.
                 for (let y = hLeft + 1; y <= h; y++) {
                    if (this.getBlock(x - 1, y) === BLOCKS.DIRT) {
                        this.setBlock(x - 1, y, BLOCKS.STONE);
@@ -234,10 +242,7 @@ export class World {
                 }
             }
 
-            // Check Right Neighbor: If current column is significantly lower than right
             if (h > hRight + 2) {
-                // x is LOW. x+1 is HIGH.
-                // The blocks at x+1 from y=hRight to y=h are exposed to the left.
                 for (let y = hRight + 1; y <= h; y++) {
                     if (this.getBlock(x + 1, y) === BLOCKS.DIRT) {
                         this.setBlock(x + 1, y, BLOCKS.STONE);
@@ -404,6 +409,11 @@ export class World {
                 weight: 10,
                 baseHeight: halfHeight - 10,
                 terrain: { largeAmplitude: 25, smallAmplitude: 2, largeFrequency: 60, smallFrequency: 5 }
+            },
+            [BIOMES.OCEAN]: {
+                weight: 18,
+                baseHeight: halfHeight + 25, // Significantly lower than other biomes (creating a basin)
+                terrain: { largeAmplitude: 15, smallAmplitude: 5, largeFrequency: 45, smallFrequency: 10 }
             }
         };
     }
@@ -413,6 +423,7 @@ export class World {
         if (biome === BIOMES.DESERT) return BLOCKS.SAND;
         if (biome === BIOMES.SNOWFIELD) return BLOCKS.SNOW;
         if (biome === BIOMES.WASTELAND) return BLOCKS.STONE;
+        if (biome === BIOMES.OCEAN) return BLOCKS.SAND; // Fallback, though handled in generate loop
         if (biome === BIOMES.MOUNTAIN) {
             if (surfaceY < snowLine) return BLOCKS.SNOW;
             if (surfaceY > this.height / 2 - 6) return BLOCKS.GRASS;
@@ -430,6 +441,7 @@ export class World {
     getSubSurfaceBlock(biome, y, surfaceY) {
         const shallow = y <= surfaceY + 4;
         if (biome === BIOMES.DESERT) return shallow ? BLOCKS.SAND : BLOCKS.STONE;
+        if (biome === BIOMES.OCEAN) return BLOCKS.SAND;
         if (biome === BIOMES.MOUNTAIN || biome === BIOMES.WASTELAND || biome === BIOMES.PLATEAU) return BLOCKS.STONE;
         return BLOCKS.DIRT;
     }
@@ -458,6 +470,49 @@ export class World {
                 this.createBlob(x, y, BLOCKS.SAND, radius);
             }
         }
+
+        // Generate Underground Aquifers (Water Pockets)
+        const waterPocketCount = Math.floor(this.width * this.height / 2000);
+        for (let i = 0; i < waterPocketCount; i++) {
+            const x = Math.floor(Math.random() * this.width);
+            const y = Math.floor(Math.random() * this.height);
+            const surface = heights[x];
+
+            // Deep enough to not break surface easily
+            if (y > surface + 15 && y < this.height - 10) {
+                const radius = 2 + Math.random() * 2.5;
+                this.createBlob(x, y, BLOCKS.WATER, radius);
+            }
+        }
+    }
+
+    generateSurfacePonds(heights, seaLevel) {
+        // Small surface ponds in non-desert, non-mountain biomes
+        const pondCount = Math.floor(this.width / 60);
+        for (let i = 0; i < pondCount; i++) {
+            const x = Math.floor(Math.random() * (this.width - 10)) + 5;
+            const y = heights[x];
+            
+            // Only generate if above sea level (don't make ponds inside the ocean)
+            if (y <= seaLevel) { 
+                const radius = 2 + Math.floor(Math.random() * 3);
+                
+                // Check if the area is relatively flat
+                if (Math.abs(heights[x - radius] - heights[x + radius]) < 3) {
+                     this.createPond(x, y, radius);
+                }
+            }
+        }
+    }
+
+    createPond(cx, cy, radius) {
+        for (let dx = -radius; dx <= radius; dx++) {
+            for (let dy = 0; dy <= radius / 2; dy++) {
+                if (dx*dx + dy*dy*4 <= radius*radius) { // flattened circle
+                    this.setBlock(cx + dx, cy + dy, BLOCKS.WATER);
+                }
+            }
+        }
     }
 
     createBlob(cx, cy, blockType, radius) {
@@ -470,7 +525,7 @@ export class World {
                     const x = cx + dx;
                     const y = cy + dy;
                     
-                    if (this.getBlock(x, y) === BLOCKS.STONE) {
+                    if (this.getBlock(x, y) === BLOCKS.STONE || this.getBlock(x, y) === BLOCKS.DIRT) {
                         this.setBlock(x, y, blockType);
                     }
                 }
@@ -478,7 +533,7 @@ export class World {
         }
     }
 
-    generateStructures(heights, biomeByColumn) {
+    generateStructures(heights, biomeByColumn, seaLevel) {
         const islandCount = Math.floor(this.width / 80);
         for (let i = 0; i < islandCount; i++) {
             const x = 20 + Math.floor(Math.random() * (this.width - 40));
@@ -486,6 +541,17 @@ export class World {
             if (surface > 50) {
                 const y = 15 + Math.floor(Math.random() * (surface - 40));
                 this.generateFloatingIsland(x, y);
+            }
+        }
+
+        // Ocean Islands
+        for (let x = 0; x < this.width; x += 1) {
+            if (biomeByColumn[x] === BIOMES.OCEAN) {
+                // 3% chance per column to start checking for an island spot, but keep distance
+                if (Math.random() < 0.03) {
+                    this.generateOceanIsland(x, seaLevel);
+                    x += 40; // Spacing
+                }
             }
         }
 
@@ -507,6 +573,41 @@ export class World {
             const surface = heights[x];
             const y = surface + 15 + Math.floor(Math.random() * (this.height - surface - 20));
             this.generateMineshaft(x, y);
+        }
+    }
+
+    generateOceanIsland(cx, seaLevel) {
+        const width = 4 + Math.floor(Math.random() * 5); // Radius
+        const height = 4 + Math.floor(Math.random() * 3); // Height above water
+        
+        // Build the island mound
+        for (let dx = -width; dx <= width; dx++) {
+            // Parabolic shape
+            const dist = Math.abs(dx) / width;
+            const h = Math.floor(height * (1 - dist * dist)); 
+            
+            // Fill from top down into the water
+            const topY = seaLevel - h;
+            const bottomY = seaLevel + 4 + Math.floor(Math.random() * 3); // Extend into water
+
+            for (let y = topY; y <= bottomY; y++) {
+                if (y < seaLevel) {
+                    // Above water
+                    this.setBlock(cx + dx, y, BLOCKS.SAND);
+                    // Add grass on top layer sometimes
+                    if (y === topY && Math.random() > 0.2) {
+                        this.setBlock(cx + dx, y, BLOCKS.GRASS);
+                    }
+                } else {
+                    // Underwater base
+                    this.setBlock(cx + dx, y, BLOCKS.SAND);
+                }
+            }
+        }
+
+        // Add a tree on the island
+        if (Math.random() > 0.3) {
+            this.generateTreeOak(cx, seaLevel - height - 1);
         }
     }
 
