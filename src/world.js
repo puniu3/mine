@@ -123,6 +123,7 @@ export class World {
         this.generateGeology(heights);
         this.generateCaves(heights);
         this.generateSurfacePonds(heights, biomeByColumn, SEA_LEVEL);
+        this.generateWaterfalls(heights, biomeByColumn, SEA_LEVEL);
         this.generateStructures(heights, biomeByColumn, SEA_LEVEL);
         this.generateHiddenFeatures(heights, biomeByColumn);
 
@@ -555,6 +556,71 @@ export class World {
 
             if (y <= seaLevel && Math.abs(prevH - nextH) < 3) { 
                  Painters.drawPond(paint, x, y, 2 + Math.floor(Math.random() * 3));
+            }
+        }
+    }
+
+    generateWaterfalls(heights, biomeByColumn, seaLevel) {
+        const paint = this.getAccessor();
+        const maxWaterfalls = 2 + Math.floor(Math.random() * 2); // 2 to 3 waterfalls
+        let created = 0;
+        let attempts = 0;
+
+        while (created < maxWaterfalls && attempts < this.width * 4) {
+            attempts++;
+            const x = Math.floor(Math.random() * this.width);
+            const biome = biomeByColumn[x];
+
+            // Filter for biomes where water/ponds make sense (e.g. not Desert, not Snowfield frozen?)
+            // "Pond biomes" usually means Plains, Forest, Mountains, etc.
+            if (biome === BIOMES.DESERT || biome === BIOMES.SNOWFIELD || biome === BIOMES.WASTELAND) {
+                continue;
+            }
+
+            const y = heights[x];
+
+            // Must be above sea level (mountains/plateaus)
+            if (y >= seaLevel) continue;
+
+            // Check for extreme height difference nearby (cliff)
+            const range = 5;
+            const threshold = 10;
+
+            const leftH = heights[(x - range + this.width) % this.width];
+            const rightH = heights[(x + range) % this.width];
+
+            const dropLeft = leftH - y;
+            const dropRight = rightH - y;
+
+            if (dropLeft > threshold || dropRight > threshold) {
+                // Found a cliff edge, create a waterfall
+
+                // 1. Draw the source pond
+                Painters.drawPond(paint, x, y, 3);
+
+                // 2. Extend water downwards
+                for (let dx = -4; dx <= 4; dx++) {
+                    const wx = (x + dx + this.width) % this.width;
+
+                    // Check if we have a water block at the source level
+                    if (this.getBlock(wx, y) === BLOCKS.WATER) {
+                        let cy = y + 1;
+                        // Trace down through AIR
+                        while (cy < this.height) {
+                            const blockBelow = this.getBlock(wx, cy);
+                            if (blockBelow === BLOCKS.AIR) {
+                                this.setBlock(wx, cy, BLOCKS.WATER);
+                            } else if (blockBelow !== BLOCKS.WATER) {
+                                // Hit solid ground, stop
+                                break;
+                            }
+                            cy++;
+                        }
+                    }
+                }
+                created++;
+                // Skip nearby x to avoid clumping
+                // Note: since x is random, we can't easily skip, but random distribution handles it well enough.
             }
         }
     }
