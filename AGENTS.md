@@ -63,6 +63,7 @@ mine/
     ├── tnt.js          # TNT explosion logic, timers, knockback, and block destruction
     ├── sapling_manager.js # Sapling growth timers and tree generation logic
     ├── ui_manager.js   # DOM event handling (Start screen, World Share modals)
+    ├── i18n.js         # Internationalization: string resources and auto-detection
     └── world_share.js  # World export/import as PNG images (1 tile = 1 pixel)
 
 ## Module Dependency Graph
@@ -73,8 +74,9 @@ main.js
 ├── audio.js
 ├── texture_gen.js
 ├── input.js
+├── i18n.js
 ├── inventory.js
-├── crafting.js
+├── crafting.js (imports: i18n)
 ├── actions.js (imports: block_particles)
 ├── world/index.js
 │   ├── world/generate.js
@@ -235,6 +237,12 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - `exportWorldToImage()`: Converts world map to PNG (1 tile = 1 pixel)
 - `importWorldFromImage()`: Converts PNG back to world map data
 - Used by `ui_manager.js`
+
+### Internationalization (i18n.js)
+- Manages string resources for UI localization.
+- `initI18n()`: Detects browser language (defaults to 'ja') and updates DOM elements with `data-i18n` attributes.
+- Exports `strings` object for programmatic access to localized text (e.g., in `crafting.js`, `ui_manager.js`).
+- Currently supports: Japanese (ja).
 
 ### Game Loop (main.js)
 - **Orchestrator**: Initializes all subsystems (World, Player, Camera, Managers, Block Particles)

@@ -55,50 +55,50 @@
             </h1>
             
             <div class="start-buttons">
-                <button id="continue-btn" class="action-btn primary-style">▶ つづきから</button>
+                <button id="continue-btn" class="action-btn primary-style" data-i18n="continue_btn">▶ つづきから</button>
                 
-                <button id="start-btn" class="action-btn primary-style">▶ はじめる</button>
+                <button id="start-btn" class="action-btn primary-style" data-i18n="start_btn">▶ はじめる</button>
                 
-                <button id="reset-btn" class="action-btn secondary-style">はじめから</button>
+                <button id="reset-btn" class="action-btn secondary-style" data-i18n="reset_btn">はじめから</button>
                 
-                <button id="world-btn" class="action-btn secondary-style">ワールド</button>
+                <button id="world-btn" class="action-btn secondary-style" data-i18n="world_btn">ワールド</button>
             </div>
 
             <div class="instructions-card">
                 <div class="inst-col">
-                    <strong>パソコン</strong>
-                    <span>うごく: やじるし / WASD</span>
-                    <span>とぶ: スペース</span>
-                    <span>つくる・こわす: クリック</span>
+                    <strong data-i18n="inst_pc">パソコン</strong>
+                    <span data-i18n="inst_move_pc">うごく: やじるし / WASD</span>
+                    <span data-i18n="inst_jump_pc">とぶ: スペース</span>
+                    <span data-i18n="inst_action_pc">つくる・こわす: クリック</span>
                 </div>
                 <div class="inst-line"></div>
                 <div class="inst-col">
-                    <strong>スマホ</strong>
-                    <span>うごく: ← →</span>
-                    <span>つくる・こわす: タップ</span>
+                    <strong data-i18n="inst_mobile">スマホ</strong>
+                    <span data-i18n="inst_move_mobile">うごく: ← →</span>
+                    <span data-i18n="inst_action_mobile">つくる・こわす: タップ</span>
                 </div>
             </div>
-            <p class="hint-text">★ あしもとに おくと のぼれるよ！</p>
+            <p class="hint-text" data-i18n="hint_text">★ あしもとに おくと のぼれるよ！</p>
         </div>
     </div>
 
     <div id="world-modal">
-        <h2>ワールド</h2>
+        <h2 data-i18n="world_modal_title">ワールド</h2>
     
         <div class="world-section">
-            <h3>のこす</h3>
-            <p>つくった せかいを えにする</p>
-            <button id="export-btn">えにする</button>
+            <h3 data-i18n="world_export_title">のこす</h3>
+            <p data-i18n="world_export_desc">つくった せかいを えにする</p>
+            <button id="export-btn" data-i18n="world_export_btn">えにする</button>
         </div>
     
         <div class="world-section">
-            <h3>よみこむ</h3>
-            <p>えを よみこんで あそぶ</p>
+            <h3 data-i18n="world_import_title">よみこむ</h3>
+            <p data-i18n="world_import_desc">えを よみこんで あそぶ</p>
             <input type="file" id="import-file" accept="image/*">
-            <button id="import-btn">よみこむ</button>
+            <button id="import-btn" data-i18n="world_import_btn">よみこむ</button>
         </div>
     
-        <button id="world-close-btn">もどる</button>
+        <button id="world-close-btn" data-i18n="world_back_btn">もどる</button>
     </div>
 
     <script type="module" src="src/main.js"></script>
