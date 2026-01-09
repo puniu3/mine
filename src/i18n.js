@@ -26,6 +26,12 @@ export const resources = {
 
         msg_import_err: "World window alert message. Displayed when the try-catch block fails during image loading/world generation."
     },
+    style: {
+        target_audience: "6-year-olds",
+        tone: "Carefree, colloquial, and friendly",
+        context: "Children playing independently without adult supervision",
+        vocabulary: "Simple, easy-to-understand words; strictly avoid technical jargon"
+    },
     ja: {
         continue_btn: "▶ つづきから",
         start_btn: "▶ はじめる",
@@ -51,6 +57,84 @@ export const resources = {
         craft_missing: "ざいりょうがたりないよ",
         craft_done: "できたよ！",
         msg_import_err: "この えでは ワールドを つくれないよ"
+    },
+    en: {
+        continue_btn: "▶ Continue",
+        start_btn: "▶ Start",
+        reset_btn: "Start Over",
+        world_btn: "World",
+        inst_pc: "PC Controls",
+        inst_move_pc: "Move: Arrows / WASD",
+        inst_jump_pc: "Jump: Space",
+        inst_action_pc: "Make / Break: Click",
+        inst_mobile: "Touch Controls",
+        inst_move_mobile: "Move: ← →",
+        inst_action_mobile: "Make / Break: Tap",
+        hint_text: "★ Put blocks at your feet to climb!",
+        world_modal_title: "My World",
+        world_export_title: "Save",
+        world_export_desc: "Turn your world into a picture.",
+        world_export_btn: "Make Picture",
+        world_import_title: "Load",
+        world_import_desc: "Load a picture to play.",
+        world_import_btn: "Load Picture",
+        world_back_btn: "Back",
+
+        craft_missing: "Need more items!",
+        craft_done: "Done!",
+        msg_import_err: "Can't use this picture."
+    },
+    zh: {
+        continue_btn: "▶ 继续玩",
+        start_btn: "▶ 开始玩",
+        reset_btn: "重新开始",
+        world_btn: "世界",
+        inst_pc: "电脑怎么玩",
+        inst_move_pc: "移动: 箭头 / WASD",
+        inst_jump_pc: "跳: 空格键",
+        inst_action_pc: "盖东西 / 拆方块: 点击",
+        inst_mobile: "手机怎么玩",
+        inst_move_mobile: "移动: ← →",
+        inst_action_mobile: "盖东西 / 拆方块: 点击",
+        hint_text: "★ 放在脚下就能爬上去哦！",
+        world_modal_title: "我的世界",
+        world_export_title: "保存",
+        world_export_desc: "把世界变成一张画。",
+        world_export_btn: "变成画",
+        world_import_title: "读取",
+        world_import_desc: "读取画来玩。",
+        world_import_btn: "读取画",
+        world_back_btn: "返回",
+
+        craft_missing: "材料不够哦",
+        craft_done: "做好了！",
+        msg_import_err: "这张画不能用哦"
+    },
+    "zh-TW": {
+        continue_btn: "▶ 繼續玩",
+        start_btn: "▶ 開始玩",
+        reset_btn: "重新開始",
+        world_btn: "世界",
+        inst_pc: "電腦怎麼玩",
+        inst_move_pc: "移動: 箭頭 / WASD",
+        inst_jump_pc: "跳: 空白鍵",
+        inst_action_pc: "蓋東西 / 拆方塊: 點擊",
+        inst_mobile: "手機怎麼玩",
+        inst_move_mobile: "移動: ← →",
+        inst_action_mobile: "蓋東西 / 拆方塊: 點擊",
+        hint_text: "★ 放在腳下就能爬上去喔！",
+        world_modal_title: "我的世界",
+        world_export_title: "保存",
+        world_export_desc: "把世界變成一張畫。",
+        world_export_btn: "變成畫",
+        world_import_title: "讀取",
+        world_import_desc: "讀取畫來玩。",
+        world_import_btn: "讀取畫",
+        world_back_btn: "返回",
+
+        craft_missing: "材料不夠喔",
+        craft_done: "做好了！",
+        msg_import_err: "這張畫不能用喔"
     }
 };
 
@@ -58,8 +142,11 @@ export const strings = {};
 Object.assign(strings, resources.ja);
 
 export function initI18n() {
-    const lang = (navigator.language || navigator.userLanguage || 'ja').split('-')[0];
-    const target = resources[lang] || resources.ja;
+    const rawLang = navigator.language || navigator.userLanguage || 'ja';
+    const mainLang = rawLang.split('-')[0];
+
+    // Priority: Exact match (e.g., zh-TW) -> Main language (e.g., en, zh, ja) -> Fallback to ja
+    const target = resources[rawLang] || resources[mainLang] || resources.ja;
 
     // Clear and update strings object
     Object.keys(strings).forEach(key => delete strings[key]);
