@@ -85,10 +85,11 @@ const SKIP_SPEED_THRESHOLD_FP = WALK_SPEED_FP * 2;
 const TAN_15_DEG_FP = 1097;
 
 export class Player {
-    constructor(world, addToInventory = null, onTNTJumpPad = null) {
+    constructor(world, addToInventory = null, onTNTJumpPad = null, onSplash = null) {
         this.world = world;
         this.addToInventory = addToInventory;
         this.onTNTJumpPad = onTNTJumpPad;
+        this.onSplash = onSplash;
 
         // Internal fixed-point storage (Q20.12)
         this._x = 0;
@@ -113,6 +114,7 @@ export class Player {
         this.fastballActive = false; // "Lift" mode active (Accelerator + Cloud)
         this.lowGravityActive = false; // "Moon Jump" mode active (Jump Pad + Cloud)
 
+        this.wasInWater = false;
         this.findSpawnPoint();
     }
 
@@ -320,6 +322,14 @@ export class Player {
         const centerGridX = Math.floor(centerX_FP / TILE_SIZE_FP);
         const centerGridY = Math.floor(centerY_FP / TILE_SIZE_FP);
         const isInWater = this.world.getBlock(centerGridX, centerGridY) === BLOCKS.WATER;
+
+        // Splash detection
+        if (isInWater && !this.wasInWater) {
+            if (this.onSplash) {
+                this.onSplash(toFloat(centerX_FP), toFloat(centerY_FP));
+            }
+        }
+        this.wasInWater = isInWater;
 
         // 1. Horizontal Movement & Friction (FP)
         if (input.keys.left) {

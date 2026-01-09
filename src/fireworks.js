@@ -110,6 +110,26 @@ export function createExplosionParticles(x, y, hueOrColor) {
 }
 
 /**
+ * Create water splash particles
+ */
+export function createSplashParticles(x, y) {
+    const hue = 210; // Blue
+    for (let i = 0; i < 20; i++) {
+        const angle = -Math.PI / 2 + (Math.random() * 1.0 - 0.5); // Upwards with spread
+        const speed = Math.random() * 0.15 + 0.05;
+        const life = 30 + Math.random() * 30;
+
+        addParticle(
+            x, y,
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed,
+            life,
+            hue
+        );
+    }
+}
+
+/**
  * Update all particles (called at 720Hz)
  */
 export function tick(world, cameraX, cameraY, canvas) {
