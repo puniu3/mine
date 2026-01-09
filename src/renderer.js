@@ -181,14 +181,39 @@ export function drawGame(ctx, {
         ctx.globalAlpha = 1.0;
     });
 
-    ctx.save();
-    ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
-
-    // --- 5. World Rendering ---
+    // --- Calculate Visible Range ---
+    // Moved up to support water masking pass
     const { startX, endX, startY, endY } = calculateVisibleTileRange(
         cameraX, cameraY, logicalWidth, logicalHeight, TILE_SIZE
     );
 
+    // --- 4.5 Water Masking Pass ---
+    // Repaint the sky gradient over celestial bodies where water exists
+    // to prevent stars/sun/moon from showing through the transparent water.
+    ctx.fillStyle = gradient;
+    
+    for (let y = startY; y < endY; y++) {
+        for (let x = startX; x < endX; x++) {
+            const normalizedY = (y % world.height + world.height) % world.height;
+            const block = world.getBlock(x, normalizedY);
+
+            if (block === BLOCKS.WATER) {
+                // Calculate precise screen coordinates matching the main render loop
+                const screenX = x * TILE_SIZE - Math.floor(cameraX);
+                const screenY = y * TILE_SIZE - Math.floor(cameraY);
+                
+                // Fill with the sky gradient (defined in screen space)
+                // This erases anything drawn behind this tile
+                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+            }
+        }
+    }
+
+    ctx.save();
+    ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
+
+    // --- 5. World Rendering ---
+    
     const NO_SHADOW_BLOCKS = new Set([
         BLOCKS.CLOUD,
         // BLOCKS.FIREWORK,
