@@ -14,7 +14,11 @@ AI-readable project specification for Block Craft 2D XL, a browser-based 2D Mine
 
 mine/
 ├── index.html          # Entry HTML with canvas and UI scaffolding
+├── manifest.json       # PWA manifest (app metadata, icons)
+├── service-worker.js   # PWA service worker (offline caching)
 ├── AGENTS.md           # This file (AI-readable project spec)
+├── icons/
+│   └── icon.svg        # PWA app icon (pixel-art grass block)
 ├── fonts/
 │   ├── fredoka-one-latin-400-normal.woff2  # Local font for logo (primary)
 │   └── fredoka-one-latin-400-normal.woff   # Local font for logo (fallback)
@@ -250,6 +254,13 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
   - Updates Physics, Input
   - Delegates specific updates to `camera`, `tntManager`, `saplingManager`, `jackpot`, `fireworks`, `block_particles`
 - **Draw Loop**: Calls `renderer.drawGame()`
+- **Service Worker Registration**: Registers PWA service worker on page load
+
+### PWA Support
+- **manifest.json**: App metadata for "Add to Home Screen" on iOS/Android
+- **service-worker.js**: Caches all assets for offline play
+- **icons/icon.svg**: Pixel-art grass block icon
+- **index.html meta tags**: `apple-mobile-web-app-capable`, `apple-touch-icon`
 
 ## Input Handling (input.js)
 
