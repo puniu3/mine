@@ -158,8 +158,13 @@ export function initUI(callbacks) {
         // Import currentLanguage dynamically to get the latest value
         import('./i18n.js').then(({ currentLanguage: lang }) => {
             // Update current button with selected language flag
-            if (langCurrentBtn && languageFlags[lang]) {
-                langCurrentBtn.textContent = languageFlags[lang];
+            if (langCurrentBtn) {
+                // Clear previous content
+                langCurrentBtn.innerHTML = '';
+                // Create flag element
+                const flag = document.createElement('div');
+                flag.className = `flag-icon flag-${lang}`;
+                langCurrentBtn.appendChild(flag);
             }
             // Update active state on options
             langOptions.forEach(btn => {
