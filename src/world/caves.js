@@ -57,4 +57,18 @@ export function generateGeology(world, heights) {
         const y = Math.floor(Math.random() * world.height);
         if (y > heights[x] + 15 && y < world.height - 10) Painters.drawBlob(paint, x, y, BLOCKS.WATER, 2 + Math.random() * 2.5);
     }
+
+    const coalVeinCount = Math.floor(world.width * world.height / 450);
+    for (let i = 0; i < coalVeinCount; i++) {
+        const x = Math.floor(Math.random() * world.width);
+        const y = Math.floor(Math.random() * world.height);
+        if (y > heights[x] + 6) Painters.drawBlob(paint, x, y, BLOCKS.COAL, 1.5 + Math.random() * 1.5);
+    }
+
+    const goldVeinCount = Math.floor(world.width * world.height / 800);
+    for (let i = 0; i < goldVeinCount; i++) {
+        const x = Math.floor(Math.random() * world.width);
+        const y = Math.floor(Math.random() * world.height);
+        if (y > heights[x] + 15) Painters.drawBlob(paint, x, y, BLOCKS.GOLD, 1.2 + Math.random() * 1.3);
+    }
 }
