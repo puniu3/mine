@@ -17,7 +17,8 @@ import {
     KNOCKBACK_STRENGTH_FP,
     KNOCKBACK_OFFSET_FP,
     TILE_SIZE_FP,
-    TILE_SIZE_SQ
+    TILE_SIZE_SQ,
+    LOW_FRICTION_EXIT_SPEED_FP
 } from './fixed_point.js';
 
 /**
@@ -32,16 +33,31 @@ export function applyFriction(vx_FP) {
 /**
  * Decays board velocity (skateboard/conveyor momentum).
  * @param {number} boardVx_FP - Current board velocity in FP
- * @returns {number} New board velocity in FP
+ * @param {boolean} lowFrictionActive - Low friction mode active (halves decay)
+ * @returns {{boardVx: number, lowFrictionActive: boolean}} New board velocity and friction state
  */
-export function applyBoardDecay(boardVx_FP) {
-    if (boardVx_FP === 0) return 0;
-
-    if (boardVx_FP > 0) {
-        return Math.max(0, boardVx_FP - BOARD_DECAY_PER_TICK_FP);
-    } else {
-        return Math.min(0, boardVx_FP + BOARD_DECAY_PER_TICK_FP);
+export function applyBoardDecay(boardVx_FP, lowFrictionActive) {
+    if (boardVx_FP === 0) {
+        return { boardVx: 0, lowFrictionActive: false };
     }
+
+    // In low friction mode, decay is halved (shift right by 1)
+    const decay = lowFrictionActive ? (BOARD_DECAY_PER_TICK_FP >> 1) : BOARD_DECAY_PER_TICK_FP;
+
+    let newBoardVx;
+    if (boardVx_FP > 0) {
+        newBoardVx = Math.max(0, boardVx_FP - decay);
+    } else {
+        newBoardVx = Math.min(0, boardVx_FP + decay);
+    }
+
+    // Exit low friction mode when speed drops below threshold
+    let newLowFrictionActive = lowFrictionActive;
+    if (lowFrictionActive && Math.abs(newBoardVx) < LOW_FRICTION_EXIT_SPEED_FP) {
+        newLowFrictionActive = false;
+    }
+
+    return { boardVx: newBoardVx, lowFrictionActive: newLowFrictionActive };
 }
 
 /**
