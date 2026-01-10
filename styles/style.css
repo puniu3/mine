@@ -380,6 +380,8 @@ button {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    line-height: 1.4; /* Consistent line spacing across all fonts */
+    white-space: nowrap; /* Prevent text wrapping */
 }
 
 .inst-col strong {
