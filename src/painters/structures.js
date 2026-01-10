@@ -405,6 +405,7 @@ export function drawAncientRuins(accessor, cx, floorY) {
 export function drawShipwreck(accessor, cx, floorY) {
     const length = 16 + Math.floor(Math.random() * 8);
     const height = 6 + Math.floor(Math.random() * 3);
+    const slope = (Math.random() - 0.5) * 0.8; // Tilt factor
 
     const bowX = cx - Math.floor(length / 2);
     const sternX = cx + Math.floor(length / 2);
@@ -417,7 +418,10 @@ export function drawShipwreck(accessor, cx, floorY) {
             yOffset = Math.floor(Math.pow((dist - 0.5) * 4, 1.5));
         }
 
-        const keelY = floorY - yOffset;
+        // Apply tilt
+        const tiltOffset = Math.floor((x - cx) * slope);
+
+        const keelY = floorY - yOffset + tiltOffset;
         const deckY = keelY - height;
 
         // Draw vertical slice
@@ -441,30 +445,65 @@ export function drawShipwreck(accessor, cx, floorY) {
         }
     }
 
-    // Masts (damaged)
+    // Masts (damaged & tilted)
+    // Mast is roughly perpendicular to deck
+    // Normal vector is (-slope, 1) or something similar in 2D
+    // Simple approach: shift X as we go up based on slope
+
     const mastX1 = cx - Math.floor(length / 4);
     const mastX2 = cx + Math.floor(length / 4);
 
     [mastX1, mastX2].forEach(mx => {
         const h = 8 + Math.floor(Math.random() * 8);
-        const keelY = floorY; // Approx
+
+        // Calculate base Y for mast
+        const tiltOffset = Math.floor((mx - cx) * slope);
+        const keelY = floorY + tiltOffset; // Approx base Y at this X
         const deckY = keelY - height;
+
+        // Perpendicular slope approximation: dx/dy = -slope
+        // So for every step up (dy=-1), dx += slope
 
         for (let i = 0; i < h; i++) {
              const y = deckY - i;
-             accessor.set(mx, y, BLOCKS.WOOD);
-             // Yardarm
+             const xOffset = Math.round(i * slope);
+             const x = mx + xOffset;
+
+             accessor.set(x, y, BLOCKS.WOOD);
+
+             // Yardarm (also tilted, following slope)
              if (i === h - 2) {
-                 accessor.set(mx - 1, y, BLOCKS.WOOD);
-                 accessor.set(mx + 1, y, BLOCKS.WOOD);
-                 if (Math.random() > 0.5) accessor.set(mx - 2, y, BLOCKS.WOOD);
-                 if (Math.random() > 0.5) accessor.set(mx + 2, y, BLOCKS.WOOD);
+                 // Yardarm is parallel to deck, so slope applies to it
+                 for (let ydx = -2; ydx <= 2; ydx++) {
+                     if (ydx === 0) continue; // Center handled
+
+                     // Yardarm offset
+                     // For x displacement 'ydx', y displacement is 'ydx * slope'
+                     const armY = y + Math.floor(ydx * slope);
+                     if (Math.random() > 0.2) {
+                         accessor.set(x + ydx, armY, BLOCKS.WOOD);
+                     }
+                 }
              }
         }
     });
 
-    // Treasure
-    accessor.set(cx, floorY - 2, BLOCKS.JACKPOT);
-    accessor.set(cx - 1, floorY - 2, BLOCKS.GOLD);
-    accessor.set(cx + 1, floorY - 2, BLOCKS.GOLD);
+    // Treasure (Center)
+    // Should align with the tilt at center (cx)
+    // At cx, tiltOffset is 0.
+    // However, if the ship is very tilted, we might want to place it safely.
+    // Center is usually safe.
+
+    // Calculate local deck Y at center
+    const centerKeelY = floorY; // tiltOffset is 0
+    // But we might have the keel curve offset if we were not at center...
+    // at cx, dist is 0, so yOffset is 0.
+
+    const centerDeckY = centerKeelY - height;
+
+    // Place treasure inside
+    const treasureY = centerKeelY - 2;
+    accessor.set(cx, treasureY, BLOCKS.JACKPOT);
+    accessor.set(cx - 1, treasureY, BLOCKS.GOLD); // Not tilted perfectly but close enough for loot pile
+    accessor.set(cx + 1, treasureY, BLOCKS.GOLD);
 }
