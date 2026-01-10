@@ -79,12 +79,19 @@ export function handleAcceleratorOverlap(player, world) {
                     player.applyAcceleratorForce(direction);
                 }
 
-                // --- 2. Check for Fastball Mode (Shared Logic) ---
-                // If the block directly below the accelerator is a CLOUD, enable fastball physics (lift).
+                // --- 2. Check for Special Modes (Shared Logic) ---
                 const blockBelow = world.getBlock(x, y + 1);
+
+                // If the block directly below the accelerator is a CLOUD, enable fastball physics (lift).
                 if (blockBelow === BLOCKS.CLOUD) {
                     // Activate "Fastball Mode" (Lift counteracts gravity based on speed)
                     player.activateFastballMode();
+                }
+
+                // If the block directly below the accelerator is SNOW, enable low friction mode.
+                if (blockBelow === BLOCKS.SNOW) {
+                    // Activate "Low Friction Mode" (Halved vx decay)
+                    player.activateLowFrictionMode();
                 }
 
                 // --- 3. Set Cooldown & Return ---

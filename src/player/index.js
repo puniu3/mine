@@ -59,6 +59,7 @@ export class Player {
         // Physics States
         this.fastballActive = false;
         this.lowGravityActive = false;
+        this.lowFrictionActive = false;
 
         // Bubble breath timer
         this.bubbleTimer = 0;
@@ -107,6 +108,10 @@ export class Player {
 
     activateFastballMode() {
         this.fastballActive = true;
+    }
+
+    activateLowFrictionMode() {
+        this.lowFrictionActive = true;
     }
 
     applyExplosionImpulse(originX_FP, originY_FP, radius_FP, sizeMultiplier_FP) {
@@ -171,6 +176,7 @@ export class Player {
         this.findSpawnPoint();
         this.fastballActive = false;
         this.lowGravityActive = false;
+        this.lowFrictionActive = false;
     }
 
     /**
@@ -226,8 +232,10 @@ export class Player {
             }
         }
 
-        // 3. Board velocity decay
-        this._boardVx = applyBoardDecay(this._boardVx);
+        // 3. Board velocity decay (with low friction mode)
+        const decayResult = applyBoardDecay(this._boardVx, this.lowFrictionActive);
+        this._boardVx = decayResult.boardVx;
+        this.lowFrictionActive = decayResult.lowFrictionActive;
 
         // 4. Gravity
         const gravityResult = applyGravity(
