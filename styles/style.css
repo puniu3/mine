@@ -420,9 +420,8 @@ button {
     width: 44px;
     height: 44px;
     padding: 0;
-    padding-bottom: 4px; /* Shift icon up visually */
+    /* padding-bottom: 4px; Remove this for center alignment of shapes */
     font-size: 24px;
-    /* Removed line-height in favor of flex centering */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -469,9 +468,8 @@ button {
     width: 36px;
     height: 36px;
     padding: 0;
-    padding-bottom: 4px; /* Shift icon up visually */
+    /* padding-bottom: 4px; Remove for center alignment */
     font-size: 20px;
-    /* Removed line-height in favor of flex centering */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -916,4 +914,193 @@ button {
     border-left: 15px solid transparent;
     border-right: 15px solid transparent;
     border-bottom: 25px solid white;
+}
+
+/* =========================================
+   Flag Icons (CSS Defined Shapes)
+   ========================================= */
+
+.flag-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+    box-shadow: 0 0 2px rgba(0,0,0,0.2);
+    background-color: #eee;
+}
+
+/* Japan */
+.flag-ja {
+    background: white;
+}
+.flag-ja::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    background: #bc002d;
+    border-radius: 50%;
+}
+
+/* USA */
+.flag-en {
+    background: repeating-linear-gradient(
+        180deg,
+        #b22234,
+        #b22234 2px,
+        #fff 2px,
+        #fff 4px
+    );
+}
+.flag-en::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 50%;
+    background: #3c3b6e;
+}
+
+/* China */
+.flag-zh {
+    background: #de2910;
+}
+.flag-zh::before {
+    content: '★';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 10px;
+    color: #ffde00;
+    line-height: 1;
+}
+
+/* Taiwan */
+.flag-zh-TW {
+    background: #fe0000;
+}
+.flag-zh-TW::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 50%;
+    background: #000095;
+}
+.flag-zh-TW::after {
+    content: '';
+    position: absolute;
+    top: 25%;
+    left: 25%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px #000095 inset; /* Simulate sun rays slightly */
+}
+
+/* Spain */
+.flag-es {
+    background: linear-gradient(
+        180deg,
+        #aa151b 25%,
+        #f1bf00 25%,
+        #f1bf00 75%,
+        #aa151b 75%
+    );
+}
+
+/* France */
+.flag-fr {
+    background: linear-gradient(
+        90deg,
+        #0055a4 33.3%,
+        #fff 33.3%,
+        #fff 66.6%,
+        #ef4135 66.6%
+    );
+}
+
+/* Germany */
+.flag-de {
+    background: linear-gradient(
+        180deg,
+        #000 33.3%,
+        #dd0000 33.3%,
+        #dd0000 66.6%,
+        #ffce00 66.6%
+    );
+}
+
+/* Italy */
+.flag-it {
+    background: linear-gradient(
+        90deg,
+        #009246 33.3%,
+        #fff 33.3%,
+        #fff 66.6%,
+        #ce2b37 66.6%
+    );
+}
+
+/* Brazil */
+.flag-pt {
+    background: #009c3b;
+}
+.flag-pt::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 18px;
+    height: 18px;
+    background: #ffdf00;
+}
+.flag-pt::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    background: #002776;
+    border-radius: 50%;
+}
+
+/* Korea */
+.flag-ko {
+    background: white;
+}
+.flag-ko::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #cd2e3a 50%, #0047a0 50%);
+}
+
+/* Russia */
+.flag-ru {
+    background: linear-gradient(
+        180deg,
+        #fff 33.3%,
+        #0039a6 33.3%,
+        #0039a6 66.6%,
+        #d52b1e 66.6%
+    );
 }
