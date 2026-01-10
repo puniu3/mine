@@ -1,6 +1,6 @@
 import { loadGameState } from './save.js';
 import { exportWorldToImage, importWorldFromImage, downloadBlob } from './world_share.js';
-import { strings, setLanguage, languageFlags } from './i18n.js';
+import { strings, setLanguage } from './i18n.js';
 
 /**
  * Initializes UI event listeners and DOM interactions.

@@ -10,6 +10,7 @@ export const resources = {
         inst_action_pc: "Title screen: Instruction. Click to place or break (gather) blocks.",
         inst_mobile: "Title screen: Instruction header. Guide for touch controls.",
         inst_move_mobile: "Title screen: Instruction. Left/Right triangle buttons appear at bottom left; tap to move.",
+        inst_jump_mobile: "Title screen: Instruction. Up triangle button appears at bottom right; tap to jump.",
         inst_action_mobile: "Title screen: Instruction. Tap tiles directly around the player character to break or place blocks.",
         hint_text: "Title screen: Instruction. Explains that placing a block on the player's body position places it at their feet, allowing them to climb up.",
         world_modal_title: "Modal window title for reading/writing world data.",
@@ -43,6 +44,7 @@ export const resources = {
         inst_action_pc: "つくる・こわす: クリック",
         inst_mobile: "スマホ",
         inst_move_mobile: "うごく: ← →",
+        inst_jump_mobile: "とぶ: ↑",
         inst_action_mobile: "つくる・こわす: タップ",
         hint_text: "★ あしもとに おくと のぼれるよ！",
         world_modal_title: "ワールド",
@@ -69,6 +71,7 @@ export const resources = {
         inst_action_pc: "Make / Break: Click",
         inst_mobile: "Touch Controls",
         inst_move_mobile: "Move: ← →",
+        inst_jump_mobile: "Jump: ↑",
         inst_action_mobile: "Make / Break: Tap",
         hint_text: "★ Put blocks at your feet to climb!",
         world_modal_title: "My World",
@@ -95,6 +98,7 @@ export const resources = {
         inst_action_pc: "盖东西 / 拆方块: 点击",
         inst_mobile: "手机怎么玩",
         inst_move_mobile: "移动: ← →",
+        inst_jump_mobile: "跳: ↑",
         inst_action_mobile: "盖东西 / 拆方块: 点按",
         hint_text: "★ 放在脚下就能爬上去哦！",
         world_modal_title: "我的世界",
@@ -121,6 +125,7 @@ export const resources = {
         inst_action_pc: "蓋東西 / 拆方塊: 點擊",
         inst_mobile: "手機怎麼玩",
         inst_move_mobile: "移動: ← →",
+        inst_jump_mobile: "跳: ↑",
         inst_action_mobile: "蓋東西 / 拆方塊: 點按",
         hint_text: "★ 放在腳下就能爬上去喔！",
         world_modal_title: "我的世界",
@@ -147,6 +152,7 @@ export const resources = {
         inst_action_pc: "Poner / Quitar: Clic",
         inst_mobile: "En móvil",
         inst_move_mobile: "Mover: ← →",
+        inst_jump_mobile: "Saltar: ↑",
         inst_action_mobile: "Poner / Quitar: Tocar",
         hint_text: "★ ¡Pon bloques bajo tus pies para subir!",
         world_modal_title: "Mi Mundo",
@@ -173,6 +179,7 @@ export const resources = {
         inst_action_pc: "Mettre / Casser : Clic",
         inst_mobile: "Sur mobile",
         inst_move_mobile: "Bouger : ← →",
+        inst_jump_mobile: "Sauter : ↑",
         inst_action_mobile: "Mettre / Casser : Toucher",
         hint_text: "★ Mets des blocs sous tes pieds pour monter !",
         world_modal_title: "Mon Monde",
@@ -199,6 +206,7 @@ export const resources = {
         inst_action_pc: "Bauen / Abbauen: Klick",
         inst_mobile: "Am Handy",
         inst_move_mobile: "Laufen: ← →",
+        inst_jump_mobile: "Hüpfen: ↑",
         inst_action_mobile: "Bauen / Abbauen: Tippen",
         hint_text: "★ Bau unter dir, um hochzukommen!",
         world_modal_title: "Meine Welt",
@@ -225,6 +233,7 @@ export const resources = {
         inst_action_pc: "Metti / Rompi: Clic",
         inst_mobile: "Telefono",
         inst_move_mobile: "Muovi: ← →",
+        inst_jump_mobile: "Salta: ↑",
         inst_action_mobile: "Metti / Rompi: Tocca",
         hint_text: "★ Metti blocchi sotto i piedi per salire!",
         world_modal_title: "Mio Mondo",
@@ -251,6 +260,7 @@ export const resources = {
         inst_action_pc: "Pôr / Tirar: Clique",
         inst_mobile: "No Celular",
         inst_move_mobile: "Andar: ← →",
+        inst_jump_mobile: "Pular: ↑",
         inst_action_mobile: "Pôr / Tirar: Toque",
         hint_text: "★ Coloque blocos no pé para subir!",
         world_modal_title: "Meu Mundo",
@@ -277,6 +287,7 @@ export const resources = {
         inst_action_pc: "놓기 / 부수기: 클릭",
         inst_mobile: "스마트폰",
         inst_move_mobile: "이동: ← →",
+        inst_jump_mobile: "점프: ↑",
         inst_action_mobile: "놓기 / 부수기: 터치",
         hint_text: "★ 발밑에 놓으면 올라갈 수 있어!",
         world_modal_title: "나의 월드",
@@ -303,6 +314,7 @@ export const resources = {
         inst_action_pc: "Строить / Ломать: Клик",
         inst_mobile: "Телефон",
         inst_move_mobile: "Ходить: ← →",
+        inst_jump_mobile: "Прыгать: ↑",
         inst_action_mobile: "Строить / Ломать: Нажми",
         hint_text: "★ Ставь блоки под ноги, чтобы залезть!",
         world_modal_title: "Мой мир",
@@ -325,23 +337,20 @@ Object.assign(strings, resources.ja);
 
 const LANG_STORAGE_KEY = 'pictoco_language';
 
-// Language to flag emoji mapping
-export const languageFlags = {
-    ja: '🇯🇵',
-    en: '🇺🇸',
-    zh: '🇨🇳',
-    'zh-TW': '🇹🇼',
-    es: '🇪🇸',
-    fr: '🇫🇷',
-    de: '🇩🇪',
-    it: '🇮🇹',
-    pt: '🇧🇷',
-    ko: '🇰🇷',
-    ru: '🇷🇺'
-};
-
-// Get list of supported language codes
-export const supportedLanguages = Object.keys(languageFlags);
+// List of supported language codes
+export const supportedLanguages = [
+    'ja',
+    'en',
+    'zh',
+    'zh-TW',
+    'es',
+    'fr',
+    'de',
+    'it',
+    'pt',
+    'ko',
+    'ru'
+];
 
 // Current language code
 export let currentLanguage = 'ja';
