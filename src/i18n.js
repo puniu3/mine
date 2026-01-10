@@ -386,6 +386,7 @@ function applyLanguage(langCode) {
     Object.assign(strings, target);
 
     // Update DOM elements
+    document.documentElement.lang = langCode;
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (strings[key]) {

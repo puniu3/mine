@@ -18,10 +18,23 @@ body {
     padding: 0;
     overflow: hidden;
     background-color: #000;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'Nunito', sans-serif;
     touch-action: none; /* Prevent browser zooming/scrolling */
     user-select: none;
     -webkit-user-select: none;
+}
+
+/* Language specific font overrides */
+:lang(ja) body {
+    font-family: 'Mochiy Pop One', 'Nunito', sans-serif;
+}
+
+:lang(zh) body {
+    font-family: 'ZCOOL KuaiLe', 'Nunito', sans-serif;
+}
+
+:lang(ko) body {
+    font-family: 'Jua', 'Nunito', sans-serif;
 }
 
 #gameCanvas {
