@@ -216,6 +216,12 @@ button {
     order: 1; /* Always on top if visible */
 }
 
+/* Latin fonts often look smaller than CJK at the same pixel size. Increase size for non-CJK */
+:root:not(:lang(ja)):not(:lang(zh)):not(:lang(zh-TW)) .action-btn.primary-style {
+    font-size: 36px;
+    padding: 18px 60px; /* Slight padding adjustment to keep total height similar if needed */
+}
+
 .action-btn.primary-style:active {
     border-bottom-width: 0;
     transform: translateY(6px);
@@ -230,6 +236,10 @@ button {
     border-bottom: 4px solid #ccc;
     width: 200px;
     order: 2; /* Below primary */
+}
+
+:root:not(:lang(ja)):not(:lang(zh)):not(:lang(zh-TW)) .action-btn.secondary-style {
+    font-size: 20px;
 }
 
 /* World Button Override (Orange) */

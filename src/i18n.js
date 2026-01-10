@@ -392,6 +392,9 @@ function applyLanguage(langCode) {
             el.innerText = strings[key];
         }
     });
+
+    // Update html lang attribute for CSS selectors
+    document.documentElement.lang = currentLanguage;
 }
 
 /**
