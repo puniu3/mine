@@ -1,12 +1,11 @@
 {
   "name": "pictoco",
   "short_name": "pictoco",
-  "description": "2D sandbox game inspired by Minecraft",
+  "description": "2D sandbox game for kids",
   "start_url": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#87CEEB",
-  "theme_color": "#4CAF50",
   "icons": [
     {
       "src": "icons/icon.svg",
@@ -22,6 +21,6 @@
     }
   ],
   "categories": ["games", "entertainment"],
-  "lang": "ja",
+  "lang": "en",
   "dir": "ltr"
 }
