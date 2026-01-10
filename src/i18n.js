@@ -33,8 +33,8 @@ export const resources = {
         vocabulary: "Simple, easy-to-understand words; strictly avoid technical jargon"
     },
     ja: {
-        continue_btn: "▶ つづきから",
-        start_btn: "▶ はじめる",
+        continue_btn: "つづきから",
+        start_btn: "はじめる",
         reset_btn: "はじめから",
         world_btn: "ワールド",
         inst_pc: "パソコン",
@@ -59,8 +59,8 @@ export const resources = {
         msg_import_err: "この えでは ワールドを つくれないよ"
     },
     en: {
-        continue_btn: "▶ Continue",
-        start_btn: "▶ Start",
+        continue_btn: "Continue",
+        start_btn: "Start",
         reset_btn: "Start Over",
         world_btn: "World",
         inst_pc: "PC Controls",
@@ -85,8 +85,8 @@ export const resources = {
         msg_import_err: "Can't use this picture."
     },
     zh: {
-        continue_btn: "▶ 继续玩",
-        start_btn: "▶ 开始玩",
+        continue_btn: "继续玩",
+        start_btn: "开始玩",
         reset_btn: "重新开始",
         world_btn: "世界",
         inst_pc: "电脑怎么玩",
@@ -111,8 +111,8 @@ export const resources = {
         msg_import_err: "这张画不能用哦"
     },
     "zh-TW": {
-        continue_btn: "▶ 繼續玩",
-        start_btn: "▶ 開始玩",
+        continue_btn: "繼續玩",
+        start_btn: "開始玩",
         reset_btn: "重新開始",
         world_btn: "世界",
         inst_pc: "電腦怎麼玩",
@@ -137,8 +137,8 @@ export const resources = {
         msg_import_err: "這張畫不能用喔"
     },
     es: {
-        continue_btn: "▶ Seguir",
-        start_btn: "▶ Jugar",
+        continue_btn: "Seguir",
+        start_btn: "Jugar",
         reset_btn: "Desde cero",
         world_btn: "Mundo",
         inst_pc: "En PC",
@@ -163,8 +163,8 @@ export const resources = {
         msg_import_err: "No puedo usar este dibujo."
     },
     fr: {
-        continue_btn: "▶ Continuer",
-        start_btn: "▶ Jouer",
+        continue_btn: "Continuer",
+        start_btn: "Jouer",
         reset_btn: "Recommencer",
         world_btn: "Monde",
         inst_pc: "Sur ordi",
@@ -189,8 +189,8 @@ export const resources = {
         msg_import_err: "Je ne peux pas utiliser cette image."
     },
     de: {
-        continue_btn: "▶ Weiter",
-        start_btn: "▶ Starten",
+        continue_btn: "Weiter",
+        start_btn: "Starten",
         reset_btn: "Neustart",
         world_btn: "Welt",
         inst_pc: "Am Computer",
@@ -215,8 +215,8 @@ export const resources = {
         msg_import_err: "Das Bild geht nicht."
     },
     it: {
-        continue_btn: "▶ Continua",
-        start_btn: "▶ Gioca",
+        continue_btn: "Continua",
+        start_btn: "Gioca",
         reset_btn: "Ricomincia",
         world_btn: "Mondo",
         inst_pc: "Computer",
@@ -241,8 +241,8 @@ export const resources = {
         msg_import_err: "Non posso usare questa foto."
     },
     pt: {
-        continue_btn: "▶ Continuar",
-        start_btn: "▶ Jogar",
+        continue_btn: "Continuar",
+        start_btn: "Jogar",
         reset_btn: "Do começo",
         world_btn: "Mundo",
         inst_pc: "No PC",
@@ -267,8 +267,8 @@ export const resources = {
         msg_import_err: "Não dá pra usar essa foto."
     },
     ko: {
-        continue_btn: "▶ 이어하기",
-        start_btn: "▶ 시작하기",
+        continue_btn: "이어하기",
+        start_btn: "시작하기",
         reset_btn: "처음부터",
         world_btn: "월드",
         inst_pc: "컴퓨터",
@@ -293,8 +293,8 @@ export const resources = {
         msg_import_err: "이 그림은 쓸 수 없어."
     },
     ru: {
-        continue_btn: "▶ Продолжить",
-        start_btn: "▶ Играть",
+        continue_btn: "Продолжить",
+        start_btn: "Играть",
         reset_btn: "С начала",
         world_btn: "Мир",
         inst_pc: "Компьютер",
