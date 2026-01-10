@@ -402,7 +402,7 @@ initUI({
     },
     onImportWorld: (worldMap) => {
         sounds.init();
-        
+
         // Load existing inventory state to preserve it
         const savedState = loadGameState();
         const inventoryState = savedState?.inventory || null;
@@ -431,3 +431,16 @@ initUI({
         );
     }
 });
+
+// --- Service Worker Registration for PWA ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+            .then((registration) => {
+                console.log('ServiceWorker registered:', registration.scope);
+            })
+            .catch((error) => {
+                console.log('ServiceWorker registration failed:', error);
+            });
+    });
+}
