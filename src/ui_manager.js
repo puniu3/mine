@@ -1,6 +1,6 @@
 import { loadGameState } from './save.js';
 import { exportWorldToImage, importWorldFromImage, downloadBlob } from './world_share.js';
-import { strings } from './i18n.js';
+import { strings, setLanguage, currentLanguage } from './i18n.js';
 
 /**
  * Initializes UI event listeners and DOM interactions.
@@ -135,7 +135,7 @@ export function initUI(callbacks) {
 
             try {
                 const worldMap = await importWorldFromImage(file);
-                
+
                 // Hide UIs
                 hideWorldModal();
                 hideStartScreen();
@@ -148,4 +148,32 @@ export function initUI(callbacks) {
             }
         });
     }
+
+    // --- Language Selector Logic ---
+    const langButtons = document.querySelectorAll('.lang-btn');
+
+    function updateLanguageButtonState() {
+        // Import currentLanguage dynamically to get the latest value
+        import('./i18n.js').then(({ currentLanguage: lang }) => {
+            langButtons.forEach(btn => {
+                if (btn.dataset.lang === lang) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    // Initialize button state
+    updateLanguageButtonState();
+
+    // Event: Language button click
+    langButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const langCode = btn.dataset.lang;
+            setLanguage(langCode);
+            updateLanguageButtonState();
+        });
+    });
 }
