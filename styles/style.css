@@ -13,6 +13,63 @@
          url('../fonts/fredoka-one-latin-400-normal.woff') format('woff');
 }
 
+/* Local Fonts for Body */
+@font-face {
+    font-family: 'Jua';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/Jua-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Mochiy Pop One';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/MochiyPopOne-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Nunito';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/Nunito-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Nunito';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/Nunito-Bold.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'ZCOOL KuaiLe';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/ZCOOLKuaiLe-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Zen Maru Gothic';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/ZenMaruGothic-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Zen Maru Gothic';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/ZenMaruGothic-Bold.ttf') format('truetype');
+}
+
 body {
     margin: 0;
     padding: 0;
