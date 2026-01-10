@@ -372,13 +372,16 @@ button {
     height: 160px; /* Fixed height for consistency */
     box-sizing: border-box;
     overflow: hidden;
-    align-items: center; /* Center content vertically */
+    /* align-items defaults to stretch, ensuring equal column heights */
 }
 
 .inst-col {
+    flex: 1; /* Equal width columns, matching heights via stretch */
     display: flex;
     flex-direction: column;
     gap: 6px;
+    line-height: 1.4; /* Consistent line spacing across all fonts */
+    white-space: nowrap; /* Prevent text wrapping */
 }
 
 .inst-col strong {
