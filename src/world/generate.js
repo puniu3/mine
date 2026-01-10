@@ -73,7 +73,7 @@ export function generate(world) {
     generateSurfacePonds(world, heights, biomeByColumn, SEA_LEVEL);
     generateWaterfalls(world, heights, biomeByColumn, SEA_LEVEL);
     generateStructures(world, heights, biomeByColumn, SEA_LEVEL);
-    generateHiddenFeatures(world, heights, biomeByColumn);
+    generateHiddenFeatures(world, heights, biomeByColumn, SEA_LEVEL);
 
     // Workbench placement
     for (let x = 10; x < world.width - 10; x += 50 + Math.floor(Math.random() * 20)) {

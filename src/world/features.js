@@ -58,8 +58,9 @@ export function generateStructures(world, heights, biomeByColumn, seaLevel) {
     }
 }
 
-export function generateHiddenFeatures(world, heights, biomeByColumn) {
+export function generateHiddenFeatures(world, heights, biomeByColumn, seaLevel) {
     const paint = world.getAccessor();
+    // console.log(`generateHiddenFeatures: width=${world.width}, heights.len=${heights.length}, seaLevel=${seaLevel}`);
     for (let x = 0; x < world.width; x++) {
         const biome = biomeByColumn[x];
         const surfaceY = heights[x];
@@ -82,6 +83,21 @@ export function generateHiddenFeatures(world, heights, biomeByColumn) {
         if (biome === BIOMES.DEEP_FOREST && Math.random() < 0.005) {
             Painters.drawWorldTree(paint, x, surfaceY);
             x += 15; continue;
+        }
+
+        // 6. Ocean Treasures (Low probability)
+        // Check if ocean and sufficiently deep
+        // In ocean, surfaceY is the sea floor. Larger surfaceY means deeper.
+        // seaLevel is the water surface.
+        if (biome === BIOMES.OCEAN) {
+            // Check if surfaceY is deep enough
+            if (surfaceY > seaLevel + 5) {
+                 if (Math.random() < 0.005) {
+                     Painters.drawTreasureChest(paint, x, surfaceY);
+                     x += 20; // spacing
+                     continue;
+                 }
+            }
         }
     }
 

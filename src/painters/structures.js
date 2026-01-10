@@ -401,3 +401,9 @@ export function drawAncientRuins(accessor, cx, floorY) {
     accessor.set(cx - 1, floorY - 1, BLOCKS.GOLD);
     accessor.set(cx + 1, floorY - 1, BLOCKS.GOLD);
 }
+
+export function drawTreasureChest(accessor, x, y) {
+    // A simple chest represented by JACKPOT block sitting on GOLD
+    accessor.set(x, y - 1, BLOCKS.JACKPOT);
+    accessor.set(x, y, BLOCKS.GOLD);
+}
