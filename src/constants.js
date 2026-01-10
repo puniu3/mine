@@ -53,7 +53,7 @@ export const ACCELERATOR_COOLDOWN_TICKS = 360; // 0.5 seconds at 720Hz (500ms * 
 export const ACCELERATOR_ACCELERATION_AMOUNT = 15; // Fixed acceleration amount
 
 // --- Low Friction Mode Constants (SNOW + Accelerator) ---
-export const LOW_FRICTION_EXIT_SPEED = 10; // Exit low friction mode when abs(boardVx) < 10
+export const LOW_FRICTION_EXIT_SPEED = 3; // Exit low friction mode when abs(boardVx) < 3
 
 // --- Sapling Constants ---
 export const SAPLING_GROWTH_BASE_TICKS = 4320; // 6 seconds at 720Hz (6000ms * 720 / 1000)
