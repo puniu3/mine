@@ -33,6 +33,10 @@ body {
     font-family: 'ZCOOL KuaiLe', 'Nunito', sans-serif;
 }
 
+:lang(zh-TW) body {
+    font-family: 'Zen Maru Gothic', 'Nunito', sans-serif;
+}
+
 :lang(ko) body {
     font-family: 'Jua', 'Nunito', sans-serif;
 }
