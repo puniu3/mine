@@ -25,8 +25,14 @@ export function generate(world) {
         const biome = biomeByColumn[x];
         let surfaceBlock = getSurfaceBlock(biome, h, x, world.height);
 
+        // Determine bedrock height for this column (uneven bottom)
+        const bedrockHeight = 1 + Math.floor(Math.random() * 4); // 1 to 4 layers of bedrock
+
         for (let y = 0; y < world.height; y++) {
-            if (y > h) {
+            if (y >= world.height - bedrockHeight) {
+                // Bedrock layer
+                world.setBlock(x, y, BLOCKS.BEDROCK);
+            } else if (y > h) {
                 // Underground generation
                 if (y > h + 5) {
                     const r = Math.random();
