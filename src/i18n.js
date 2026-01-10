@@ -323,12 +323,63 @@ export const resources = {
 export const strings = {};
 Object.assign(strings, resources.ja);
 
-export function initI18n() {
+const LANG_STORAGE_KEY = 'pictoco_language';
+
+// Language to flag emoji mapping
+export const languageFlags = {
+    ja: '🇯🇵',
+    en: '🇺🇸',
+    zh: '🇨🇳',
+    'zh-TW': '🇹🇼',
+    es: '🇪🇸',
+    fr: '🇫🇷',
+    de: '🇩🇪',
+    it: '🇮🇹',
+    pt: '🇧🇷',
+    ko: '🇰🇷',
+    ru: '🇷🇺'
+};
+
+// Get list of supported language codes
+export const supportedLanguages = Object.keys(languageFlags);
+
+// Current language code
+export let currentLanguage = 'ja';
+
+/**
+ * Get the detected language based on priority:
+ * 1. LocalStorage (user selection)
+ * 2. Browser settings
+ * 3. Fallback (ja)
+ */
+function detectLanguage() {
+    // Priority 1: LocalStorage
+    const storedLang = localStorage.getItem(LANG_STORAGE_KEY);
+    if (storedLang && resources[storedLang]) {
+        return storedLang;
+    }
+
+    // Priority 2: Browser settings
     const rawLang = navigator.language || navigator.userLanguage || 'ja';
     const mainLang = rawLang.split('-')[0];
 
-    // Priority: Exact match (e.g., zh-TW) -> Main language (e.g., en, zh, ja) -> Fallback to ja
-    const target = resources[rawLang] || resources[mainLang] || resources.ja;
+    if (resources[rawLang]) {
+        return rawLang;
+    }
+    if (resources[mainLang]) {
+        return mainLang;
+    }
+
+    // Priority 3: Fallback
+    return 'ja';
+}
+
+/**
+ * Apply the given language to strings and DOM
+ */
+function applyLanguage(langCode) {
+    const target = resources[langCode] || resources.ja;
+    currentLanguage = langCode;
 
     // Clear and update strings object
     Object.keys(strings).forEach(key => delete strings[key]);
@@ -341,4 +392,24 @@ export function initI18n() {
             el.innerText = strings[key];
         }
     });
+}
+
+/**
+ * Set language and save to LocalStorage
+ */
+export function setLanguage(langCode) {
+    if (!resources[langCode]) {
+        console.warn(`Language '${langCode}' not supported`);
+        return;
+    }
+    localStorage.setItem(LANG_STORAGE_KEY, langCode);
+    applyLanguage(langCode);
+}
+
+/**
+ * Initialize i18n with priority: LocalStorage > Browser > Fallback
+ */
+export function initI18n() {
+    const langCode = detectLanguage();
+    applyLanguage(langCode);
 }

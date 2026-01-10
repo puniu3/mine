@@ -1,6 +1,6 @@
 import { loadGameState } from './save.js';
 import { exportWorldToImage, importWorldFromImage, downloadBlob } from './world_share.js';
-import { strings } from './i18n.js';
+import { strings, setLanguage, languageFlags } from './i18n.js';
 
 /**
  * Initializes UI event listeners and DOM interactions.
@@ -135,7 +135,7 @@ export function initUI(callbacks) {
 
             try {
                 const worldMap = await importWorldFromImage(file);
-                
+
                 // Hide UIs
                 hideWorldModal();
                 hideStartScreen();
@@ -148,4 +148,70 @@ export function initUI(callbacks) {
             }
         });
     }
+
+    // --- Language Selector Logic ---
+    const langCurrentBtn = document.getElementById('lang-current');
+    const langPopup = document.getElementById('lang-popup');
+    const langOptions = document.querySelectorAll('.lang-option');
+
+    function updateLanguageUI() {
+        // Import currentLanguage dynamically to get the latest value
+        import('./i18n.js').then(({ currentLanguage: lang }) => {
+            // Update current button with selected language flag
+            if (langCurrentBtn && languageFlags[lang]) {
+                langCurrentBtn.textContent = languageFlags[lang];
+            }
+            // Update active state on options
+            langOptions.forEach(btn => {
+                if (btn.dataset.lang === lang) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    function openLangPopup() {
+        if (langPopup) langPopup.classList.add('open');
+    }
+
+    function closeLangPopup() {
+        if (langPopup) langPopup.classList.remove('open');
+    }
+
+    // Initialize UI state
+    updateLanguageUI();
+
+    // Event: Toggle popup on current language button click
+    if (langCurrentBtn) {
+        langCurrentBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (langPopup && langPopup.classList.contains('open')) {
+                closeLangPopup();
+            } else {
+                openLangPopup();
+            }
+        });
+    }
+
+    // Event: Language option click
+    langOptions.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const langCode = btn.dataset.lang;
+            setLanguage(langCode);
+            updateLanguageUI();
+            closeLangPopup();
+        });
+    });
+
+    // Event: Close popup when clicking outside
+    document.addEventListener('click', (e) => {
+        if (langPopup && langPopup.classList.contains('open')) {
+            if (!langPopup.contains(e.target) && e.target !== langCurrentBtn) {
+                closeLangPopup();
+            }
+        }
+    });
 }
