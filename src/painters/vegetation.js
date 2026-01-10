@@ -173,3 +173,13 @@ export function drawBoulder(accessor, x, y) {
     if (Math.random() < 0.7) accessor.set(x + 1, y, BLOCKS.STONE);
     if (Math.random() < 0.5) accessor.set(x, y - 1, BLOCKS.STONE);
 }
+
+export function drawSeaweed(accessor, x, y) {
+    const height = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < height; i++) {
+        // Only grow into water
+        if (accessor.get(x, y - i) === BLOCKS.WATER) {
+            accessor.set(x, y - i, BLOCKS.LEAVES);
+        }
+    }
+}

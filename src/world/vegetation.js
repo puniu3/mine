@@ -47,5 +47,8 @@ export function generateVegetation(accessor, x, y, biome) {
             else if (r < 0.2) Painters.drawPond(accessor, x, y, 2);
             else if (r < 0.4 && Math.random() < 0.5) Painters.drawBush(accessor, x, y);
             break;
+        case BIOMES.OCEAN:
+            if (r < 0.3) Painters.drawSeaweed(accessor, x, y);
+            break;
     }
 }

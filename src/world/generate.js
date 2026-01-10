@@ -51,7 +51,8 @@ export function generate(world) {
                         (biome === BIOMES.DESERT && surfaceBlock === BLOCKS.SAND) ||
                         (biome === BIOMES.WASTELAND && surfaceBlock === BLOCKS.STONE) ||
                         (biome === BIOMES.SAVANNA && (surfaceBlock === BLOCKS.GRASS || surfaceBlock === BLOCKS.DIRT)) ||
-                        (biome === BIOMES.PLATEAU && surfaceBlock === BLOCKS.STONE);
+                        (biome === BIOMES.PLATEAU && surfaceBlock === BLOCKS.STONE) ||
+                        (biome === BIOMES.OCEAN && surfaceBlock === BLOCKS.SAND);
 
                     if (isVegetationGround && x > 5 && x < world.width - 5) {
                         generateVegetation(world.getAccessor(), x, y - 1, biome);
