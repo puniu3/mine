@@ -30,7 +30,7 @@ export function generate(world) {
                 // Underground generation
                 if (y > h + 5) {
                     const r = Math.random();
-                    if (r > 0.985 && y > h + 15) world.setBlock(x, y, BLOCKS.GOLD);
+                    if (r > 0.995 && y > h + 15) world.setBlock(x, y, BLOCKS.GOLD);
                     else if (r > 0.96) world.setBlock(x, y, BLOCKS.COAL);
                     else if (Math.random() > 0.95) world.setBlock(x, y, BLOCKS.DIRT);
                     else world.setBlock(x, y, BLOCKS.STONE);
