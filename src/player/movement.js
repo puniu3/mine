@@ -137,7 +137,7 @@ export function processJumpPad(x_FP, y_FP, width_FP, height_FP, world, onTNTJump
 
     if (tntPositions.length > 0 && onTNTJumpPad) {
         // TNT + JUMP_PAD super launch
-        const superStackCount = tntPositions.length * 20;
+        const superStackCount = tntPositions.length * 16;
         const clampedCount = Math.min(superStackCount, 128);
         return {
             vy: -JUMP_PAD_FORCE_TABLE_FP[clampedCount],

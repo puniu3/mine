@@ -17,14 +17,14 @@ export function initAccelerator(callbacks) {
 }
 
 /**
- * Apply super acceleration force (TNT count * 20 accelerators worth)
+ * Apply super acceleration force (TNT count * 16 accelerators worth)
  * @param {Object} player - Player instance
  * @param {number} direction - 1 for right, -1 for left
  * @param {number} tntCount - Number of connected TNTs
  */
 function applySuperAcceleratorForce(player, direction, tntCount) {
-    // TNT count * 20 accelerators worth of force, clamped to 128
-    const stackCount = Math.min(tntCount * 20, 128);
+    // TNT count * 16 accelerators worth of force, clamped to 128
+    const stackCount = Math.min(tntCount * 16, 128);
     const superForce = ACCELERATOR_ACCELERATION_AMOUNT * Math.sqrt(stackCount);
     player.boardVx = direction * superForce;
     player.facingRight = (direction > 0);
