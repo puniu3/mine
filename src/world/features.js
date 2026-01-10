@@ -96,6 +96,33 @@ export function generateHiddenFeatures(world, heights, biomeByColumn) {
     const laputaX = 150 + Math.floor(Math.random() * (world.width - 300));
     const laputaY = 30 + Math.floor(Math.random() * 10); // Y: 30-40 (High Sky)
     Painters.drawLaputa(paint, laputaX, laputaY);
+
+    // 6. Shipwreck (Sunken Ship) - Only ONE per world
+    const oceanColumns = [];
+    for (let x = 0; x < world.width; x++) {
+        if (biomeByColumn[x] === BIOMES.OCEAN) {
+            oceanColumns.push(x);
+        }
+    }
+
+    if (oceanColumns.length > 0) {
+        // Pick a random spot in the ocean, avoiding edges
+        let attempts = 0;
+        while (attempts < 10) {
+            const idx = Math.floor(Math.random() * oceanColumns.length);
+            const x = oceanColumns[idx];
+            const floorY = heights[x];
+
+            // Ensure we have some depth (ship height is approx 6)
+            // heights[x] is seabed. Sea level is higher.
+            // We just need a valid floorY.
+            if (floorY < world.height - 10) {
+                Painters.drawShipwreck(paint, x, floorY);
+                break;
+            }
+            attempts++;
+        }
+    }
 }
 
 export function generateSurfacePonds(world, heights, biomeByColumn, seaLevel) {

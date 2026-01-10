@@ -401,3 +401,70 @@ export function drawAncientRuins(accessor, cx, floorY) {
     accessor.set(cx - 1, floorY - 1, BLOCKS.GOLD);
     accessor.set(cx + 1, floorY - 1, BLOCKS.GOLD);
 }
+
+export function drawShipwreck(accessor, cx, floorY) {
+    const length = 16 + Math.floor(Math.random() * 8);
+    const height = 6 + Math.floor(Math.random() * 3);
+
+    const bowX = cx - Math.floor(length / 2);
+    const sternX = cx + Math.floor(length / 2);
+
+    for (let x = bowX; x <= sternX; x++) {
+        // Curve the keel up at the ends
+        const dist = Math.abs(x - cx) / (length / 2);
+        let yOffset = 0;
+        if (dist > 0.5) {
+            yOffset = Math.floor(Math.pow((dist - 0.5) * 4, 1.5));
+        }
+
+        const keelY = floorY - yOffset;
+        const deckY = keelY - height;
+
+        // Draw vertical slice
+        for (let y = deckY; y <= keelY; y++) {
+            if (y === keelY) {
+                // Bottom
+                accessor.set(x, y, BLOCKS.WOOD);
+            } else if (y === deckY) {
+                // Deck (with holes)
+                if (Math.random() > 0.2) accessor.set(x, y, BLOCKS.WOOD);
+                else accessor.set(x, y, BLOCKS.WATER);
+            } else if (x === bowX || x === sternX) {
+                // Side walls
+                accessor.set(x, y, BLOCKS.WOOD);
+            } else {
+                // Interior
+                // Random pillars or cargo
+                if (Math.random() < 0.05) accessor.set(x, y, BLOCKS.WOOD); // Crates?
+                else accessor.set(x, y, BLOCKS.WATER);
+            }
+        }
+    }
+
+    // Masts (damaged)
+    const mastX1 = cx - Math.floor(length / 4);
+    const mastX2 = cx + Math.floor(length / 4);
+
+    [mastX1, mastX2].forEach(mx => {
+        const h = 8 + Math.floor(Math.random() * 8);
+        const keelY = floorY; // Approx
+        const deckY = keelY - height;
+
+        for (let i = 0; i < h; i++) {
+             const y = deckY - i;
+             accessor.set(mx, y, BLOCKS.WOOD);
+             // Yardarm
+             if (i === h - 2) {
+                 accessor.set(mx - 1, y, BLOCKS.WOOD);
+                 accessor.set(mx + 1, y, BLOCKS.WOOD);
+                 if (Math.random() > 0.5) accessor.set(mx - 2, y, BLOCKS.WOOD);
+                 if (Math.random() > 0.5) accessor.set(mx + 2, y, BLOCKS.WOOD);
+             }
+        }
+    });
+
+    // Treasure
+    accessor.set(cx, floorY - 2, BLOCKS.JACKPOT);
+    accessor.set(cx - 1, floorY - 2, BLOCKS.GOLD);
+    accessor.set(cx + 1, floorY - 2, BLOCKS.GOLD);
+}
