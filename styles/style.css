@@ -306,43 +306,81 @@ button {
     position: absolute;
     bottom: 20px;
     right: 20px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    max-width: 200px;
-    justify-content: flex-end;
     z-index: 100;
 }
 
 .lang-btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     padding: 0;
-    font-size: 20px;
-    line-height: 36px;
+    font-size: 24px;
+    line-height: 44px;
     text-align: center;
-    background: rgba(255, 255, 255, 0.8);
-    border: 2px solid transparent;
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
     cursor: pointer;
-    transition: transform 0.1s, border-color 0.1s, background 0.1s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s, box-shadow 0.1s;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
     text-shadow: none;
 }
 
 .lang-btn:hover {
     transform: scale(1.1);
-    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .lang-btn:active {
     transform: scale(0.95);
 }
 
-.lang-btn.active {
+/* Language Popup */
+.lang-popup {
+    display: none;
+    position: absolute;
+    bottom: 50px;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 140px;
+    justify-content: center;
+}
+
+.lang-popup.open {
+    display: flex;
+}
+
+.lang-option {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    font-size: 20px;
+    line-height: 36px;
+    text-align: center;
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.1s, border-color 0.1s;
+    text-shadow: none;
+}
+
+.lang-option:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(1.1);
+}
+
+.lang-option:active {
+    transform: scale(0.95);
+}
+
+.lang-option.active {
     border-color: #4CAF50;
-    background: rgba(255, 255, 255, 1);
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+    background: rgba(76, 175, 80, 0.15);
 }
 
 
@@ -717,15 +755,25 @@ button {
     #language-selector {
         bottom: 10px;
         right: 10px;
-        max-width: 160px;
-        gap: 4px;
     }
 
     .lang-btn {
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+        line-height: 36px;
+    }
+
+    .lang-popup {
+        bottom: 42px;
+        width: 120px;
+    }
+
+    .lang-option {
+        width: 30px;
+        height: 30px;
         font-size: 16px;
-        line-height: 28px;
+        line-height: 30px;
     }
 }
 
