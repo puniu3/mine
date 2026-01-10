@@ -11,6 +11,7 @@ import { generateVegetation } from './vegetation.js';
 import { generateStructures, generateHiddenFeatures, generateSurfacePonds, generateWaterfalls } from './features.js';
 import { generateCaves, generateGeology } from './caves.js';
 import { generateClouds } from './clouds.js';
+import { generateBottomErosion } from './erosion.js';
 
 export function generate(world) {
     const biomeConfigs = getBiomeConfigs(world.height);
@@ -74,6 +75,7 @@ export function generate(world) {
     generateWaterfalls(world, heights, biomeByColumn, SEA_LEVEL);
     generateStructures(world, heights, biomeByColumn, SEA_LEVEL);
     generateHiddenFeatures(world, heights, biomeByColumn);
+    generateBottomErosion(world);
 
     // Workbench placement
     for (let x = 10; x < world.width - 10; x += 50 + Math.floor(Math.random() * 20)) {
