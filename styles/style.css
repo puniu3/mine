@@ -384,9 +384,18 @@ button {
 .inst-col strong {
     color: #4CAF50;
     font-size: 16px;
-    border-bottom: 2px solid #ddd;
-    display: inline-block;
     margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.inst-col strong::after {
+    content: '';
+    flex: 1;
+    height: 2px;
+    background: #ddd;
 }
 
 .inst-line {
