@@ -317,12 +317,10 @@ export function drawGame(ctx, {
         const worldPos = screenToWorld(gcX, gcY, cameraX, cameraY);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
 
-        // Highlight target block if within reach
-        if (isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
-            ctx.strokeStyle = 'rgba(255, 200, 50, 0.7)';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        }
+        // Always highlight target block with yellow grid cursor
+        ctx.strokeStyle = 'rgba(255, 235, 59, 0.7)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 
     ctx.restore();
