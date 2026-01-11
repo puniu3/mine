@@ -154,7 +154,6 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
 
     // Gamepad connection handlers
     window.addEventListener('gamepadconnected', (e) => {
-        console.log('Gamepad connected:', e.gamepad.id);
         gamepadIndex = e.gamepad.index;
         input.gamepad.connected = true;
         input.gamepad.cursorActive = true;
@@ -170,7 +169,6 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
     });
 
     window.addEventListener('gamepaddisconnected', (e) => {
-        console.log('Gamepad disconnected:', e.gamepad.id);
         if (e.gamepad.index === gamepadIndex) {
             gamepadIndex = null;
             input.gamepad.connected = false;
