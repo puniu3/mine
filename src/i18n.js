@@ -329,6 +329,33 @@ export const resources = {
         craft_missing: "Не хватает вещей!",
         craft_done: "Готово!",
         msg_import_err: "Эта картинка не работает."
+    },
+    id: {
+        continue_btn: "Lanjut",
+        start_btn: "Main",
+        reset_btn: "Ulangi",
+        world_btn: "Dunia",
+        inst_pc: "Komputer",
+        inst_move_pc: "Gerak: Panah / WASD",
+        inst_jump_pc: "Lompat: Spasi",
+        inst_action_pc: "Buat / Hancurkan: Klik",
+        inst_mobile: "HP",
+        inst_move_mobile: "Gerak: ← →",
+        inst_jump_mobile: "Lompat: ↑",
+        inst_action_mobile: "Buat / Hancurkan: Sentuh",
+        hint_text: "★ Taruh balok di kaki buat manjat!",
+        world_modal_title: "Duniaku",
+        world_export_title: "Simpan",
+        world_export_desc: "Jadikan duniamu gambar.",
+        world_export_btn: "Buat Gambar",
+        world_import_title: "Buka",
+        world_import_desc: "Main pakai gambar.",
+        world_import_btn: "Buka Gambar",
+        world_back_btn: "Kembali",
+
+        craft_missing: "Barangnya kurang!",
+        craft_done: "Jadi deh!",
+        msg_import_err: "Gambar ini gak bisa dipakai."
     }
 };
 
@@ -349,7 +376,8 @@ export const supportedLanguages = [
     'it',
     'pt',
     'ko',
-    'ru'
+    'ru',
+    'id'
 ];
 
 // Current language code
