@@ -1,3 +1,5 @@
+import { HOTBAR_ITEMS } from './constants.js';
+
 // Gamepad button indices for Xbox controller (Standard Gamepad mapping)
 const GAMEPAD_BUTTONS = {
     A: 0,           // Jump
@@ -266,12 +268,13 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
         }
 
         // --- Hotbar Selection (LB/RB) ---
+        const hotbarLength = HOTBAR_ITEMS.length;
         if (isButtonJustPressed(buttons, GAMEPAD_BUTTONS.LB)) {
-            currentHotbarIndex = (currentHotbarIndex - 1 + 9) % 9;
+            currentHotbarIndex = (currentHotbarIndex - 1 + hotbarLength) % hotbarLength;
             if (onHotbarSelect) onHotbarSelect(currentHotbarIndex);
         }
         if (isButtonJustPressed(buttons, GAMEPAD_BUTTONS.RB)) {
-            currentHotbarIndex = (currentHotbarIndex + 1) % 9;
+            currentHotbarIndex = (currentHotbarIndex + 1) % hotbarLength;
             if (onHotbarSelect) onHotbarSelect(currentHotbarIndex);
         }
 
