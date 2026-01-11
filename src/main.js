@@ -348,13 +348,11 @@ function tick() {
         // RT - Break block only
         if (input.gamepad.breakAction) {
             actions.handlePointer(gcX, gcY, 'break');
-            input.gamepad.breakAction = false;
         }
 
         // LT - Place block only (including climb)
         if (input.gamepad.placeAction) {
             actions.handlePointer(gcX, gcY, 'place');
-            input.gamepad.placeAction = false;
         }
     }
 
