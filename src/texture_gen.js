@@ -307,9 +307,8 @@ export function generateTextures() {
     });
 
     createTexture(BLOCKS.CLOUD, (ctx, s) => {
-        // Light semi-transparent base for a thin cloud look when solo
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.fillRect(0, 0, s, s);
+        // Clear background for transparency
+        ctx.clearRect(0, 0, s, s);
 
         // Add soft puffy shapes that connect when blocks are adjacent
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';

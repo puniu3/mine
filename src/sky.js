@@ -25,7 +25,6 @@ const SPACE_COLOR = '#020205';       // Deep space black
 const UNDERGROUND_COLOR = '#050505'; // Cave darkness
 
 // Altitude thresholds (Normalized 0.0=Top, 1.0=Bottom)
-// Assuming surface is roughly around 0.3 - 0.4 depending on terrain
 const ALTITUDE_SPACE_START = 0.2; // Start fading to space above this
 const ALTITUDE_SURFACE_LEVEL = 0.4; // Rough surface level
 const ALTITUDE_UNDERGROUND_START = 0.5; // Start fading to darkness below this
@@ -142,7 +141,7 @@ export function getSunRenderData(time, altitude, screenWidth, screenHeight) {
     const SUN_RADIUS = 50;
 
     // Check base visibility
-    let isVisible = y < screenHeight + SUN_RADIUS * 2;
+    let isVisible = y < screenHeight + SUN_RADIUS * 4; // Expanded for glow
 
     // Check altitude visibility (Hide sun if deep underground)
     const altVis = getAltitudeVisibility(altitude);
@@ -151,9 +150,12 @@ export function getSunRenderData(time, altitude, screenWidth, screenHeight) {
     // Color Logic
     let color = '#FFFFA0';
     let shadowColor = '#FFFFFF';
+    let glowColor = 'rgba(255, 255, 200, 0.4)';
+
     if (time > 0.35 && time < 0.65) {
         color = '#FF7E5F';
         shadowColor = '#FD746C';
+        glowColor = 'rgba(255, 100, 50, 0.4)';
     }
 
     return {
@@ -163,6 +165,7 @@ export function getSunRenderData(time, altitude, screenWidth, screenHeight) {
         radius: SUN_RADIUS,
         color,
         shadow: { color: shadowColor, blur: 40 },
+        glowColor,
         opacity: altVis // Add opacity for fade effect
     };
 }
@@ -180,7 +183,7 @@ export function getMoonRenderData(time, altitude, screenWidth, screenHeight, day
     const y = centerY + Math.sin(angle) * orbitRadius;
     const MOON_RADIUS = 30;
 
-    let isVisible = y < screenHeight + MOON_RADIUS * 2;
+    let isVisible = y < screenHeight + MOON_RADIUS * 4;
     
     const altVis = getAltitudeVisibility(altitude);
     if (altVis <= 0) isVisible = false;
@@ -197,6 +200,7 @@ export function getMoonRenderData(time, altitude, screenWidth, screenHeight, day
         radius: MOON_RADIUS,
         color: '#F4F6F0',
         shadow: { color: '#ffffff', blur: 10 },
+        glowColor: 'rgba(200, 220, 255, 0.2)', // Cold glow
         opacity: altVis,
         phase // Export phase for rendering logic
     };
