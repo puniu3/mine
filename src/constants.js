@@ -18,6 +18,7 @@ export const WORLD_WIDTH = 512 * 8;
 export const WORLD_HEIGHT = 256;
 export const REACH = 5 * TILE_SIZE;
 export const CAMERA_SMOOTHING = 0.1;
+export const GAMEPAD_BREAK_COOLDOWN_TICKS = 60;
 
 // --- Player Physics Constants (720Hz native, per-tick values) ---
 // Gravity acceleration per tick (velocity units)

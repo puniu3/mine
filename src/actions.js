@@ -240,7 +240,7 @@ export function createActions({
             sounds.playDig(getBlockMaterialType(currentBlock, BLOCK_PROPS));
             emitBlockBreakParticles(bx, by, currentBlock);
             world.setBlock(bx, by, BLOCKS.AIR);
-            return;
+            return true;
         }
 
         // ========================================================================
