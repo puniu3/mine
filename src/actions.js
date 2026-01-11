@@ -129,6 +129,12 @@ export function createActions({
 
         if (isFeetReplaceable && isAreaAboveFree) {
             const selectedBlock = inventory.getSelectedBlockId();
+
+            // Skip if placing the same block type on itself
+            if (blockAtFeet === selectedBlock) {
+                return false;
+            }
+
             const isCloud = selectedBlock === BLOCKS.CLOUD;
 
             // Strict Rule: Must attach to a solid block (not Water), unless it's a Cloud.
@@ -245,8 +251,14 @@ export function createActions({
 
             if (!isIntersecting) {
                 const selectedBlock = inventory.getSelectedBlockId();
+
+                // Skip if placing the same block type on itself
+                if (currentBlock === selectedBlock) {
+                    return;
+                }
+
                 const isCloud = selectedBlock === BLOCKS.CLOUD;
-                
+
                 // Strict Rule: Must attach to a solid block (not Water), unless it's a Cloud.
                 // Replaces previous lenient hasAdjacentBlock check.
                 const hasSupport = isCloud || hasSolidNeighbor(bx, by);
