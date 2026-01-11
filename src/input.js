@@ -184,8 +184,11 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
      * @param {Object} options - Polling options
      * @param {number} options.screenWidth - Logical screen width for cursor clamping
      * @param {number} options.screenHeight - Logical screen height for cursor clamping
+     * @param {number} options.playerScreenX - Player center X position on screen
+     * @param {number} options.playerScreenY - Player center Y position on screen
+     * @param {number} options.reach - Player interaction reach distance
      */
-    function pollGamepads({ screenWidth, screenHeight }) {
+    function pollGamepads({ screenWidth, screenHeight, playerScreenX, playerScreenY, reach }) {
         if (gamepadIndex === null) return;
 
         const gamepads = navigator.getGamepads();
@@ -218,8 +221,22 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
             input.gamepad.cursorX += rightX * CURSOR_SENSITIVITY;
             input.gamepad.cursorY += rightY * CURSOR_SENSITIVITY;
             input.gamepad.cursorActive = true;
+        }
 
-            // Clamp cursor to screen bounds
+        // Clamp cursor to player's reach radius (circular constraint)
+        if (reach !== undefined && playerScreenX !== undefined && playerScreenY !== undefined) {
+            const dx = input.gamepad.cursorX - playerScreenX;
+            const dy = input.gamepad.cursorY - playerScreenY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > reach) {
+                // Clamp to edge of reach circle
+                const scale = reach / distance;
+                input.gamepad.cursorX = playerScreenX + dx * scale;
+                input.gamepad.cursorY = playerScreenY + dy * scale;
+            }
+        } else {
+            // Fallback to screen bounds if reach not provided
             input.gamepad.cursorX = Math.max(0, Math.min(screenWidth, input.gamepad.cursorX));
             input.gamepad.cursorY = Math.max(0, Math.min(screenHeight, input.gamepad.cursorY));
         }
