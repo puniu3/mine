@@ -690,7 +690,6 @@ button {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    flex-grow: 1;
 }
 
 .craft-outputs {
@@ -698,6 +697,8 @@ button {
     align-items: center;
     justify-content: flex-end;
     gap: 16px;
+    margin-left: auto;
+    flex-shrink: 0;
 }
 
 .craft-icon { width: 32px; height: 32px; }
