@@ -1107,3 +1107,12 @@ button {
         #d52b1e 66.6%
     );
 }
+
+/* Indonesia */
+.flag-id {
+    background: linear-gradient(
+        180deg,
+        #ce1126 50%,
+        #fff 50%
+    );
+}
