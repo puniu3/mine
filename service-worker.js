@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pictoco-v1';
+const CACHE_NAME = 'pictoco-v2';
 
 const ASSETS_TO_CACHE = [
   './',
