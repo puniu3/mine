@@ -331,14 +331,12 @@ export function drawGame(ctx, {
     if (input && input.gamepad && input.gamepad.cursorActive && input.gamepad.connected) {
         const gcX = input.gamepad.cursorX;
         const gcY = input.gamepad.cursorY;
-        const worldPos = screenToWorld(gcX, gcY, cameraX, cameraY);
-        const inReach = isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH);
 
         // Draw crosshair at cursor position
         const crosshairSize = 12;
         const innerGap = 4;
 
-        ctx.strokeStyle = inReach ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 100, 100, 0.7)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.lineWidth = 2;
 
         // Horizontal lines
@@ -355,7 +353,7 @@ export function drawGame(ctx, {
         ctx.stroke();
 
         // Center dot
-        ctx.fillStyle = inReach ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 100, 100, 0.7)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.beginPath();
         ctx.arc(gcX, gcY, 2, 0, Math.PI * 2);
         ctx.fill();
