@@ -179,6 +179,10 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
     // Hotbar selection tracking for LB/RB
     let currentHotbarIndex = 0;
 
+    // Track previous player screen position for cursor following
+    let prevPlayerScreenX = null;
+    let prevPlayerScreenY = null;
+
     /**
      * Poll gamepad state - should be called every frame
      * @param {Object} options - Polling options
@@ -212,6 +216,16 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
         if (isButtonJustPressed(buttons, GAMEPAD_BUTTONS.X)) {
             if (onClimb) onClimb();
         }
+
+        // --- Cursor follows player movement to prevent jitter at boundary ---
+        if (prevPlayerScreenX !== null && prevPlayerScreenY !== null) {
+            const playerDeltaX = playerScreenX - prevPlayerScreenX;
+            const playerDeltaY = playerScreenY - prevPlayerScreenY;
+            input.gamepad.cursorX += playerDeltaX;
+            input.gamepad.cursorY += playerDeltaY;
+        }
+        prevPlayerScreenX = playerScreenX;
+        prevPlayerScreenY = playerScreenY;
 
         // --- Virtual Cursor Movement (Right Stick) ---
         const rightX = applyDeadzone(axes[GAMEPAD_AXES.RIGHT_X] || 0);
