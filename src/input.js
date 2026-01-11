@@ -38,6 +38,9 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
             connected: false,
             cursorX: 0,
             cursorY: 0,
+            // Cursor offset from player center (stable, not affected by player movement)
+            cursorOffsetX: 0,
+            cursorOffsetY: 0,
             cursorActive: false,
             breakAction: false,
             placeAction: false,
@@ -179,10 +182,6 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
     // Hotbar selection tracking for LB/RB
     let currentHotbarIndex = 0;
 
-    // Track previous player screen position for cursor following
-    let prevPlayerScreenX = null;
-    let prevPlayerScreenY = null;
-
     /**
      * Poll gamepad state - should be called every frame
      * @param {Object} options - Polling options
@@ -217,40 +216,37 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
             if (onClimb) onClimb();
         }
 
-        // --- Cursor follows player movement to prevent jitter at boundary ---
-        if (prevPlayerScreenX !== null && prevPlayerScreenY !== null) {
-            const playerDeltaX = playerScreenX - prevPlayerScreenX;
-            const playerDeltaY = playerScreenY - prevPlayerScreenY;
-            input.gamepad.cursorX += playerDeltaX;
-            input.gamepad.cursorY += playerDeltaY;
-        }
-        prevPlayerScreenX = playerScreenX;
-        prevPlayerScreenY = playerScreenY;
-
         // --- Virtual Cursor Movement (Right Stick) ---
+        // Use offset from player center to avoid jitter from player movement
         const rightX = applyDeadzone(axes[GAMEPAD_AXES.RIGHT_X] || 0);
         const rightY = applyDeadzone(axes[GAMEPAD_AXES.RIGHT_Y] || 0);
 
         if (rightX !== 0 || rightY !== 0) {
-            input.gamepad.cursorX += rightX * CURSOR_SENSITIVITY;
-            input.gamepad.cursorY += rightY * CURSOR_SENSITIVITY;
+            input.gamepad.cursorOffsetX += rightX * CURSOR_SENSITIVITY;
+            input.gamepad.cursorOffsetY += rightY * CURSOR_SENSITIVITY;
             input.gamepad.cursorActive = true;
         }
 
-        // Clamp cursor to player's reach radius (circular constraint)
-        if (reach !== undefined && playerScreenX !== undefined && playerScreenY !== undefined) {
-            const dx = input.gamepad.cursorX - playerScreenX;
-            const dy = input.gamepad.cursorY - playerScreenY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+        // Clamp cursor offset to player's reach radius (circular constraint)
+        if (reach !== undefined) {
+            const distance = Math.sqrt(
+                input.gamepad.cursorOffsetX * input.gamepad.cursorOffsetX +
+                input.gamepad.cursorOffsetY * input.gamepad.cursorOffsetY
+            );
 
             if (distance > reach) {
-                // Clamp to edge of reach circle
                 const scale = reach / distance;
-                input.gamepad.cursorX = playerScreenX + dx * scale;
-                input.gamepad.cursorY = playerScreenY + dy * scale;
+                input.gamepad.cursorOffsetX *= scale;
+                input.gamepad.cursorOffsetY *= scale;
             }
+        }
+
+        // Calculate screen position from player position + offset
+        if (playerScreenX !== undefined && playerScreenY !== undefined) {
+            input.gamepad.cursorX = playerScreenX + input.gamepad.cursorOffsetX;
+            input.gamepad.cursorY = playerScreenY + input.gamepad.cursorOffsetY;
         } else {
-            // Fallback to screen bounds if reach not provided
+            // Fallback to screen bounds if player position not provided
             input.gamepad.cursorX = Math.max(0, Math.min(screenWidth, input.gamepad.cursorX));
             input.gamepad.cursorY = Math.max(0, Math.min(screenHeight, input.gamepad.cursorY));
         }
