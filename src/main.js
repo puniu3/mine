@@ -312,9 +312,16 @@ function tick() {
 
     // Poll gamepad state (every physics tick for responsive input)
     if (input.pollGamepads) {
+        // Calculate player's screen position for cursor clamping
+        const playerScreenX = player.getCenterX() - camera.x;
+        const playerScreenY = player.getCenterY() - camera.y;
+
         input.pollGamepads({
             screenWidth: logicalWidth,
-            screenHeight: logicalHeight
+            screenHeight: logicalHeight,
+            playerScreenX,
+            playerScreenY,
+            reach: REACH
         });
     }
 
@@ -328,20 +335,20 @@ function tick() {
         input.mouse.leftDown = false;
     }
 
-    // Input Handling - Gamepad (RT for break, LT for place)
+    // Input Handling - Gamepad (RT for break only, LT for place only)
     if (input.gamepad && input.gamepad.connected && !isCraftingOpen) {
         const gcX = input.gamepad.cursorX;
         const gcY = input.gamepad.cursorY;
 
-        // RT - Break block (or climb if targeting near player)
+        // RT - Break block only
         if (input.gamepad.breakAction) {
-            actions.handlePointer(gcX, gcY);
+            actions.handlePointer(gcX, gcY, 'break');
             input.gamepad.breakAction = false;
         }
 
-        // LT - Place block (same action, context-aware)
+        // LT - Place block only (including climb)
         if (input.gamepad.placeAction) {
-            actions.handlePointer(gcX, gcY);
+            actions.handlePointer(gcX, gcY, 'place');
             input.gamepad.placeAction = false;
         }
     }
