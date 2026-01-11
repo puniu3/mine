@@ -284,6 +284,13 @@ button {
     transform: scale(0.95);
 }
 
+/* Gamepad selection for title screen buttons */
+.action-btn.gamepad-selected {
+    outline: 4px solid #ffeb3b;
+    outline-offset: 2px;
+    box-shadow: 0 0 20px rgba(255, 235, 59, 0.6);
+}
+
 /* Primary Style (Big Green) */
 .action-btn.primary-style {
     background: #4CAF50;
@@ -684,6 +691,13 @@ button {
 .craft-item:hover {
     border-color: #fff;
     background: rgba(255, 255, 255, 0.2);
+}
+
+/* Gamepad selection highlight */
+.craft-item.gamepad-selected {
+    border-color: #ffeb3b;
+    background: rgba(255, 235, 59, 0.3);
+    box-shadow: 0 0 10px rgba(255, 235, 59, 0.5);
 }
 
 .craft-inputs {

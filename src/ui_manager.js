@@ -2,6 +2,12 @@ import { loadGameState } from './save.js';
 import { exportWorldToImage, importWorldFromImage, downloadBlob } from './world_share.js';
 import { strings, setLanguage } from './i18n.js';
 
+// Gamepad button indices
+const GP_A = 0;
+const GP_B = 1;
+const GP_DPAD_UP = 12;
+const GP_DPAD_DOWN = 13;
+
 /**
  * Initializes UI event listeners and DOM interactions.
  * @param {Object} callbacks - Functions to communicate back to the main game loop.
@@ -218,5 +224,102 @@ export function initUI(callbacks) {
                 closeLangPopup();
             }
         }
+    });
+
+    // --- Gamepad Navigation for Start Screen ---
+    let titleSelectedIndex = 0;
+    let prevDpadUp = false;
+    let prevDpadDown = false;
+    let prevAButton = false;
+
+    function getVisibleTitleButtons() {
+        const startScreen = document.getElementById('start-screen');
+        if (!startScreen || startScreen.style.display === 'none') return [];
+
+        const buttons = [];
+        const savedState = loadGameState();
+
+        // Primary buttons (based on save state)
+        if (savedState) {
+            const continueBtn = document.getElementById('continue-btn');
+            if (continueBtn) buttons.push(continueBtn);
+            const resetBtn = document.getElementById('reset-btn');
+            if (resetBtn) buttons.push(resetBtn);
+        } else {
+            const startBtn = document.getElementById('start-btn');
+            if (startBtn) buttons.push(startBtn);
+        }
+
+        // World button is always visible
+        const worldBtn = document.getElementById('world-btn');
+        if (worldBtn) buttons.push(worldBtn);
+
+        return buttons;
+    }
+
+    function updateTitleSelection() {
+        const buttons = getVisibleTitleButtons();
+        buttons.forEach((btn, index) => {
+            if (index === titleSelectedIndex) {
+                btn.classList.add('gamepad-selected');
+                btn.focus();
+            } else {
+                btn.classList.remove('gamepad-selected');
+            }
+        });
+    }
+
+    function pollTitleGamepad() {
+        const startScreen = document.getElementById('start-screen');
+        if (!startScreen || startScreen.style.display === 'none') return;
+
+        // Check if world modal is open
+        if (worldModal && worldModal.classList.contains('visible')) return;
+
+        const gamepads = navigator.getGamepads();
+        let gp = null;
+        for (const pad of gamepads) {
+            if (pad && pad.connected) {
+                gp = pad;
+                break;
+            }
+        }
+        if (!gp) return;
+
+        const { buttons } = gp;
+        const visibleButtons = getVisibleTitleButtons();
+
+        // D-PAD Up
+        const dpadUp = buttons[GP_DPAD_UP] && buttons[GP_DPAD_UP].pressed;
+        if (dpadUp && !prevDpadUp) {
+            titleSelectedIndex = Math.max(0, titleSelectedIndex - 1);
+            updateTitleSelection();
+        }
+        prevDpadUp = dpadUp;
+
+        // D-PAD Down
+        const dpadDown = buttons[GP_DPAD_DOWN] && buttons[GP_DPAD_DOWN].pressed;
+        if (dpadDown && !prevDpadDown) {
+            titleSelectedIndex = Math.min(visibleButtons.length - 1, titleSelectedIndex + 1);
+            updateTitleSelection();
+        }
+        prevDpadDown = dpadDown;
+
+        // A Button - Activate selected button
+        const aButton = buttons[GP_A] && buttons[GP_A].pressed;
+        if (aButton && !prevAButton) {
+            const selectedBtn = visibleButtons[titleSelectedIndex];
+            if (selectedBtn) selectedBtn.click();
+        }
+        prevAButton = aButton;
+    }
+
+    // Poll gamepad for title screen navigation
+    setInterval(pollTitleGamepad, 50);
+
+    // Initialize selection on gamepad connect
+    window.addEventListener('gamepadconnected', () => {
+        titleSelectedIndex = 0;
+        updateTitleSelection();
     });
 }

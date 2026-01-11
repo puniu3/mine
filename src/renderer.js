@@ -310,5 +310,54 @@ export function drawGame(ctx, {
         }
     }
 
+    // --- 8. Gamepad Virtual Cursor ---
+    if (input && input.gamepad && input.gamepad.cursorActive && input.gamepad.connected) {
+        const gcX = input.gamepad.cursorX;
+        const gcY = input.gamepad.cursorY;
+        const worldPos = screenToWorld(gcX, gcY, cameraX, cameraY);
+        const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
+
+        // Highlight target block if within reach
+        if (isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
+            ctx.strokeStyle = 'rgba(255, 200, 50, 0.7)';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+    }
+
     ctx.restore();
+
+    // --- 9. Gamepad Crosshair (drawn in screen space) ---
+    if (input && input.gamepad && input.gamepad.cursorActive && input.gamepad.connected) {
+        const gcX = input.gamepad.cursorX;
+        const gcY = input.gamepad.cursorY;
+        const worldPos = screenToWorld(gcX, gcY, cameraX, cameraY);
+        const inReach = isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH);
+
+        // Draw crosshair at cursor position
+        const crosshairSize = 12;
+        const innerGap = 4;
+
+        ctx.strokeStyle = inReach ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 100, 100, 0.7)';
+        ctx.lineWidth = 2;
+
+        // Horizontal lines
+        ctx.beginPath();
+        ctx.moveTo(gcX - crosshairSize, gcY);
+        ctx.lineTo(gcX - innerGap, gcY);
+        ctx.moveTo(gcX + innerGap, gcY);
+        ctx.lineTo(gcX + crosshairSize, gcY);
+        // Vertical lines
+        ctx.moveTo(gcX, gcY - crosshairSize);
+        ctx.lineTo(gcX, gcY - innerGap);
+        ctx.moveTo(gcX, gcY + innerGap);
+        ctx.lineTo(gcX, gcY + crosshairSize);
+        ctx.stroke();
+
+        // Center dot
+        ctx.fillStyle = inReach ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 100, 100, 0.7)';
+        ctx.beginPath();
+        ctx.arc(gcX, gcY, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }

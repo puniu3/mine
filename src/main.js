@@ -24,7 +24,7 @@ import {
     initHotbarUI, selectHotbar, getSelectedBlockId,
     getInventoryState, loadInventoryState
 } from './inventory.js';
-import { isCraftingOpen, updateCrafting } from './crafting.js';
+import { isCraftingOpen, updateCrafting, pollCraftingGamepad } from './crafting.js';
 import { tick as tickFireworks, createExplosionParticles } from './fireworks.js';
 import { tick as tickBlockParticles, initBlockParticles } from './block_particles.js';
 import { createActions } from './actions.js';
@@ -309,9 +309,18 @@ function init(savedState = null) {
 // --- Tick Loop (Physics) ---
 function tick() {
     if (!player) return;
+
+    // Poll gamepad state (every physics tick for responsive input)
+    if (input.pollGamepads) {
+        input.pollGamepads({
+            screenWidth: logicalWidth,
+            screenHeight: logicalHeight
+        });
+    }
+
     player.tick(input);
 
-    // Input Handling
+    // Input Handling - Mouse
     if (input.mouse.leftDown) {
         if (!isCraftingOpen) {
             actions.handlePointer(input.mouse.x, input.mouse.y);
@@ -319,8 +328,31 @@ function tick() {
         input.mouse.leftDown = false;
     }
 
+    // Input Handling - Gamepad (RT for break, LT for place)
+    if (input.gamepad && input.gamepad.connected && !isCraftingOpen) {
+        const gcX = input.gamepad.cursorX;
+        const gcY = input.gamepad.cursorY;
+
+        // RT - Break block (or climb if targeting near player)
+        if (input.gamepad.breakAction) {
+            actions.handlePointer(gcX, gcY);
+            input.gamepad.breakAction = false;
+        }
+
+        // LT - Place block (same action, context-aware)
+        if (input.gamepad.placeAction) {
+            actions.handlePointer(gcX, gcY);
+            input.gamepad.placeAction = false;
+        }
+    }
+
     // System Updates
     updateCrafting(player, world, textures);
+
+    // Poll gamepad for crafting UI navigation
+    if (isCraftingOpen) {
+        pollCraftingGamepad();
+    }
 
     handleJackpotOverlap(player, world, sounds);
     tickJackpots();

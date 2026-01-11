@@ -43,6 +43,84 @@ const CRAFTING_RECIPES = [
 
 export let isCraftingOpen = false;
 
+// Gamepad navigation state for crafting UI
+let selectedRecipeIndex = 0;
+let gamepadNavEnabled = false;
+let prevDpadUp = false;
+let prevDpadDown = false;
+let prevAButton = false;
+let prevBButton = false;
+
+// Gamepad button indices
+const GP_A = 0;
+const GP_B = 1;
+const GP_DPAD_UP = 12;
+const GP_DPAD_DOWN = 13;
+
+/**
+ * Poll gamepad for crafting UI navigation
+ * Should be called when crafting UI is open
+ */
+export function pollCraftingGamepad() {
+    if (!isCraftingOpen) return;
+
+    const gamepads = navigator.getGamepads();
+    let gp = null;
+    for (const pad of gamepads) {
+        if (pad && pad.connected) {
+            gp = pad;
+            break;
+        }
+    }
+    if (!gp) return;
+
+    const { buttons } = gp;
+
+    // D-PAD Up - move selection up
+    const dpadUp = buttons[GP_DPAD_UP] && buttons[GP_DPAD_UP].pressed;
+    if (dpadUp && !prevDpadUp) {
+        selectedRecipeIndex = Math.max(0, selectedRecipeIndex - 1);
+        updateCraftingSelection();
+    }
+    prevDpadUp = dpadUp;
+
+    // D-PAD Down - move selection down
+    const dpadDown = buttons[GP_DPAD_DOWN] && buttons[GP_DPAD_DOWN].pressed;
+    if (dpadDown && !prevDpadDown) {
+        selectedRecipeIndex = Math.min(CRAFTING_RECIPES.length - 1, selectedRecipeIndex + 1);
+        updateCraftingSelection();
+    }
+    prevDpadDown = dpadDown;
+
+    // A Button - craft selected item
+    const aButton = buttons[GP_A] && buttons[GP_A].pressed;
+    if (aButton && !prevAButton) {
+        const recipe = CRAFTING_RECIPES[selectedRecipeIndex];
+        if (recipe) craftItem(recipe);
+    }
+    prevAButton = aButton;
+
+    // B Button is handled elsewhere (closing is automatic when leaving workbench)
+    const bButton = buttons[GP_B] && buttons[GP_B].pressed;
+    prevBButton = bButton;
+}
+
+function updateCraftingSelection() {
+    const list = document.getElementById('craft-list');
+    if (!list) return;
+
+    const items = list.querySelectorAll('.craft-item');
+    items.forEach((item, index) => {
+        if (index === selectedRecipeIndex) {
+            item.classList.add('gamepad-selected');
+            // Scroll into view if needed
+            item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } else {
+            item.classList.remove('gamepad-selected');
+        }
+    });
+}
+
 export function checkWorktableOverlap(player, world) {
     const px = player.x;
     const py = player.y;
@@ -81,6 +159,7 @@ export function updateCrafting(player, world, textures) {
 
 export function openCraftingUI(textures) {
     isCraftingOpen = true;
+    selectedRecipeIndex = 0; // Reset selection when opening
     const modal = document.getElementById('crafting-modal');
     const list = document.getElementById('craft-list');
     const status = document.getElementById('crafting-status');
@@ -135,6 +214,9 @@ export function openCraftingUI(textures) {
     });
 
     modal.style.display = 'block';
+
+    // Initialize gamepad selection visual (first item selected)
+    updateCraftingSelection();
 }
 
 export function closeCraftingUI() {

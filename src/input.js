@@ -1,10 +1,53 @@
+// Gamepad button indices for Xbox controller (Standard Gamepad mapping)
+const GAMEPAD_BUTTONS = {
+    A: 0,           // Jump
+    B: 1,           // Close UI
+    X: 2,           // Climb
+    Y: 3,
+    LB: 4,          // Hotbar left
+    RB: 5,          // Hotbar right
+    LT: 6,          // Place block
+    RT: 7,          // Break block
+    BACK: 8,
+    START: 9,
+    L_STICK: 10,
+    R_STICK: 11,
+    DPAD_UP: 12,
+    DPAD_DOWN: 13,
+    DPAD_LEFT: 14,
+    DPAD_RIGHT: 15
+};
+
+// Gamepad axis indices
+const GAMEPAD_AXES = {
+    LEFT_X: 0,      // Movement
+    LEFT_Y: 1,
+    RIGHT_X: 2,     // Cursor
+    RIGHT_Y: 3
+};
+
+// Deadzone and sensitivity settings
+const DEADZONE = 0.15;
+const CURSOR_SENSITIVITY = 8;
+
 export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
     const input = {
         keys: { left: false, right: false, jump: false },
-        mouse: { x: 0, y: 0, leftDown: false, active: false }
+        mouse: { x: 0, y: 0, leftDown: false, active: false },
+        gamepad: {
+            connected: false,
+            cursorX: 0,
+            cursorY: 0,
+            cursorActive: false,
+            breakAction: false,
+            placeAction: false,
+            // Previous button states for edge detection
+            prevButtons: {}
+        }
     };
 
     let lastTouchTime = 0;
+    let gamepadIndex = null;
 
     // Hide mobile controls on first keydown, then remove listener
     const hideMobileControls = () => {
@@ -89,6 +132,126 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
         lastTouchTime = Date.now();
         if (onTouch) onTouch(t.clientX - rect.left, t.clientY - rect.top);
     }, { passive: false });
+
+    // --- Gamepad Support ---
+
+    // Apply deadzone to axis value
+    function applyDeadzone(value) {
+        if (Math.abs(value) < DEADZONE) return 0;
+        // Normalize value to 0-1 range after deadzone
+        const sign = Math.sign(value);
+        return sign * (Math.abs(value) - DEADZONE) / (1 - DEADZONE);
+    }
+
+    // Check if button was just pressed (edge detection)
+    function isButtonJustPressed(buttons, index) {
+        const isPressed = buttons[index] && buttons[index].pressed;
+        const wasPressed = input.gamepad.prevButtons[index];
+        return isPressed && !wasPressed;
+    }
+
+    // Gamepad connection handlers
+    window.addEventListener('gamepadconnected', (e) => {
+        console.log('Gamepad connected:', e.gamepad.id);
+        gamepadIndex = e.gamepad.index;
+        input.gamepad.connected = true;
+        input.gamepad.cursorActive = true;
+
+        // Initialize cursor at center of screen
+        const rect = canvas.getBoundingClientRect();
+        input.gamepad.cursorX = rect.width / 2;
+        input.gamepad.cursorY = rect.height / 2;
+
+        // Hide mobile controls when gamepad is connected
+        const el = document.getElementById('mobile-controls');
+        if (el) el.style.display = 'none';
+    });
+
+    window.addEventListener('gamepaddisconnected', (e) => {
+        console.log('Gamepad disconnected:', e.gamepad.id);
+        if (e.gamepad.index === gamepadIndex) {
+            gamepadIndex = null;
+            input.gamepad.connected = false;
+            input.gamepad.cursorActive = false;
+        }
+    });
+
+    // Hotbar selection tracking for LB/RB
+    let currentHotbarIndex = 0;
+
+    /**
+     * Poll gamepad state - should be called every frame
+     * @param {Object} options - Polling options
+     * @param {number} options.screenWidth - Logical screen width for cursor clamping
+     * @param {number} options.screenHeight - Logical screen height for cursor clamping
+     */
+    function pollGamepads({ screenWidth, screenHeight }) {
+        if (gamepadIndex === null) return;
+
+        const gamepads = navigator.getGamepads();
+        const gp = gamepads[gamepadIndex];
+
+        if (!gp) return;
+
+        const { axes, buttons } = gp;
+
+        // --- Movement (Left Stick) ---
+        const leftX = applyDeadzone(axes[GAMEPAD_AXES.LEFT_X] || 0);
+        input.keys.left = leftX < -0.3;
+        input.keys.right = leftX > 0.3;
+
+        // --- Jump (A Button) ---
+        if (buttons[GAMEPAD_BUTTONS.A]) {
+            input.keys.jump = buttons[GAMEPAD_BUTTONS.A].pressed;
+        }
+
+        // --- Climb (X Button) ---
+        if (isButtonJustPressed(buttons, GAMEPAD_BUTTONS.X)) {
+            if (onClimb) onClimb();
+        }
+
+        // --- Virtual Cursor Movement (Right Stick) ---
+        const rightX = applyDeadzone(axes[GAMEPAD_AXES.RIGHT_X] || 0);
+        const rightY = applyDeadzone(axes[GAMEPAD_AXES.RIGHT_Y] || 0);
+
+        if (rightX !== 0 || rightY !== 0) {
+            input.gamepad.cursorX += rightX * CURSOR_SENSITIVITY;
+            input.gamepad.cursorY += rightY * CURSOR_SENSITIVITY;
+            input.gamepad.cursorActive = true;
+
+            // Clamp cursor to screen bounds
+            input.gamepad.cursorX = Math.max(0, Math.min(screenWidth, input.gamepad.cursorX));
+            input.gamepad.cursorY = Math.max(0, Math.min(screenHeight, input.gamepad.cursorY));
+        }
+
+        // --- Break Block (RT) ---
+        if (buttons[GAMEPAD_BUTTONS.RT]) {
+            input.gamepad.breakAction = buttons[GAMEPAD_BUTTONS.RT].pressed && buttons[GAMEPAD_BUTTONS.RT].value > 0.5;
+        }
+
+        // --- Place Block (LT) ---
+        if (buttons[GAMEPAD_BUTTONS.LT]) {
+            input.gamepad.placeAction = buttons[GAMEPAD_BUTTONS.LT].pressed && buttons[GAMEPAD_BUTTONS.LT].value > 0.5;
+        }
+
+        // --- Hotbar Selection (LB/RB) ---
+        if (isButtonJustPressed(buttons, GAMEPAD_BUTTONS.LB)) {
+            currentHotbarIndex = (currentHotbarIndex - 1 + 9) % 9;
+            if (onHotbarSelect) onHotbarSelect(currentHotbarIndex);
+        }
+        if (isButtonJustPressed(buttons, GAMEPAD_BUTTONS.RB)) {
+            currentHotbarIndex = (currentHotbarIndex + 1) % 9;
+            if (onHotbarSelect) onHotbarSelect(currentHotbarIndex);
+        }
+
+        // Store button states for next frame (edge detection)
+        for (let i = 0; i < buttons.length; i++) {
+            input.gamepad.prevButtons[i] = buttons[i] && buttons[i].pressed;
+        }
+    }
+
+    // Expose polling function on input object
+    input.pollGamepads = pollGamepads;
 
     return input;
 }
