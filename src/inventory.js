@@ -126,3 +126,9 @@ export function selectHotbar(index, { playSound = true } = {}) {
     selectedHotbarIndex = index;
     if (playSound) sounds.playPop();
 }
+
+export function cycleHotbar(delta) {
+    const len = HOTBAR_ITEMS.length;
+    const newIndex = (selectedHotbarIndex + delta + len) % len;
+    selectHotbar(newIndex);
+}

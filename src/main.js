@@ -21,7 +21,7 @@ import { generateTextures } from './texture_gen.js';
 import { createInput } from './input.js';
 import {
     updateInventoryUI, addToInventory, consumeFromInventory,
-    initHotbarUI, selectHotbar, getSelectedBlockId,
+    initHotbarUI, selectHotbar, cycleHotbar, getSelectedBlockId,
     getInventoryState, loadInventoryState
 } from './inventory.js';
 import { isCraftingOpen, updateCrafting } from './crafting.js';
@@ -257,6 +257,7 @@ function init(savedState = null) {
     // Initialize Input
     input = createInput(canvas, {
         onHotbarSelect: selectHotbar,
+        onHotbarScroll: cycleHotbar,
         onTouch: (x, y) => actions.handlePointer(x, y),
         onClimb: () => actions.triggerClimb()
     });
@@ -308,6 +309,10 @@ function init(savedState = null) {
 // --- Tick Loop (Physics) ---
 function tick() {
     if (!player) return;
+
+    // Update input state (poll gamepads)
+    if (input.update) input.update();
+
     player.tick(input);
 
     // Input Handling
@@ -316,6 +321,16 @@ function tick() {
             actions.handlePointer(input.mouse.x, input.mouse.y);
         }
         input.mouse.leftDown = false;
+    }
+
+    // Gamepad Action Handling
+    if (input.gamepad && input.gamepad.active) {
+        if (input.gamepad.rtDown && !isCraftingOpen) {
+            actions.handlePointer(input.gamepad.cursorX, input.gamepad.cursorY, 'break');
+        }
+        if (input.gamepad.ltDown && !isCraftingOpen) {
+            actions.handlePointer(input.gamepad.cursorX, input.gamepad.cursorY, 'place');
+        }
     }
 
     // System Updates

@@ -299,14 +299,57 @@ export function drawGame(ctx, {
     drawFireworks(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
     drawBlockParticles(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
 
-    // --- 7. Cursor Highlight ---
+    // --- 7. Cursor Highlight (Mouse or Gamepad) ---
+    let cursorX = 0;
+    let cursorY = 0;
+    let isCursorActive = false;
+
     if (input && input.mouse && input.mouse.active) {
-        const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY);
+        cursorX = input.mouse.x;
+        cursorY = input.mouse.y;
+        isCursorActive = true;
+    } else if (input && input.gamepad && input.gamepad.active) {
+        cursorX = input.gamepad.cursorX;
+        cursorY = input.gamepad.cursorY;
+        isCursorActive = true;
+    }
+
+    if (isCursorActive) {
+        const worldPos = screenToWorld(cursorX, cursorY, cameraX, cameraY);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
+
+        // Draw Block Highlight
         if (isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.lineWidth = 2;
             ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+
+        // Draw Virtual Cursor Crosshair (Only for Gamepad)
+        if (input.gamepad && input.gamepad.active) {
+            // Transform back to screen space for UI drawing (which is independent of camera transform)
+            // Wait, we are inside a ctx.restore() block? No, `ctx.restore()` is at the very end.
+            // But verify:
+            // `ctx.save()` at line 143 (`ctx.translate(-Math.floor(cameraX)...`)
+            // The code above (Cursor Highlight) uses `bx * TILE_SIZE` which is world space.
+            // So we are currently in World Space (translated by camera).
+
+            // If we want to draw the cursor at screen coordinates, we need to untranslate or calculate world coords.
+            // `input.gamepad.cursorX` is screen coordinates.
+
+            // Option 1: Draw at world coordinates corresponding to cursor position.
+            const curWorldX = cursorX + cameraX;
+            const curWorldY = cursorY + cameraY;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const size = 10;
+            ctx.moveTo(curWorldX - size, curWorldY);
+            ctx.lineTo(curWorldX + size, curWorldY);
+            ctx.moveTo(curWorldX, curWorldY - size);
+            ctx.lineTo(curWorldX, curWorldY + size);
+            ctx.stroke();
         }
     }
 

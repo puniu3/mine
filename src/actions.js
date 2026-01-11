@@ -148,8 +148,9 @@ export function createActions({
      * Handles pointer interaction (mouse/touch) for breaking and placing blocks.
      * @param {number} screenX - Screen X coordinate.
      * @param {number} screenY - Screen Y coordinate.
+     * @param {string} mode - Interaction mode: 'auto' (default), 'break', or 'place'.
      */
-    function handlePointer(screenX, screenY) {
+    function handlePointer(screenX, screenY, mode = 'auto') {
         const worldPos = screenToWorld(screenX, screenY, camera.x, camera.y);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
 
@@ -161,33 +162,36 @@ export function createActions({
         // ========================================================================
         // 1. Auto-Climb Trigger Detection (Top Priority)
         // ========================================================================
-        const pCenterX = player.getCenterX();
-        const pHeadTileX = Math.floor(pCenterX / TILE_SIZE);
-        const pHeadTileY = Math.floor(player.y / TILE_SIZE);
+        // Only trigger auto-climb in 'auto' mode
+        if (mode === 'auto') {
+            const pCenterX = player.getCenterX();
+            const pHeadTileX = Math.floor(pCenterX / TILE_SIZE);
+            const pHeadTileY = Math.floor(player.y / TILE_SIZE);
 
-        // Condition 1: Tile containing the center of the player's head
-        const isHeadTile = (bx === pHeadTileX && by === pHeadTileY);
+            // Condition 1: Tile containing the center of the player's head
+            const isHeadTile = (bx === pHeadTileX && by === pHeadTileY);
 
-        // Condition 2: Upper half of the tile directly below the head tile
-        const isBelowHead = (bx === pHeadTileX && by === pHeadTileY + 1);
-        const isUpperHalf = (worldPos.y % TILE_SIZE) < (TILE_SIZE / 2);
-        const isBelowHeadUpperHalf = isBelowHead && isUpperHalf;
+            // Condition 2: Upper half of the tile directly below the head tile
+            const isBelowHead = (bx === pHeadTileX && by === pHeadTileY + 1);
+            const isUpperHalf = (worldPos.y % TILE_SIZE) < (TILE_SIZE / 2);
+            const isBelowHeadUpperHalf = isBelowHead && isUpperHalf;
 
-        // Condition 3: Specific Rect (32px wide, 48px high, top at player.y - 4, centered)
-        const rectX = pCenterX - 16;
-        const rectY = player.y - 4;
-        const rectW = 32;
-        const rectH = 48;
-        const isInsideRect = (
-            worldPos.x >= rectX &&
-            worldPos.x < rectX + rectW &&
-            worldPos.y >= rectY &&
-            worldPos.y < rectY + rectH
-        );
+            // Condition 3: Specific Rect (32px wide, 48px high, top at player.y - 4, centered)
+            const rectX = pCenterX - 16;
+            const rectY = player.y - 4;
+            const rectW = 32;
+            const rectH = 48;
+            const isInsideRect = (
+                worldPos.x >= rectX &&
+                worldPos.x < rectX + rectW &&
+                worldPos.y >= rectY &&
+                worldPos.y < rectY + rectH
+            );
 
-        if (isHeadTile || isBelowHeadUpperHalf || isInsideRect) {
-            executeClimb();
-            return;
+            if (isHeadTile || isBelowHeadUpperHalf || isInsideRect) {
+                executeClimb();
+                return;
+            }
         }
 
         // ========================================================================
@@ -195,7 +199,8 @@ export function createActions({
         // ========================================================================
         const currentBlock = world.getBlock(bx, by);
 
-        if (currentBlock !== BLOCKS.AIR && isBlockBreakable(currentBlock, BLOCK_PROPS)) {
+        if ((mode === 'auto' || mode === 'break') &&
+            currentBlock !== BLOCKS.AIR && isBlockBreakable(currentBlock, BLOCK_PROPS)) {
             inventory.addToInventory(currentBlock);
             sounds.playDig(getBlockMaterialType(currentBlock, BLOCK_PROPS));
             emitBlockBreakParticles(bx, by, currentBlock);
@@ -206,7 +211,8 @@ export function createActions({
         // ========================================================================
         // 3. Normal Block Placement
         // ========================================================================
-        if ((currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) && currentBlock !== BLOCKS.WORKBENCH) {
+        if ((mode === 'auto' || mode === 'place') &&
+            (currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) && currentBlock !== BLOCKS.WORKBENCH) {
             const playerRect = player.getRect();
             const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
             
