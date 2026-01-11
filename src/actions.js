@@ -59,11 +59,13 @@ export function createActions({
      * Checks if a target tile has at least one valid supporting neighbor.
      * Valid supports are any block except Air and Water.
      * This allows placing blocks on transparent blocks like Workbench or Sapling, but not Water.
+     * EXCEPTION: Water can support Water.
      * @param {number} tx - Target tile X.
      * @param {number} ty - Target tile Y.
+     * @param {number} [blockBeingPlaced] - The ID of the block currently being placed.
      * @returns {boolean} True if a valid supporting neighbor exists.
      */
-    function hasSolidNeighbor(tx, ty) {
+    function hasSolidNeighbor(tx, ty, blockBeingPlaced) {
         const offsets = [
             { dx: 0, dy: -1 }, // Top
             { dx: 0, dy: 1 },  // Bottom
@@ -73,10 +75,13 @@ export function createActions({
 
         for (const { dx, dy } of offsets) {
             const nb = world.getBlock(tx + dx, ty + dy);
-            // Logic updated: Valid support is any block that is not AIR and not WATER.
-            // This allows other transparent blocks (e.g. Workbench, Sapling) to serve as support.
-            if (nb !== BLOCKS.AIR && nb !== BLOCKS.WATER) {
-                return true;
+
+            if (nb !== BLOCKS.AIR) {
+                // Standard rule: Support must be non-Water.
+                // Exception: If we are placing Water, then Water is a valid support.
+                if (nb !== BLOCKS.WATER || blockBeingPlaced === BLOCKS.WATER) {
+                    return true;
+                }
             }
         }
         return false;
@@ -138,7 +143,7 @@ export function createActions({
             const isCloud = selectedBlock === BLOCKS.CLOUD;
 
             // Strict Rule: Must attach to a solid block (not Water), unless it's a Cloud.
-            const hasSupport = isCloud || hasSolidNeighbor(targetTx, targetTy);
+            const hasSupport = isCloud || hasSolidNeighbor(targetTx, targetTy, selectedBlock);
 
             if (hasSupport) {
                 if (inventory.consumeFromInventory(selectedBlock)) {
@@ -261,7 +266,7 @@ export function createActions({
 
                 // Strict Rule: Must attach to a solid block (not Water), unless it's a Cloud.
                 // Replaces previous lenient hasAdjacentBlock check.
-                const hasSupport = isCloud || hasSolidNeighbor(bx, by);
+                const hasSupport = isCloud || hasSolidNeighbor(bx, by, selectedBlock);
 
                 if (hasSupport) {
                     if (inventory.consumeFromInventory(selectedBlock)) {
