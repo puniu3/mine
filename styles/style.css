@@ -269,6 +269,12 @@ button {
     transition: transform 0.1s, box-shadow 0.1s;
 }
 
+button.gamepad-focus,
+.craft-item.gamepad-focus {
+    box-shadow: 0 0 0 4px rgba(255, 235, 59, 0.85);
+    transform: scale(1.03);
+}
+
 /* Common Action Button Base */
 .action-btn {
     /* Default ordering logic managed by CSS Display */

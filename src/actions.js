@@ -148,8 +148,11 @@ export function createActions({
      * Handles pointer interaction (mouse/touch) for breaking and placing blocks.
      * @param {number} screenX - Screen X coordinate.
      * @param {number} screenY - Screen Y coordinate.
+     * @param {string} [mode='both'] - Which action to perform ('both', 'break', 'place').
      */
-    function handlePointer(screenX, screenY) {
+    function handlePointer(screenX, screenY, mode = 'both') {
+        const shouldBreak = mode === 'both' || mode === 'break';
+        const shouldPlace = mode === 'both' || mode === 'place';
         const worldPos = screenToWorld(screenX, screenY, camera.x, camera.y);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
 
@@ -195,7 +198,7 @@ export function createActions({
         // ========================================================================
         const currentBlock = world.getBlock(bx, by);
 
-        if (currentBlock !== BLOCKS.AIR && isBlockBreakable(currentBlock, BLOCK_PROPS)) {
+        if (shouldBreak && currentBlock !== BLOCKS.AIR && isBlockBreakable(currentBlock, BLOCK_PROPS)) {
             inventory.addToInventory(currentBlock);
             sounds.playDig(getBlockMaterialType(currentBlock, BLOCK_PROPS));
             emitBlockBreakParticles(bx, by, currentBlock);
@@ -206,7 +209,7 @@ export function createActions({
         // ========================================================================
         // 3. Normal Block Placement
         // ========================================================================
-        if ((currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) && currentBlock !== BLOCKS.WORKBENCH) {
+        if (shouldPlace && (currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) && currentBlock !== BLOCKS.WORKBENCH) {
             const playerRect = player.getRect();
             const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
             

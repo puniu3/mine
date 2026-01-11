@@ -42,6 +42,8 @@ const CRAFTING_RECIPES = [
 ];
 
 export let isCraftingOpen = false;
+let selectedCraftIndex = 0;
+let manualCloseUntilExit = false;
 
 export function checkWorktableOverlap(player, world) {
     const px = player.x;
@@ -73,9 +75,10 @@ export function checkWorktableOverlap(player, world) {
 export function updateCrafting(player, world, textures) {
      const found = checkWorktableOverlap(player, world);
      if (found) {
-         if (!isCraftingOpen) openCraftingUI(textures);
+         if (!isCraftingOpen && !manualCloseUntilExit) openCraftingUI(textures);
      } else {
          if (isCraftingOpen) closeCraftingUI();
+         manualCloseUntilExit = false;
      }
 }
 
@@ -134,12 +137,48 @@ export function openCraftingUI(textures) {
         list.appendChild(div);
     });
 
+    selectedCraftIndex = 0;
+    updateCraftingFocus();
     modal.style.display = 'block';
 }
 
 export function closeCraftingUI() {
     isCraftingOpen = false;
     document.getElementById('crafting-modal').style.display = 'none';
+}
+
+export function handleCraftingGamepad(input) {
+    if (!isCraftingOpen || !input || !input.gamepad) return;
+
+    const items = Array.from(document.querySelectorAll('.craft-item'));
+    if (!items.length) return;
+
+    if (input.gamepad.ui.upPressed) {
+        selectedCraftIndex = Math.max(0, selectedCraftIndex - 1);
+        updateCraftingFocus();
+    }
+    if (input.gamepad.ui.downPressed) {
+        selectedCraftIndex = Math.min(items.length - 1, selectedCraftIndex + 1);
+        updateCraftingFocus();
+    }
+    if (input.gamepad.ui.confirmPressed) {
+        items[selectedCraftIndex]?.click();
+    }
+    if (input.gamepad.ui.cancelPressed) {
+        manualCloseUntilExit = true;
+        closeCraftingUI();
+    }
+}
+
+function updateCraftingFocus() {
+    const items = Array.from(document.querySelectorAll('.craft-item'));
+    items.forEach((item, index) => {
+        if (index === selectedCraftIndex) {
+            item.classList.add('gamepad-focus');
+        } else {
+            item.classList.remove('gamepad-focus');
+        }
+    });
 }
 
 function craftItem(recipe) {

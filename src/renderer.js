@@ -300,8 +300,8 @@ export function drawGame(ctx, {
     drawBlockParticles(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
 
     // --- 7. Cursor Highlight ---
-    if (input && input.mouse && input.mouse.active) {
-        const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY);
+    if (input && input.cursor && input.cursor.active) {
+        const worldPos = screenToWorld(input.cursor.x, input.cursor.y, cameraX, cameraY);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
         if (isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';

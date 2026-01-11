@@ -14,6 +14,10 @@ export function getSelectedBlockId() {
     return HOTBAR_ITEMS[selectedHotbarIndex];
 }
 
+export function getSelectedHotbarIndex() {
+    return selectedHotbarIndex;
+}
+
 export function getInventoryState() {
     const counts = {};
     HOTBAR_ITEMS.forEach(id => {

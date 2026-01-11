@@ -11,6 +11,11 @@ import { strings, setLanguage } from './i18n.js';
  */
 export function initUI(callbacks) {
     const { onStartGame, onLoadGame, onImportWorld } = callbacks;
+    const uiGamepadState = {
+        prevButtons: [],
+        focusIndex: 0,
+        context: null
+    };
 
     // --- Start Screen Logic ---
     function hideStartScreen() {
@@ -219,4 +224,98 @@ export function initUI(callbacks) {
             }
         }
     });
+
+    const isVisible = (el) => el && el.offsetParent !== null;
+
+    const getFocusableButtons = (context) => {
+        if (context === 'start') {
+            return Array.from(document.querySelectorAll('.start-buttons .action-btn'))
+                .filter(btn => isVisible(btn) && !btn.disabled);
+        }
+        if (context === 'world') {
+            return [exportBtn, importBtn, worldCloseBtn].filter(btn => isVisible(btn) && !btn.disabled);
+        }
+        return [];
+    };
+
+    const getUiContext = () => {
+        if (worldModal && worldModal.classList.contains('visible')) {
+            return 'world';
+        }
+        const startScreen = document.getElementById('start-screen');
+        if (isVisible(startScreen)) {
+            return 'start';
+        }
+        return null;
+    };
+
+    const updateFocus = (buttons) => {
+        if (!buttons.length) return;
+        if (uiGamepadState.focusIndex >= buttons.length) {
+            uiGamepadState.focusIndex = 0;
+        }
+        buttons.forEach((btn, index) => {
+            if (index === uiGamepadState.focusIndex) {
+                btn.classList.add('gamepad-focus');
+                btn.focus();
+            } else {
+                btn.classList.remove('gamepad-focus');
+            }
+        });
+    };
+
+    const isButtonPressed = (button) => button && (button.pressed || button.value > 0.5);
+
+    const pollUiGamepad = () => {
+        const context = getUiContext();
+        if (context !== uiGamepadState.context) {
+            uiGamepadState.context = context;
+            uiGamepadState.focusIndex = 0;
+        }
+
+        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+        const pad = pads ? Array.from(pads).find(p => p) : null;
+
+        if (!context || !pad) {
+            const buttons = getFocusableButtons(uiGamepadState.context);
+            buttons.forEach(btn => btn.classList.remove('gamepad-focus'));
+            requestAnimationFrame(pollUiGamepad);
+            return;
+        }
+
+        const buttons = getFocusableButtons(context);
+        if (!buttons.length) {
+            requestAnimationFrame(pollUiGamepad);
+            return;
+        }
+
+        const prevButtons = uiGamepadState.prevButtons.length
+            ? uiGamepadState.prevButtons
+            : pad.buttons.map(() => false);
+
+        const dpadUp = isButtonPressed(pad.buttons[12]);
+        const dpadDown = isButtonPressed(pad.buttons[13]);
+        const confirm = isButtonPressed(pad.buttons[0]);
+        const cancel = isButtonPressed(pad.buttons[1]);
+
+        if (dpadUp && !prevButtons[12]) {
+            uiGamepadState.focusIndex = Math.max(0, uiGamepadState.focusIndex - 1);
+        }
+        if (dpadDown && !prevButtons[13]) {
+            uiGamepadState.focusIndex = Math.min(buttons.length - 1, uiGamepadState.focusIndex + 1);
+        }
+        updateFocus(buttons);
+
+        if (confirm && !prevButtons[0]) {
+            buttons[uiGamepadState.focusIndex]?.click();
+        }
+        if (cancel && !prevButtons[1] && context === 'world') {
+            hideWorldModal();
+        }
+
+        uiGamepadState.prevButtons = pad.buttons.map(isButtonPressed);
+        requestAnimationFrame(pollUiGamepad);
+    };
+
+    pollUiGamepad();
 }

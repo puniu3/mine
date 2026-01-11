@@ -21,10 +21,10 @@ import { generateTextures } from './texture_gen.js';
 import { createInput } from './input.js';
 import {
     updateInventoryUI, addToInventory, consumeFromInventory,
-    initHotbarUI, selectHotbar, getSelectedBlockId,
+    initHotbarUI, selectHotbar, getSelectedBlockId, getSelectedHotbarIndex,
     getInventoryState, loadInventoryState
 } from './inventory.js';
-import { isCraftingOpen, updateCrafting } from './crafting.js';
+import { isCraftingOpen, updateCrafting, handleCraftingGamepad } from './crafting.js';
 import { tick as tickFireworks, createExplosionParticles } from './fireworks.js';
 import { tick as tickBlockParticles, initBlockParticles } from './block_particles.js';
 import { createActions } from './actions.js';
@@ -257,6 +257,11 @@ function init(savedState = null) {
     // Initialize Input
     input = createInput(canvas, {
         onHotbarSelect: selectHotbar,
+        onHotbarMove: (direction) => {
+            const current = getSelectedHotbarIndex();
+            const next = clamp(current + direction, 0, 8);
+            selectHotbar(next);
+        },
         onTouch: (x, y) => actions.handlePointer(x, y),
         onClimb: () => actions.triggerClimb()
     });
@@ -308,6 +313,9 @@ function init(savedState = null) {
 // --- Tick Loop (Physics) ---
 function tick() {
     if (!player) return;
+    if (input && input.updateGamepad) {
+        input.updateGamepad(logicalWidth, logicalHeight);
+    }
     player.tick(input);
 
     // Input Handling
@@ -317,9 +325,18 @@ function tick() {
         }
         input.mouse.leftDown = false;
     }
+    if (input.gamepad && !isCraftingOpen) {
+        if (input.gamepad.actions.breakPressed && input.cursor.active) {
+            actions.handlePointer(input.cursor.x, input.cursor.y, 'break');
+        }
+        if (input.gamepad.actions.placePressed && input.cursor.active) {
+            actions.handlePointer(input.cursor.x, input.cursor.y, 'place');
+        }
+    }
 
     // System Updates
     updateCrafting(player, world, textures);
+    handleCraftingGamepad(input);
 
     handleJackpotOverlap(player, world, sounds);
     tickJackpots();
