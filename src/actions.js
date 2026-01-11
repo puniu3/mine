@@ -171,8 +171,9 @@ export function createActions({
      * Handles pointer interaction (mouse/touch) for breaking and placing blocks.
      * @param {number} screenX - Screen X coordinate.
      * @param {number} screenY - Screen Y coordinate.
+     * @param {string} [mode] - Optional mode: 'break' for break only, 'place' for place only.
      */
-    function handlePointer(screenX, screenY) {
+    function handlePointer(screenX, screenY, mode) {
         const worldPos = screenToWorld(screenX, screenY, camera.x, camera.y);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
 
@@ -209,8 +210,11 @@ export function createActions({
         );
 
         if (isHeadTile || isBelowHeadUpperHalf || isInsideRect) {
-            executeClimb();
-            return;
+            // Climb involves block placement, so only execute in 'place' mode or default mode
+            if (mode !== 'break') {
+                executeClimb();
+                return;
+            }
         }
 
         // ========================================================================
@@ -218,7 +222,8 @@ export function createActions({
         // ========================================================================
         const currentBlock = world.getBlock(bx, by);
 
-        if (currentBlock !== BLOCKS.AIR && isBlockBreakable(currentBlock, BLOCK_PROPS)) {
+        // Only break blocks in 'break' mode or default mode (not 'place' mode)
+        if (mode !== 'place' && currentBlock !== BLOCKS.AIR && isBlockBreakable(currentBlock, BLOCK_PROPS)) {
             inventory.addToInventory(currentBlock);
             sounds.playDig(getBlockMaterialType(currentBlock, BLOCK_PROPS));
             emitBlockBreakParticles(bx, by, currentBlock);
@@ -229,7 +234,8 @@ export function createActions({
         // ========================================================================
         // 3. Normal Block Placement
         // ========================================================================
-        if ((currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) && currentBlock !== BLOCKS.WORKBENCH) {
+        // Only place blocks in 'place' mode or default mode (not 'break' mode)
+        if (mode !== 'break' && (currentBlock === BLOCKS.AIR || isBlockTransparent(currentBlock, BLOCK_PROPS)) && currentBlock !== BLOCKS.WORKBENCH) {
             const playerRect = player.getRect();
             const blockRect = { x: bx * TILE_SIZE, y: by * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
             
