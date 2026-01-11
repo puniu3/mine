@@ -30,6 +30,22 @@ import { countVerticalJumpPads } from './collision.js';
  * @returns {{vx: number, facingRight: boolean}}
  */
 export function processHorizontalInput(input, currentVx_FP, currentFacing, applyFriction) {
+    // 1. Analog Input (Gamepad)
+    const axisX = (input.gamepad && input.gamepad.connected) ? input.gamepad.axisLeftX : 0;
+
+    if (Math.abs(axisX) > 0) {
+        // Linear interpolation: scale * WALK_SPEED
+        const speedScale = Math.abs(axisX);
+        const targetSpeed_FP = Math.floor(WALK_SPEED_FP * speedScale);
+
+        if (axisX < 0) {
+            return { vx: -targetSpeed_FP, facingRight: false };
+        } else {
+            return { vx: targetSpeed_FP, facingRight: true };
+        }
+    }
+
+    // 2. Digital Input (Keyboard / D-Pad fallback)
     if (input.keys.left) {
         return { vx: -WALK_SPEED_FP, facingRight: false };
     } else if (input.keys.right) {
