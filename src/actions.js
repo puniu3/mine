@@ -210,8 +210,9 @@ export function createActions({
         );
 
         if (isHeadTile || isBelowHeadUpperHalf || isInsideRect) {
-            // Climb involves block placement, so only execute in 'place' mode or default mode
-            if (mode !== 'break') {
+            // Climb involves block placement at feet - only execute in default mode (mouse/touch)
+            // Gamepad place mode (LT) should only do normal block placement
+            if (!mode) {
                 executeClimb();
                 return;
             }
