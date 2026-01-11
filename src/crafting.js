@@ -51,6 +51,10 @@ let prevDpadDown = false;
 let prevAButton = false;
 let prevBButton = false;
 
+// Flag to track if crafting was manually closed with B button
+// Prevents reopening until player leaves and re-enters workbench
+let manuallyClosed = false;
+
 // Gamepad button indices
 const GP_A = 0;
 const GP_B = 1;
@@ -100,8 +104,11 @@ export function pollCraftingGamepad() {
     }
     prevAButton = aButton;
 
-    // B Button is handled elsewhere (closing is automatic when leaving workbench)
+    // B Button - close crafting UI
     const bButton = buttons[GP_B] && buttons[GP_B].pressed;
+    if (bButton && !prevBButton) {
+        closeCraftingUI(true); // true = manually closed
+    }
     prevBButton = bButton;
 }
 
@@ -151,9 +158,12 @@ export function checkWorktableOverlap(player, world) {
 export function updateCrafting(player, world, textures) {
      const found = checkWorktableOverlap(player, world);
      if (found) {
-         if (!isCraftingOpen) openCraftingUI(textures);
+         // Only open if not already open AND not manually closed
+         if (!isCraftingOpen && !manuallyClosed) openCraftingUI(textures);
      } else {
-         if (isCraftingOpen) closeCraftingUI();
+         // Player left workbench - close UI and reset manuallyClosed flag
+         if (isCraftingOpen) closeCraftingUI(false);
+         manuallyClosed = false; // Reset flag when leaving workbench
      }
 }
 
@@ -219,9 +229,12 @@ export function openCraftingUI(textures) {
     updateCraftingSelection();
 }
 
-export function closeCraftingUI() {
+export function closeCraftingUI(isManual = false) {
     isCraftingOpen = false;
     document.getElementById('crafting-modal').style.display = 'none';
+    if (isManual) {
+        manuallyClosed = true;
+    }
 }
 
 function craftItem(recipe) {
