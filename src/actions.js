@@ -278,7 +278,7 @@ export function createActions({
                         world.setBlock(bx, by, selectedBlock);
                         sounds.playDig('dirt');
                         if (onBlockPlaced) onBlockPlaced(bx, by, selectedBlock);
-                    } else {
+                    } else if (mode !== 'place') {
                         sounds.playPop();
                     }
                 }
