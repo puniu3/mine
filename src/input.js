@@ -27,8 +27,8 @@ const GAMEPAD_AXES = {
 };
 
 // Deadzone and sensitivity settings
-const DEADZONE = 0.15;
-const CURSOR_SENSITIVITY = 8;
+const DEADZONE = 0.01;
+const CURSOR_SENSITIVITY = .3;
 
 export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
     const input = {
