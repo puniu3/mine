@@ -15,7 +15,8 @@ import { sounds } from './audio.js';
 import {
     TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH,
     BLOCKS, BLOCK_PROPS,
-    PHYSICS_TPS, PHYSICS_DT
+    PHYSICS_TPS, PHYSICS_DT,
+    GAMEPAD_BREAK_COOLDOWN_TICKS
 } from './constants.js';
 import { generateTextures } from './texture_gen.js';
 import { createInput } from './input.js';
@@ -59,6 +60,7 @@ let actions;
 let tntManager = null;
 let saplingManager = null;
 let saveManager = null;
+let breakCooldownTimer = 0;
 
 // Physics Settings (720Hz High-Frequency Step)
 // - Syncs perfectly with 144Hz monitors (5 steps per frame).
@@ -310,6 +312,10 @@ function init(savedState = null) {
 function tick() {
     if (!player) return;
 
+    if (breakCooldownTimer > 0) {
+        breakCooldownTimer--;
+    }
+
     // Poll gamepad state (every physics tick for responsive input)
     if (input.pollGamepads) {
         // Calculate player's screen position for cursor clamping
@@ -347,7 +353,11 @@ function tick() {
 
         // RT - Break block only
         if (input.gamepad.breakAction) {
-            actions.handlePointer(gcX, gcY, 'break');
+            if (breakCooldownTimer === 0) {
+                if (actions.handlePointer(gcX, gcY, 'break')) {
+                    breakCooldownTimer = GAMEPAD_BREAK_COOLDOWN_TICKS;
+                }
+            }
         }
 
         // LT - Place block only (including climb)
