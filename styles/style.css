@@ -671,6 +671,7 @@ button {
 .craft-item {
     display: flex;
     align-items: center;
+    justify-content: space-between; /* Separate Left and Right */
     gap: 16px;
     background: rgba(255, 255, 255, 0.1);
     margin: 10px 0;
@@ -685,6 +686,20 @@ button {
     background: rgba(255, 255, 255, 0.2);
 }
 
+.craft-inputs {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-grow: 1;
+}
+
+.craft-outputs {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+}
+
 .craft-icon { width: 32px; height: 32px; }
 .craft-icon-output { width: 48px; height: 48px; }
 
@@ -695,7 +710,7 @@ button {
     align-items: center;
     justify-content: center;
     line-height: 1;
-    align-self: stretch;
+    /* Removed align-self: stretch to align nicely in the flex row */
 }
 
 .craft-cost-icons {
