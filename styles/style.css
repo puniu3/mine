@@ -537,18 +537,51 @@ button {
 #hotbar::-webkit-scrollbar { display: none; }
 
 .hotbar-scroll-indicator {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 12px;
-    padding: 0 4px;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
     opacity: 0;
     transition: opacity 0.2s;
     pointer-events: none;
     user-select: none;
+    z-index: 20;
 }
 
 .hotbar-scroll-indicator.visible { opacity: 1; }
-.hotbar-scroll-indicator.left { margin-right: 2px; }
-.hotbar-scroll-indicator.right { margin-left: 2px; }
+
+.hotbar-scroll-indicator.left {
+    left: 0;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+
+.hotbar-scroll-indicator.right {
+    right: 0;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.hotbar-scroll-indicator::after {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+}
+
+.hotbar-scroll-indicator.left::after {
+    border-right: 8px solid rgba(255, 255, 255, 0.9);
+}
+
+.hotbar-scroll-indicator.right::after {
+    border-left: 8px solid rgba(255, 255, 255, 0.9);
+}
 
 .slot {
     width: 40px;
