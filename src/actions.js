@@ -50,6 +50,7 @@ export function createActions({
         isWithinReach,
         isBlockBreakable,
         isBlockTransparent,
+        isBlockSolid,
         getBlockMaterialType,
         rectsIntersect
     } = utils;
@@ -87,12 +88,34 @@ export function createActions({
      */
     function executeClimb() {
         const pCenterX = player.getCenterX();
-        const pHeadTileX = Math.floor(pCenterX / TILE_SIZE);
+        const centerTx = Math.floor(pCenterX / TILE_SIZE);
 
-        // Target is always the feet tile in the center column
-        const targetTx = pHeadTileX;
-        // Ensure feet calculation gets the tile strictly containing the feet bottom
+        // Tile Y coordinate where the player's feet are (usually air)
         const targetTy = Math.floor((player.y + player.height - 0.01) / TILE_SIZE);
+
+        // Tile Y coordinate of the block the player is standing on (one tile below feet)
+        const standingBlockTy = Math.floor((player.y + player.height + 0.1) / TILE_SIZE);
+
+        // Find the X coordinate of the solid block the player is actually standing on
+        // This handles the case where player is on the edge of a block, leaning into air
+        const leftTx = Math.floor(player.x / TILE_SIZE);
+        const rightTx = Math.floor((player.x + player.width - 0.01) / TILE_SIZE);
+
+        let targetTx = centerTx; // Default to center
+
+        // Check if center tile has a solid block underneath
+        const blockAtCenter = world.getBlock(centerTx, standingBlockTy);
+        if (!isBlockSolid(blockAtCenter, BLOCK_PROPS)) {
+            // Center is not on solid ground, check left and right edges
+            const blockAtLeft = world.getBlock(leftTx, standingBlockTy);
+            const blockAtRight = world.getBlock(rightTx, standingBlockTy);
+
+            if (isBlockSolid(blockAtLeft, BLOCK_PROPS)) {
+                targetTx = leftTx;
+            } else if (isBlockSolid(blockAtRight, BLOCK_PROPS)) {
+                targetTx = rightTx;
+            }
+        }
 
         // Validation: Is the feet block replaceable (Air/Water/Grass)?
         // Must be transparent AND (AIR or breakable). 

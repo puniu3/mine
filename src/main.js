@@ -169,6 +169,7 @@ function init(savedState = null) {
             isWithinReach,
             isBlockBreakable,
             isBlockTransparent,
+            isBlockSolid,
             getBlockMaterialType,
             rectsIntersect,
             hasAdjacentBlock
