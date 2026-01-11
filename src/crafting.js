@@ -92,6 +92,10 @@ export function openCraftingUI(textures) {
         div.className = 'craft-item';
         div.onclick = () => craftItem(recipe);
 
+        // Left: Inputs
+        const inputsDiv = document.createElement('div');
+        inputsDiv.className = 'craft-inputs';
+
         const costContainer = document.createElement('div');
         costContainer.className = 'craft-cost-icons';
         for (let [blockId, amount] of Object.entries(recipe.cost)) {
@@ -109,6 +113,11 @@ export function openCraftingUI(textures) {
             costItem.appendChild(count);
             costContainer.appendChild(costItem);
         }
+        inputsDiv.appendChild(costContainer);
+
+        // Right: Arrow + Output
+        const outputsDiv = document.createElement('div');
+        outputsDiv.className = 'craft-outputs';
 
         const arrow = document.createElement('div');
         arrow.className = 'craft-arrow';
@@ -117,9 +126,11 @@ export function openCraftingUI(textures) {
         const outputIcon = createIconCanvas(recipe.id, 48, textures);
         outputIcon.classList.add('craft-icon-output');
 
-        div.appendChild(costContainer);
-        div.appendChild(arrow);
-        div.appendChild(outputIcon);
+        outputsDiv.appendChild(arrow);
+        outputsDiv.appendChild(outputIcon);
+
+        div.appendChild(inputsDiv);
+        div.appendChild(outputsDiv);
         list.appendChild(div);
     });
 
