@@ -572,6 +572,7 @@ button {
     color: white;
     font-weight: bold;
     font-size: 14px;
+    font-family: 'Nunito', sans-serif;
     text-shadow: 1px 1px 0 #000;
     pointer-events: none;
 }
@@ -719,6 +720,7 @@ button {
     border-radius: 8px;
     padding: 0 4px;
     font-size: 0.75em;
+    font-family: 'Nunito', sans-serif;
     color: #ffeb3b;
 }
 
