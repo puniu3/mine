@@ -206,6 +206,7 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
         const leftX = applyDeadzone(axes[GAMEPAD_AXES.LEFT_X] || 0);
         input.keys.left = leftX < -0.3;
         input.keys.right = leftX > 0.3;
+        input.gamepad.axisLeftX = leftX;
 
         // --- Jump (A Button) ---
         if (buttons[GAMEPAD_BUTTONS.A]) {
