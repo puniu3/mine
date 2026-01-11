@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pictoco-v4';
+const CACHE_NAME = 'pictoco-v5';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -6,6 +6,7 @@ const ASSETS_TO_CACHE = [
   './manifest.json',
   './styles/style.css',
   './icons/icon.svg',
+  './icons/icon.png',
   // Main JS
   './src/main.js',
   './src/input.js',
