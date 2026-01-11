@@ -325,6 +325,11 @@ function tick() {
         });
     }
 
+    // Disable jump while crafting UI is open (A button should only select items)
+    if (isCraftingOpen) {
+        input.keys.jump = false;
+    }
+
     player.tick(input);
 
     // Input Handling - Mouse
