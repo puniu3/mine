@@ -52,8 +52,38 @@ export function createCamera() {
                 );
             }
 
-            // Smoothly interpolate zoom
-            zoom = zoom + (targetZoom - zoom) * 0.01;
+            // Hybrid zoom tracking: constant-step when far + proportional when near + snap
+            const ZOOM_EPSILON = 1e-4;
+            
+            // Far zone: move at constant speed (keeps convergence time predictable)
+            const ZOOM_STEP_FAR = 0.002;      // zoom per frame
+            
+            // Near zone: move proportionally (keeps the last part smooth)
+            const ZOOM_LERP_NEAR = 0.06;      // 0..1 per frame
+            
+            // Boundary between far and near behavior
+            const ZOOM_NEAR_RANGE = 0.05;     // when |diff| <= this, switch to near mode
+            
+            const zoomDiff = targetZoom - zoom;
+            const adiff = Math.abs(zoomDiff);
+            
+            if (adiff < ZOOM_EPSILON) {
+                zoom = targetZoom;
+            } else {
+                if (adiff > ZOOM_NEAR_RANGE) {
+                    // Far: constant-step toward target
+                    zoom += Math.sign(zoomDiff) * ZOOM_STEP_FAR;
+            
+                    // Prevent overshoot
+                    if ((targetZoom - zoom) * zoomDiff < 0) zoom = targetZoom;
+                } else {
+                    // Near: proportional smoothing for “buttery” finish
+                    zoom += zoomDiff * ZOOM_LERP_NEAR;
+            
+                    // Snap if we can finish cleanly
+                    if (Math.abs(targetZoom - zoom) < ZOOM_EPSILON) zoom = targetZoom;
+                }
+            }
 
             // 2. Calculate target position
             // The visible width/height in world units depends on zoom
