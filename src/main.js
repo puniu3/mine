@@ -328,7 +328,7 @@ function tick() {
             screenHeight: logicalHeight,
             playerScreenX,
             playerScreenY,
-            reach: REACH,
+            reach: REACH * camera.zoom,
             skipJump: isCraftingOpen
         });
     }
