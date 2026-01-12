@@ -14,7 +14,6 @@ export class SoundManager {
         this.isMusicPlaying = false;
         this.nextNoteTimeout = null;
         this.musicGainNode = null;
-        this._isResuming = false; // Prevents multiple resume operations
 
         // C Major Pentatonic Scale (C, D, E, G, A) across varied octaves
         this.scale = [
@@ -49,45 +48,22 @@ export class SoundManager {
     /**
      * Resume audio context after suspension (e.g., app switch on iOS/iPadOS PWA).
      * Handles multiple states: suspended, interrupted, and closed.
-     * Stops and restarts music cleanly to avoid overlapping sounds.
      */
     resume() {
         if (!this.ctx) return;
 
         const state = this.ctx.state;
 
+        // iOS/iPadOS can put AudioContext into 'interrupted' state when PWA goes to background
+        if (state === 'suspended' || state === 'interrupted') {
+            this.ctx.resume().catch(() => {
+                // Resume failed - might need user interaction, will retry on next touch/click
+            });
+        }
+
         // If AudioContext is closed (can happen after long background on iOS), recreate it
         if (state === 'closed') {
             this._recreateContext();
-            return;
-        }
-
-        // Already running, no action needed
-        if (state === 'running') return;
-
-        // Prevent multiple simultaneous resume operations
-        if (this._isResuming) return;
-
-        // iOS/iPadOS can put AudioContext into 'interrupted' state when PWA goes to background
-        if (state === 'suspended' || state === 'interrupted') {
-            this._isResuming = true;
-
-            // Stop current music scheduling to prevent overlap
-            const wasMusicPlaying = this.isMusicPlaying;
-            this.stopMusic();
-
-            this.ctx.resume().then(() => {
-                this._isResuming = false;
-                // Restart music cleanly after a short delay for natural UX
-                if (wasMusicPlaying) {
-                    setTimeout(() => {
-                        this.startMusic();
-                    }, 500);
-                }
-            }).catch(() => {
-                this._isResuming = false;
-                // Resume failed - might need user interaction, will retry on next touch/click
-            });
         }
     }
 
@@ -110,7 +86,6 @@ export class SoundManager {
         this.reverbNode = null;
         this.musicGainNode = null;
         this.isMusicPlaying = false;
-        this._isResuming = false;
 
         // Recreate context
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
