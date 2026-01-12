@@ -53,7 +53,7 @@ export function createCamera() {
             }
 
             // Smoothly interpolate zoom
-            zoom = zoom + (targetZoom - zoom) * 0.05;
+            zoom = zoom + (targetZoom - zoom) * 0.01;
 
             // 2. Calculate target position
             // The visible width/height in world units depends on zoom
