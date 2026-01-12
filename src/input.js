@@ -176,6 +176,26 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
         }
     });
 
+    // Check for already connected gamepads (e.g., connected during title screen)
+    const gamepads = navigator.getGamepads();
+    for (const gp of gamepads) {
+        if (gp && gp.connected) {
+            gamepadIndex = gp.index;
+            input.gamepad.connected = true;
+            input.gamepad.cursorActive = true;
+
+            // Initialize cursor at center of screen
+            const rect = canvas.getBoundingClientRect();
+            input.gamepad.cursorX = rect.width / 2;
+            input.gamepad.cursorY = rect.height / 2;
+
+            // Hide mobile controls when gamepad is connected
+            const el = document.getElementById('mobile-controls');
+            if (el) el.style.display = 'none';
+            break;
+        }
+    }
+
     // Hotbar selection tracking for LB/RB
     let currentHotbarIndex = 0;
 
