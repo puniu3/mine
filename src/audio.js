@@ -154,7 +154,10 @@ export class SoundManager {
     scheduleNextNote() {
         if (!this.isMusicPlaying) return;
 
-        this.playAmbientNote();
+        // Only play if context is running to prevent queuing sounds while suspended (e.g. background tab)
+        if (this.ctx && this.ctx.state === 'running') {
+            this.playAmbientNote();
+        }
 
         // Random delay between 2s and 7s
         const delay = 2000 + Math.random() * 5000;
