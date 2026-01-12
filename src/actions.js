@@ -185,7 +185,7 @@ export function createActions({
      * @param {string} [mode] - Optional mode: 'break' for break only, 'place' for place only.
      */
     function handlePointer(screenX, screenY, mode) {
-        const worldPos = screenToWorld(screenX, screenY, camera.x, camera.y);
+        const worldPos = screenToWorld(screenX, screenY, camera.x, camera.y, camera.zoom);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
 
         // Basic reach check (distance from player center)

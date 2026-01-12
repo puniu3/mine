@@ -319,8 +319,9 @@ function tick() {
     // Poll gamepad state (every physics tick for responsive input)
     if (input.pollGamepads) {
         // Calculate player's screen position for cursor clamping
-        const playerScreenX = player.getCenterX() - camera.x;
-        const playerScreenY = player.getCenterY() - camera.y;
+        // Account for zoom: WorldDiff * Zoom = ScreenDiff
+        const playerScreenX = (player.getCenterX() - camera.x) * camera.zoom;
+        const playerScreenY = (player.getCenterY() - camera.y) * camera.zoom;
 
         input.pollGamepads({
             screenWidth: logicalWidth,
@@ -397,6 +398,7 @@ function draw() {
         player,
         cameraX: camera.x,
         cameraY: camera.y,
+        zoom: camera.zoom,
         logicalWidth,
         logicalHeight,
         textures,
