@@ -3,8 +3,13 @@
  * Handles game state persistence using localStorage
  */
 
+import { rleEncode, rleDecode } from './utils.js';
+
 const SAVE_KEY = 'blockCraftSave';
 const AUTOSAVE_INTERVAL = 5000;
+
+/** Current save schema version */
+const SAVE_SCHEMA_VERSION = 2;
 
 /**
  * Convert Uint8Array to base64 string
@@ -59,11 +64,13 @@ export function createSaveManager({ world, player, timers, inventory, utils, con
     function saveGameState() {
         if (!world || !player) return;
         try {
+            const compressedMap = rleEncode(world.map);
             const state = {
+                schema: SAVE_SCHEMA_VERSION,
                 world: {
                     width: world.width,
                     height: world.height,
-                    map: uint8ToBase64(world.map)
+                    map: uint8ToBase64(compressedMap)
                 },
                 player: {
                     x: player.x,
@@ -92,7 +99,9 @@ export function createSaveManager({ world, player, timers, inventory, utils, con
         if (!state) return;
 
         if (state.world && state.world.map && state.world.width === world.width && state.world.height === world.height) {
-            const decodedMap = base64ToUint8(state.world.map);
+            const rawData = base64ToUint8(state.world.map);
+            // Schema v2+: RLE compressed; v1 or missing: uncompressed
+            const decodedMap = (state.schema >= 2) ? rleDecode(rawData) : rawData;
             if (decodedMap.length === world.map.length) {
                 world.map = decodedMap;
             }

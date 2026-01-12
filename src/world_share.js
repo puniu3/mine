@@ -5,6 +5,7 @@
 
 import { BLOCKS, BLOCK_PROPS, WORLD_WIDTH, WORLD_HEIGHT } from './constants.js';
 import { World } from './world/index.js';
+import { rleDecode } from './utils.js';
 
 // Color mapping for export (WOOD uses different color to avoid collision with DIRT)
 const EXPORT_COLORS = {
@@ -102,13 +103,16 @@ function findNearestBlock(r, g, b) {
 }
 
 /**
- * Export world to PNG image (1 tile = 1 pixel)
- * @param {Uint8Array} worldMap - The world map data
+ * Export world to PNG image (1 tile = 1 pixel).
+ * Assumes input is RLE compressed (latest save schema).
+ * @param {Uint8Array} compressedMap - RLE compressed world map data
  * @param {number} width - World width in tiles
  * @param {number} height - World height in tiles
  * @returns {Promise<Blob>} PNG blob
  */
-export function exportWorldToImage(worldMap, width, height) {
+export function exportWorldToImage(compressedMap, width, height) {
+    const worldMap = rleDecode(compressedMap);
+
     return new Promise((resolve) => {
         const canvas = document.createElement('canvas');
         canvas.width = width;
