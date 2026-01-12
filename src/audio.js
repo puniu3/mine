@@ -45,6 +45,12 @@ export class SoundManager {
         }
     }
 
+    resume() {
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
     /**
      * Generates a synthetic impulse response for reverb.
      * Creates a "large space" feel without loading external assets.

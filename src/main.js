@@ -442,6 +442,20 @@ function loop(timestamp) {
 }
 
 // --- Initialize UI & Event Listeners ---
+// Resume audio context on visibility change or user interaction
+const resumeAudio = () => {
+    sounds.resume();
+};
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        resumeAudio();
+    }
+});
+window.addEventListener('click', resumeAudio);
+window.addEventListener('keydown', resumeAudio);
+window.addEventListener('touchstart', resumeAudio);
+
 initUI({
     onStartGame: () => {
         sounds.init();
