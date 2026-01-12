@@ -327,13 +327,9 @@ function tick() {
             screenHeight: logicalHeight,
             playerScreenX,
             playerScreenY,
-            reach: REACH
+            reach: REACH,
+            skipJump: isCraftingOpen
         });
-    }
-
-    // Disable jump while crafting UI is open (A button should only select items)
-    if (isCraftingOpen) {
-        input.keys.jump = false;
     }
 
     player.tick(input);
