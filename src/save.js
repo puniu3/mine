@@ -1,31 +1,16 @@
 /**
  * Save/Load Module
- * Handles game state persistence using localStorage
+ * Handles game state persistence using localStorage and Web Worker
  */
 
-import { rleEncode, rleDecode } from './utils.js';
+import { rleDecode } from './utils.js';
 
 const SAVE_KEY = 'blockCraftSave';
 const AUTOSAVE_INTERVAL = 5000;
 
-/** Current save schema version */
-const SAVE_SCHEMA_VERSION = 2;
-
-/**
- * Convert Uint8Array to base64 string
- */
-function uint8ToBase64(bytes) {
-    const chunkSize = 0x8000;
-    const chunks = [];
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-        const slice = bytes.subarray(i, i + chunkSize);
-        chunks.push(String.fromCharCode(...slice));
-    }
-    return btoa(chunks.join(''));
-}
-
 /**
  * Convert base64 string to Uint8Array
+ * (Used for loading on main thread)
  */
 function base64ToUint8(base64) {
     const binary = atob(base64);
@@ -38,7 +23,7 @@ function base64ToUint8(base64) {
 }
 
 /**
- * Load game state from localStorage (standalone, no dependencies)
+ * Load game state from localStorage (standalone, synchronous)
  */
 export function loadGameState() {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -57,39 +42,79 @@ export function loadGameState() {
  */
 export function createSaveManager({ world, player, timers, inventory, utils, constants }) {
     let autosaveHandle = null;
+    let isSaving = false;
+    let worker = null;
+
+    // Initialize Web Worker
+    try {
+        worker = new Worker(new URL('./save.worker.js', import.meta.url), { type: 'module' });
+        
+        worker.onmessage = (e) => {
+            const { type, data, error } = e.data;
+            
+            if (type === 'SAVE_COMPLETE') {
+                try {
+                    // Final I/O: This is the only synchronous blocking part, but it's just writing a string.
+                    // If this still causes lag, we must move to IndexedDB.
+                    localStorage.setItem(SAVE_KEY, data);
+                } catch (err) {
+                    console.warn('LocalStorage write failed:', err);
+                } finally {
+                    isSaving = false;
+                }
+            } else if (type === 'SAVE_ERROR') {
+                console.warn('Worker save failed:', error);
+                isSaving = false;
+            }
+        };
+
+        worker.onerror = (err) => {
+            console.error('Save Worker Error:', err);
+            isSaving = false;
+        };
+
+    } catch (err) {
+        console.warn('Failed to initialize Save Worker, autosave disabled.', err);
+    }
 
     /**
-     * Save current game state to localStorage
+     * Save current game state
+     * Creates a snapshot and offloads processing to Worker
      */
     function saveGameState() {
-        if (!world || !player) return;
-        try {
-            const compressedMap = rleEncode(world.map);
-            const state = {
-                schema: SAVE_SCHEMA_VERSION,
-                world: {
-                    width: world.width,
-                    height: world.height,
-                    map: uint8ToBase64(compressedMap)
-                },
-                player: {
-                    x: player.x,
-                    y: player.y,
-                    vx: player.vx,
-                    vy: player.vy,
-                    grounded: player.grounded,
-                    facingRight: player.facingRight
-                },
-                inventory: inventory.getInventoryState(),
-                timers: {
-                    tnt: timers.tnt.map(t => ({ x: t.x, y: t.y, timer: t.timer })),
-                    saplings: timers.saplings.map(s => ({ x: s.x, y: s.y, timer: s.timer }))
-                }
-            };
-            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-        } catch (err) {
-            console.warn('Failed to save game state', err);
-        }
+        if (!world || !player || !worker) return;
+
+        // Prevent overlapping saves
+        if (isSaving) return;
+        isSaving = true;
+
+        // Create a snapshot of the current state.
+        // Structured Clone will deep copy these to the worker, preventing race conditions.
+        // The main thread is only blocked for the duration of this object creation/copying (very fast).
+        const snapshot = {
+            map: world.map, // Uint8Array copy
+            width: world.width,
+            height: world.height,
+            player: {
+                x: player.x,
+                y: player.y,
+                vx: player.vx,
+                vy: player.vy,
+                grounded: player.grounded,
+                facingRight: player.facingRight
+            },
+            inventory: inventory.getInventoryState(),
+            timers: {
+                tnt: timers.tnt.map(t => ({ x: t.x, y: t.y, timer: t.timer })),
+                saplings: timers.saplings.map(s => ({ x: s.x, y: s.y, timer: s.timer }))
+            }
+        };
+
+        // Offload to worker
+        worker.postMessage({
+            type: 'SAVE',
+            payload: snapshot
+        });
     }
 
     /**
