@@ -1,4 +1,4 @@
-import { BLOCKS, BLOCK_PROPS, TILE_SIZE } from './constants.js';
+import { BLOCKS, BLOCK_PROPS, TILE_SIZE, CRAFTING_RAPID_FIRE_THRESHOLD_TICKS, CRAFTING_RAPID_FIRE_INTERVAL_TICKS } from './constants.js';
 import { sounds } from './audio.js';
 import { inventory, updateInventoryUI } from './inventory.js';
 import { strings } from './i18n.js';
@@ -50,6 +50,7 @@ let prevDpadUp = false;
 let prevDpadDown = false;
 let prevAButton = false;
 let prevBButton = false;
+let aButtonHoldTicks = 0; // Track how long A button is held for rapid-fire
 
 // Flag to track if crafting was manually closed with B button
 // Prevents reopening until player leaves and re-enters workbench
@@ -96,11 +97,28 @@ export function pollCraftingGamepad() {
     }
     prevDpadDown = dpadDown;
 
-    // A Button - craft selected item
+    // A Button - craft selected item (with rapid-fire support)
     const aButton = buttons[GP_A] && buttons[GP_A].pressed;
-    if (aButton && !prevAButton) {
-        const recipe = CRAFTING_RECIPES[selectedRecipeIndex];
-        if (recipe) craftItem(recipe);
+    if (aButton) {
+        // Button is pressed
+        if (!prevAButton) {
+            // Just pressed - craft immediately
+            const recipe = CRAFTING_RECIPES[selectedRecipeIndex];
+            if (recipe) craftItem(recipe);
+        }
+        aButtonHoldTicks++;
+
+        // Rapid-fire: after holding 1 second, craft 4 times per second
+        if (aButtonHoldTicks >= CRAFTING_RAPID_FIRE_THRESHOLD_TICKS) {
+            const ticksSinceThreshold = aButtonHoldTicks - CRAFTING_RAPID_FIRE_THRESHOLD_TICKS;
+            if (ticksSinceThreshold % CRAFTING_RAPID_FIRE_INTERVAL_TICKS === 0) {
+                const recipe = CRAFTING_RECIPES[selectedRecipeIndex];
+                if (recipe) craftItem(recipe);
+            }
+        }
+    } else {
+        // Button released - reset counter
+        aButtonHoldTicks = 0;
     }
     prevAButton = aButton;
 

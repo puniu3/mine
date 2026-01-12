@@ -24,6 +24,10 @@ export const CAMERA_ZOOM_FACTOR = 0.015;
 export const CAMERA_MIN_ZOOM = 0.6;
 export const GAMEPAD_BREAK_COOLDOWN_TICKS = 60;
 
+// --- Crafting Rapid-Fire Constants (for A button hold in crafting UI) ---
+export const CRAFTING_RAPID_FIRE_THRESHOLD_TICKS = 720; // 1 second at 720Hz to activate rapid-fire
+export const CRAFTING_RAPID_FIRE_INTERVAL_TICKS = 180;  // 4 times per second (720/4 = 180 ticks)
+
 // --- Player Physics Constants (720Hz native, per-tick values) ---
 // Gravity acceleration per tick (velocity units)
 export const GRAVITY_PER_TICK = 0.5 * TICK_TIME_SCALE; // ~0.0417 per tick
