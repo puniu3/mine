@@ -53,7 +53,11 @@ export function createCamera() {
             }
 
             // Smoothly interpolate zoom
-            zoom = zoom + (targetZoom - zoom) * 0.01;
+            if (Math.abs(targetZoom - zoom) < 0.00001) {
+                zoom = targetZoom;
+            } else {
+                zoom = zoom + (targetZoom - zoom) * 0.01;
+            }
 
             // 2. Calculate target position
             // The visible width/height in world units depends on zoom
@@ -84,8 +88,17 @@ export function createCamera() {
             }
 
             // Apply smoothing to both axes
-            x = smoothCamera(x, targetCamX, CAMERA_SMOOTHING);
-            y = smoothCamera(y, targetCamY, CAMERA_SMOOTHING);
+            if (Math.abs(targetCamX - x) < 0.05) {
+                x = targetCamX;
+            } else {
+                x = smoothCamera(x, targetCamX, CAMERA_SMOOTHING);
+            }
+
+            if (Math.abs(targetCamY - y) < 0.05) {
+                y = targetCamY;
+            } else {
+                y = smoothCamera(y, targetCamY, CAMERA_SMOOTHING);
+            }
         }
     };
 }
