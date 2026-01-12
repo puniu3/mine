@@ -32,10 +32,11 @@ import { processHorizontalInput, processMizukiri, processJumpPad, processJump } 
 import { drawPlayer } from './render.js';
 
 export class Player {
-    constructor(world, addToInventory = null, onTNTJumpPad = null) {
+    constructor(world, addToInventory = null, onTNTJumpPad = null, onSplash = null) {
         this.world = world;
         this.addToInventory = addToInventory;
         this.onTNTJumpPad = onTNTJumpPad;
+        this.onSplash = onSplash;
 
         // Internal fixed-point storage (Q20.12)
         this._x = 0;
@@ -63,6 +64,7 @@ export class Player {
 
         // Bubble breath timer
         this.bubbleTimer = 0;
+        this.wasInWater = false;
 
         this.findSpawnPoint();
     }
@@ -189,6 +191,14 @@ export class Player {
         const centerGridX = Math.floor(centerX_FP / TILE_SIZE_FP);
         const centerGridY = Math.floor(centerY_FP / TILE_SIZE_FP);
         const isInWater = this.world.getBlock(centerGridX, centerGridY) === BLOCKS.WATER;
+
+        // Trigger splash on entry
+        if (isInWater && !this.wasInWater) {
+            if (this.onSplash) {
+                this.onSplash(this.getCenterX(), this.getCenterY());
+            }
+        }
+        this.wasInWater = isInWater;
 
         // 1. Horizontal Movement & Friction
         const moveResult = processHorizontalInput(input, this._vx, this.facingRight, applyFriction);
