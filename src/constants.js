@@ -17,6 +17,7 @@ export const TILE_SIZE = 32;
 export const WORLD_WIDTH = 512 * 8;
 export const WORLD_HEIGHT = 256;
 export const REACH = 5 * TILE_SIZE;
+export const CURSOR_REACH_MARGIN = TILE_SIZE / 2; // Margin to ensure cursor stays within interactable reach
 export const CAMERA_SMOOTHING = 0.1;
 export const CAMERA_ZOOM_SPEED_THRESHOLD = 15;
 export const CAMERA_ZOOM_FACTOR = 0.015;

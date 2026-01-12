@@ -13,7 +13,7 @@ import {
 } from './utils.js';
 import { sounds } from './audio.js';
 import {
-    TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH,
+    TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH, CURSOR_REACH_MARGIN,
     BLOCKS, BLOCK_PROPS,
     PHYSICS_TPS, PHYSICS_DT,
     GAMEPAD_BREAK_COOLDOWN_TICKS
@@ -328,7 +328,7 @@ function tick() {
             screenHeight: logicalHeight,
             playerScreenX,
             playerScreenY,
-            reach: REACH * camera.zoom,
+            reach: (REACH - CURSOR_REACH_MARGIN) * camera.zoom,
             skipJump: isCraftingOpen
         });
     }
