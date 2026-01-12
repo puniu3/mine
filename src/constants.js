@@ -18,6 +18,9 @@ export const WORLD_WIDTH = 512 * 8;
 export const WORLD_HEIGHT = 256;
 export const REACH = 5 * TILE_SIZE;
 export const CAMERA_SMOOTHING = 0.1;
+export const CAMERA_ZOOM_SPEED_THRESHOLD = 15;
+export const CAMERA_ZOOM_FACTOR = 0.015;
+export const CAMERA_MIN_ZOOM = 0.6;
 export const GAMEPAD_BREAK_COOLDOWN_TICKS = 60;
 
 // --- Player Physics Constants (720Hz native, per-tick values) ---

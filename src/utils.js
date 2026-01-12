@@ -132,10 +132,10 @@ export function coordToIndex(x, y, width, height) {
  * @param {number} cameraY - Camera Y position
  * @returns {Point} World coordinates
  */
-export function screenToWorld(screenX, screenY, cameraX, cameraY) {
+export function screenToWorld(screenX, screenY, cameraX, cameraY, zoom = 1) {
     return {
-        x: screenX + cameraX,
-        y: screenY + cameraY
+        x: (screenX / zoom) + cameraX,
+        y: (screenY / zoom) + cameraY
     };
 }
 
@@ -450,11 +450,11 @@ export function clampCamera(cameraPos, minPos, worldSize, viewportSize) {
  * @param {number} tileSize - Tile size
  * @returns {{startX: number, endX: number, startY: number, endY: number}} Visible range
  */
-export function calculateVisibleTileRange(cameraX, cameraY, canvasWidth, canvasHeight, tileSize) {
+export function calculateVisibleTileRange(cameraX, cameraY, canvasWidth, canvasHeight, tileSize, zoom = 1) {
     const startX = Math.floor(cameraX / tileSize);
-    const endX = startX + Math.ceil(canvasWidth / tileSize) + 1;
+    const endX = startX + Math.ceil((canvasWidth / zoom) / tileSize) + 1;
     const startY = Math.floor(cameraY / tileSize);
-    const endY = startY + Math.ceil(canvasHeight / tileSize) + 1;
+    const endY = startY + Math.ceil((canvasHeight / zoom) / tileSize) + 1;
     return { startX, endX, startY, endY };
 }
 

@@ -32,6 +32,7 @@ export function drawGame(ctx, {
     player,
     cameraX,
     cameraY,
+    zoom = 1,
     logicalWidth,
     logicalHeight,
     textures,
@@ -170,8 +171,12 @@ export function drawGame(ctx, {
 
     // --- Calculate Visible Range ---
     const { startX, endX, startY, endY } = calculateVisibleTileRange(
-        cameraX, cameraY, logicalWidth, logicalHeight, TILE_SIZE
+        cameraX, cameraY, logicalWidth, logicalHeight, TILE_SIZE, zoom
     );
+
+    // Apply global zoom and translation for the world rendering
+    ctx.save();
+    ctx.scale(zoom, zoom);
 
     // --- 5. Water Masking Pass ---
     // Erase sky elements behind water to handle transparency correctly
@@ -190,6 +195,15 @@ export function drawGame(ctx, {
         }
     }
 
+    // Note: Water Mask (Step 5) uses explicit subtraction (x*TILE - cameraX)
+    // so it naturally works inside the scaled context, producing (World - Camera) * Zoom.
+    // However, Steps 6-9 use a global translation.
+    // To harmonize, we will wrap Steps 6-9 in the translation as before,
+    // but ensure Step 5's manual calculation is consistent or updated.
+    // Actually, Step 5 relies on `screenX = x * TILE - cameraX`.
+    // Inside `scale(zoom)`, this draws at `(x * TILE - cameraX) * zoom`. Correct.
+
+    // Global translation for World Entities (Steps 6, 7, 8, 9)
     ctx.save();
     ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
 
@@ -267,7 +281,8 @@ export function drawGame(ctx, {
 
     // --- 8. Cursor Highlight ---
     if (input && input.mouse && input.mouse.active) {
-        const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY);
+        // screenToWorld uses zoom now
+        const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY, zoom);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
         if (isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
@@ -280,7 +295,7 @@ export function drawGame(ctx, {
     if (input && input.gamepad && input.gamepad.cursorActive && input.gamepad.connected) {
         const gcX = input.gamepad.cursorX;
         const gcY = input.gamepad.cursorY;
-        const worldPos = screenToWorld(gcX, gcY, cameraX, cameraY);
+        const worldPos = screenToWorld(gcX, gcY, cameraX, cameraY, zoom);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
 
         ctx.strokeStyle = 'rgba(255, 235, 59, 0.7)';
@@ -288,6 +303,10 @@ export function drawGame(ctx, {
         ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 
+    // Restore translation
+    ctx.restore();
+
+    // Restore scale
     ctx.restore();
 
     // --- 10. Gamepad Crosshair ---
