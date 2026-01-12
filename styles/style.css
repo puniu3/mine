@@ -466,7 +466,7 @@ button {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     flex-wrap: wrap;
     gap: 6px;
-    width: 140px;
+    width: 180px;
     justify-content: center;
 }
 
@@ -1185,3 +1185,73 @@ button {
         #fff 50%
     );
 }
+
+/* Poland */
+.flag-pl {
+    background: linear-gradient(180deg, #fff 50%, #dc143c 50%);
+}
+
+/* Ukraine */
+.flag-uk {
+    background: linear-gradient(180deg, #0057b7 50%, #ffd700 50%);
+}
+
+/* Turkey */
+.flag-tr {
+    background: #e30a17;
+}
+.flag-tr::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 45%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    box-shadow: -3px 0 0 0 white;
+}
+.flag-tr::after {
+    content: '★';
+    position: absolute;
+    top: 50%;
+    left: 65%;
+    transform: translate(-50%, -50%) rotate(-15deg);
+    color: white;
+    font-size: 8px;
+    line-height: 1;
+}
+
+/* Malaysia */
+.flag-ms {
+    background: repeating-linear-gradient(
+        180deg,
+        #cc0000,
+        #cc0000 2px,
+        #fff 2px,
+        #fff 4px
+    );
+}
+.flag-ms::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 50%;
+    background: #000066;
+}
+.flag-ms::after {
+    content: '★';
+    position: absolute;
+    top: 25%;
+    left: 25%;
+    transform: translate(-50%, -50%);
+    color: #ffcc00;
+    font-size: 8px;
+    line-height: 1;
+    text-shadow: 6px 0 0 #ffcc00; /* Cheap way to make it look bigger/complex? No. */
+}
+/* Enhance Malaysia crescent via box-shadow on the star? No, let's add a small circle using box-shadow on the ::before? */
+/* The ::before is the blue canton. I can use box-shadow on IT? No. */
+/* I'll stick to a simple star for Malaysia at this resolution. */
