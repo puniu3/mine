@@ -98,6 +98,28 @@ export function createBubble(x, y, distanceToSurface = TILE_SIZE * 2) {
 }
 
 /**
+ * Create splash particles for water entry
+ * @param {number} x - Center X position
+ * @param {number} y - Center Y position
+ */
+export function createSplashParticles(x, y) {
+    // Light Blue / Cyan hue ~ 195
+    const hue = 195;
+
+    for (let i = 0; i < 20; i++) {
+        // Upward cone (-PI/2 is straight up)
+        // Spread slightly (PI/2 = 90 degrees total spread)
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.5;
+        const speed = Math.random() * 0.15 + 0.05;
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        const life = 300 + Math.random() * 200;
+
+        addParticle(x, y, vx, vy, life, hue);
+    }
+}
+
+/**
  * Create explosion particles with specified hue
  * @param {number} x - Center X position
  * @param {number} y - Center Y position

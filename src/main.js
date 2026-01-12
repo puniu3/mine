@@ -26,7 +26,7 @@ import {
     getInventoryState, loadInventoryState
 } from './inventory.js';
 import { isCraftingOpen, updateCrafting, pollCraftingGamepad } from './crafting.js';
-import { tick as tickFireworks, createExplosionParticles } from './fireworks.js';
+import { tick as tickFireworks, createExplosionParticles, createSplashParticles } from './fireworks.js';
 import { tick as tickBlockParticles, initBlockParticles } from './block_particles.js';
 import { createActions } from './actions.js';
 import { World } from './world/index.js';
@@ -110,7 +110,9 @@ function init(savedState = null) {
         // No particles - camera moves too fast to see them
     };
 
-    player = new Player(world, addToInventory, handleTNTJumpPad);
+    player = new Player(world, addToInventory, handleTNTJumpPad, (x, y) => {
+        createSplashParticles(x, y);
+    });
     textures = generateTextures();
     initBlockParticles(textures);
 
