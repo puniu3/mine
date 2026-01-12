@@ -360,7 +360,7 @@ export const resources = {
 };
 
 export const strings = {};
-Object.assign(strings, resources.ja);
+Object.assign(strings, resources.en);
 
 const LANG_STORAGE_KEY = 'pictoco_language';
 
@@ -381,7 +381,7 @@ export const supportedLanguages = [
 ];
 
 // Current language code
-export let currentLanguage = 'ja';
+export let currentLanguage = 'en';
 
 /**
  * Get the detected language based on priority:
@@ -397,7 +397,7 @@ function detectLanguage() {
     }
 
     // Priority 2: Browser settings
-    const rawLang = navigator.language || navigator.userLanguage || 'ja';
+    const rawLang = navigator.language || navigator.userLanguage || 'en';
     const mainLang = rawLang.split('-')[0];
 
     if (resources[rawLang]) {
@@ -408,14 +408,14 @@ function detectLanguage() {
     }
 
     // Priority 3: Fallback
-    return 'ja';
+    return 'en';
 }
 
 /**
  * Apply the given language to strings and DOM
  */
 function applyLanguage(langCode) {
-    const target = resources[langCode] || resources.ja;
+    const target = resources[langCode] || resources.en;
     currentLanguage = langCode;
 
     // Clear and update strings object
