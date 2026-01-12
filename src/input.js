@@ -154,6 +154,7 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
 
     // Gamepad connection handlers
     window.addEventListener('gamepadconnected', (e) => {
+        if(e.gamepad.mapping !== 'standard') return;
         gamepadIndex = e.gamepad.index;
         input.gamepad.connected = true;
         input.gamepad.cursorActive = true;
@@ -179,7 +180,7 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
     // Check for already connected gamepads (e.g., connected during title screen)
     const gamepads = navigator.getGamepads();
     for (const gp of gamepads) {
-        if (gp && gp.connected) {
+        if (gp && gp.connected && gp.mapping === 'standard') {
             gamepadIndex = gp.index;
             input.gamepad.connected = true;
             input.gamepad.cursorActive = true;
