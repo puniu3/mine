@@ -443,18 +443,36 @@ function loop(timestamp) {
 
 // --- Initialize UI & Event Listeners ---
 // Resume audio context on visibility change or user interaction
+// Enhanced for iOS/iPadOS PWA where audio context can be suspended/interrupted/closed
 const resumeAudio = () => {
     sounds.resume();
 };
 
+// Standard visibility change (works on most browsers)
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
         resumeAudio();
     }
 });
+
+// pageshow event for iOS PWA - fires when returning from BFCache or app switch
+window.addEventListener('pageshow', (event) => {
+    // persisted=true means page was restored from BFCache (common in iOS PWA)
+    if (event.persisted) {
+        resumeAudio();
+    }
+    // Also resume on regular pageshow as iOS PWA might not set persisted
+    resumeAudio();
+});
+
+// focus event - fires when PWA window regains focus after app switch
+window.addEventListener('focus', resumeAudio);
+
+// User interaction events - required for iOS audio policy
 window.addEventListener('click', resumeAudio);
 window.addEventListener('keydown', resumeAudio);
 window.addEventListener('touchstart', resumeAudio);
+window.addEventListener('touchend', resumeAudio);
 
 initUI({
     onStartGame: () => {
