@@ -63,7 +63,8 @@ mine/
     ├── jackpot.js      # Jackpot block: coin burst particles on player overlap
     ├── block_particles.js # Block destruction particle effects (texture color sampling)
     ├── sky.js          # Dynamic sky colors, sun/moon orbit, and star rendering
-    ├── save.js         # Save/load system using localStorage with autosave functionality
+    ├── save.js         # Save/load orchestrator (main thread)
+    ├── save.worker.js  # Web Worker for heavy save operations (RLE compression, JSON)
     ├── tnt.js          # TNT explosion logic, timers, knockback, and block destruction
     ├── sapling_manager.js # Sapling growth timers and tree generation logic
     ├── ui_manager.js   # DOM event handling (Start screen, World Share modals)
@@ -108,6 +109,7 @@ main.js
 ├── fireworks.js
 ├── block_particles.js (imports: constants)
 ├── save.js
+│   └── save.worker.js (imports: utils)
 ├── tnt.js
 ├── sapling_manager.js (imports: constants, utils)
 └── ui_manager.js (imports: save, world_share)
@@ -232,10 +234,11 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - `explodeTNT()`: Destroys blocks, applies player knockback, spawns particles
 - State persistence: provides timer data to Save Manager
 
-### Save/Load (save.js)
-- Persists game state to localStorage
-- Aggregates state from: World, Player, Inventory, TNT Manager, Sapling Manager
-- `startAutosave()`: Periodic saving (5s)
+### Save/Load (save.js + save.worker.js)
+- Persists game state to localStorage using a **Web Worker** to prevent main thread blocking.
+- **save.js**: Creates state snapshots and manages the Worker lifecycle.
+- **save.worker.js**: Handles CPU-intensive tasks (RLE compression, Base64 conversion, JSON serialization).
+- `startAutosave()`: Periodic saving (5s).
 
 ### World Share (world_share.js)
 - `exportWorldToImage()`: Converts world map to PNG (1 tile = 1 pixel)
