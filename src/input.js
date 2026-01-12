@@ -191,8 +191,9 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
      * @param {number} options.playerScreenX - Player center X position on screen
      * @param {number} options.playerScreenY - Player center Y position on screen
      * @param {number} options.reach - Player interaction reach distance
+     * @param {boolean} options.skipJump - Skip A button jump input (for crafting UI)
      */
-    function pollGamepads({ screenWidth, screenHeight, playerScreenX, playerScreenY, reach }) {
+    function pollGamepads({ screenWidth, screenHeight, playerScreenX, playerScreenY, reach, skipJump }) {
         if (gamepadIndex === null) return;
 
         const gamepads = navigator.getGamepads();
@@ -209,7 +210,8 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
         input.gamepad.axisLeftX = leftX;
 
         // --- Jump (A Button) ---
-        if (buttons[GAMEPAD_BUTTONS.A]) {
+        // Skip when crafting UI is open (A button used for item selection instead)
+        if (!skipJump && buttons[GAMEPAD_BUTTONS.A]) {
             input.keys.jump = buttons[GAMEPAD_BUTTONS.A].pressed;
         }
 
