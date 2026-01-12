@@ -1,4 +1,4 @@
-import { BLOCKS, TILE_SIZE } from './constants.js';
+import { BLOCKS, TILE_SIZE, BLOCK_PROPS } from './constants.js';
 import { calculateVisibleTileRange } from './utils.js';
 
 // ============================================================
@@ -12,7 +12,7 @@ const MAX_PARTICLES = 8000;
 const particles = {
     x: new Float32Array(MAX_PARTICLES),
     y: new Float32Array(MAX_PARTICLES),
-    vx: new Float32Array(MAX_PARTICLES),
+    vx: new Float32Array(MAX_PARTICLES),       // For rockets: stores payload Hue
     vy: new Float32Array(MAX_PARTICLES),
     life: new Float32Array(MAX_PARTICLES),      // life > 0 for particles, negative for rockets (stores targetY)
     hue: new Uint16Array(MAX_PARTICLES),        // HSL hue (0-360), 361 = white (rocket)
@@ -28,6 +28,48 @@ const BUBBLE_SPEED = -0.15;
 // Camera bounds for culling (updated each draw call)
 let cullMinX = 0, cullMaxX = 0, cullMinY = 0, cullMaxY = 0;
 const CULL_MARGIN = 50;  // pixels outside viewport to keep updating
+
+/**
+ * Helper to convert Hex color to HSL Hue
+ * @param {string} hex - Hex color string (e.g., "#388e3c")
+ * @returns {number} Hue (0-360)
+ */
+function hexToHue(hex) {
+    if (!hex || !hex.startsWith('#')) return Math.floor(Math.random() * 360);
+
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 4) {
+        r = parseInt(hex[1] + hex[1], 16);
+        g = parseInt(hex[2] + hex[2], 16);
+        b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length === 7) {
+        r = parseInt(hex.substring(1, 3), 16);
+        g = parseInt(hex.substring(3, 5), 16);
+        b = parseInt(hex.substring(5, 7), 16);
+    }
+
+    r /= 255;
+    g /= 255;
+    b /= 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0;
+
+    if (max === min) {
+        h = 0;
+    } else {
+        const d = max - min;
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    return Math.floor(h * 360);
+}
 
 /**
  * Swap-and-pop removal: O(1) instead of O(n) splice
@@ -62,19 +104,30 @@ function addParticle(x, y, vx, vy, life, hue) {
 
 /**
  * Launch a rocket from a position
+ * @param {number} x - World X
+ * @param {number} y - World Y
+ * @param {number} [targetHue] - Optional hue for the explosion
  */
-function launchFirework(x, y) {
+function launchFirework(x, y, targetHue) {
     // For rockets: life stores negative targetY, hue = ROCKET_HUE
+    // We store the payload hue in vx (which is unused for vertical rockets)
     const targetY = y - (10 * TILE_SIZE);
-    addParticle(x, y, 0, ROCKET_SPEED, -targetY, ROCKET_HUE);
+
+    // If targetHue is undefined, use -1 (which will trigger random generation later)
+    // Actually, storing it as a number is safer.
+    // If undefined, pass a sentinel like -1 or generate random now.
+    const payload = (targetHue !== undefined) ? targetHue : -1;
+
+    addParticle(x, y, payload, ROCKET_SPEED, -targetY, ROCKET_HUE);
 }
 
 /**
  * Create explosion particles at a position
  */
-function explode(x, y) {
-    const hue = Math.floor(Math.random() * 360);
-    createExplosionParticles(x, y, hue);
+function explode(x, y, hue) {
+    // If hue is undefined or -1, createExplosionParticles will handle it (or we pass random)
+    const finalHue = (hue !== undefined && hue !== -1) ? hue : Math.floor(Math.random() * 360);
+    createExplosionParticles(x, y, finalHue);
 }
 
 /**
@@ -145,7 +198,16 @@ export function tick(world, cameraX, cameraY, canvas) {
         for (let y = range.startY - 10; y < range.endY + 10; y++) {
             for (let x = range.startX - 10; x < range.endX + 10; x++) {
                 if (world.getBlock(x, y) === BLOCKS.FIREWORK) {
-                    launchFirework(x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2);
+                    // Check block below for color
+                    const blockBelow = world.getBlock(x, y + 1);
+                    const props = BLOCK_PROPS[blockBelow];
+
+                    let hue; // undefined (random) by default
+                    if (props && props.color) {
+                        hue = hexToHue(props.color);
+                    }
+
+                    launchFirework(x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2, hue);
                 }
             }
         }
@@ -165,8 +227,10 @@ export function tick(world, cameraX, cameraY, canvas) {
             if (particles.y[i] <= targetY) {
                 const px = particles.x[i];
                 const py = particles.y[i];
+                const payloadHue = particles.vx[i]; // Retrieve stored hue payload
+
                 removeParticle(i);
-                explode(px, py);
+                explode(px, py, payloadHue);
                 // Don't increment i, check the swapped particle
                 continue;
             }
