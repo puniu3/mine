@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pictoco-v14';
+const CACHE_NAME = 'pictoco-v15';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -59,11 +59,11 @@ const ASSETS_TO_CACHE = [
   './fonts/fredoka-one-latin-400-normal.woff',
   './fonts/Nunito-Bold.ttf',
   './fonts/Nunito-Regular.ttf',
-  './fonts/Jua-Regular.ttf',
-  './fonts/ZCOOLKuaiLe-Regular.ttf',
-  './fonts/ZenMaruGothic-Regular.ttf',
-  './fonts/ZenMaruGothic-Bold.ttf',
-  './fonts/MochiyPopOne-Regular.ttf'
+  // './fonts/Jua-Regular.ttf',
+  // './fonts/ZCOOLKuaiLe-Regular.ttf',
+  // './fonts/ZenMaruGothic-Regular.ttf',
+  // './fonts/ZenMaruGothic-Bold.ttf',
+  // './fonts/MochiyPopOne-Regular.ttf'
 ];
 
 // Install event - cache all assets
