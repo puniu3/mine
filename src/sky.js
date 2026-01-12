@@ -209,6 +209,54 @@ export function getMoonRenderData(time, altitude, screenWidth, screenHeight, day
 /**
  * Returns star data.
  */
+/**
+ * Draws lens flare effects.
+ */
+export function drawLensFlare(ctx, sun, screenWidth, screenHeight) {
+    if (!sun || !sun.isVisible || sun.opacity <= 0.01) return;
+
+    const cx = screenWidth / 2;
+    const cy = screenHeight / 2;
+
+    const dx = cx - sun.x;
+    const dy = cy - sun.y;
+
+    // Base intensity derived from sun opacity (which handles altitude fade)
+    const globalAlpha = sun.opacity * 0.8;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter'; // Additive blending for strong light effects
+
+    // Artifact definitions
+    // pos: position along the line from sun to center (0=sun, 1=center, >1=opposite side)
+    // size: radius in pixels
+    // color: base rgb color
+    // alpha: base alpha
+    const artifacts = [
+        { pos: 0.15, size: 60, color: '255, 255, 255', alpha: 0.6 },  // Near sun glow
+        { pos: 0.3, size: 30, color: '200, 255, 200', alpha: 0.6 },   // Greenish
+        { pos: 0.45, size: 15, color: '255, 150, 150', alpha: 0.6 },  // Reddish
+        { pos: 1.0, size: 180, color: '200, 220, 255', alpha: 0.4 }, // Center massive soft glow
+        { pos: 1.2, size: 60, color: '180, 255, 180', alpha: 0.4 },   // Greenish
+        { pos: 1.4, size: 35, color: '220, 180, 255', alpha: 0.5 },   // Purple
+        { pos: 1.9, size: 100, color: '255, 255, 200', alpha: 0.3 },  // Distant soft
+        { pos: 0.7, size: 8, color: '255, 255, 255', alpha: 0.8 },    // Bright speck
+        { pos: 1.7, size: 20, color: '180, 180, 255', alpha: 0.5 },  // Blueish
+    ];
+
+    artifacts.forEach(a => {
+        const x = sun.x + dx * a.pos;
+        const y = sun.y + dy * a.pos;
+
+        ctx.fillStyle = `rgba(${a.color}, ${a.alpha * globalAlpha})`;
+        ctx.beginPath();
+        ctx.arc(x, y, a.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    ctx.restore();
+}
+
 export function getStarRenderData(time, altitude, screenWidth, screenHeight) {
     // Separate opacity calculation into two sources: Time (Night) and Altitude (Space)
     

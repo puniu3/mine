@@ -21,7 +21,8 @@ import {
     getSkyGradientColors,
     getSunRenderData,
     getMoonRenderData,
-    getStarRenderData
+    getStarRenderData,
+    drawLensFlare
 } from './sky.js';
 import { drawJackpotParticles } from './jackpot.js';
 import { draw as drawFireworks } from './fireworks.js';
@@ -308,6 +309,14 @@ export function drawGame(ctx, {
 
     // Restore scale
     ctx.restore();
+
+    // --- 7.5 Lens Flare ---
+    // Draw lens flare on top of world/entities but behind UI
+    // Reuse 'sun' object calculated in Step 4.
+    // Must be drawn in Screen Space (outside zoom/translate).
+    if (sun && sun.isVisible) {
+        drawLensFlare(ctx, sun, logicalWidth, logicalHeight);
+    }
 
     // --- 10. Gamepad Crosshair ---
     if (input && input.gamepad && input.gamepad.cursorActive && input.gamepad.connected) {
