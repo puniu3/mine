@@ -484,3 +484,74 @@ export function hasAdjacentBlock(tx, ty, getBlockFn, airBlockId) {
     }
     return false;
 }
+
+// ============================================================================
+// Compression (Run-Length Encoding)
+// ============================================================================
+
+/**
+ * Encode Uint8Array using simple RLE compression.
+ * Format: [value, count, value, count, ...]
+ * Count is stored as 1-2 bytes: if count <= 255, single byte; otherwise 0 + 2 bytes (big endian).
+ * @param {Uint8Array} data - Input data
+ * @returns {Uint8Array} RLE encoded data
+ */
+export function rleEncode(data) {
+    if (data.length === 0) return new Uint8Array(0);
+
+    const result = [];
+    let i = 0;
+
+    while (i < data.length) {
+        const value = data[i];
+        let count = 1;
+
+        while (i + count < data.length && data[i + count] === value && count < 65535) {
+            count++;
+        }
+
+        result.push(value);
+        if (count <= 255) {
+            result.push(count);
+        } else {
+            // Use 0 as escape, then 2 bytes for count (big endian)
+            result.push(0);
+            result.push((count >> 8) & 0xff);
+            result.push(count & 0xff);
+        }
+
+        i += count;
+    }
+
+    return new Uint8Array(result);
+}
+
+/**
+ * Decode RLE compressed Uint8Array.
+ * @param {Uint8Array} encoded - RLE encoded data
+ * @returns {Uint8Array} Decoded data
+ */
+export function rleDecode(encoded) {
+    if (encoded.length === 0) return new Uint8Array(0);
+
+    const result = [];
+    let i = 0;
+
+    while (i < encoded.length) {
+        const value = encoded[i++];
+        let count = encoded[i++];
+
+        if (count === 0) {
+            // Extended count: next 2 bytes
+            const high = encoded[i++];
+            const low = encoded[i++];
+            count = (high << 8) | low;
+        }
+
+        for (let j = 0; j < count; j++) {
+            result.push(value);
+        }
+    }
+
+    return new Uint8Array(result);
+}

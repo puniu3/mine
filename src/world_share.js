@@ -5,6 +5,7 @@
 
 import { BLOCKS, BLOCK_PROPS, WORLD_WIDTH, WORLD_HEIGHT } from './constants.js';
 import { World } from './world/index.js';
+import { rleDecode } from './utils.js';
 
 // Color mapping for export (WOOD uses different color to avoid collision with DIRT)
 const EXPORT_COLORS = {
@@ -135,6 +136,19 @@ export function exportWorldToImage(worldMap, width, height) {
         ctx.putImageData(imageData, 0, 0);
         canvas.toBlob(resolve, 'image/png');
     });
+}
+
+/**
+ * Export world to PNG image from compressed save data.
+ * Assumes save data uses latest schema (RLE compressed).
+ * @param {Uint8Array} compressedMap - RLE compressed world map
+ * @param {number} width - World width in tiles
+ * @param {number} height - World height in tiles
+ * @returns {Promise<Blob>} PNG blob
+ */
+export function exportCompressedWorldToImage(compressedMap, width, height) {
+    const worldMap = rleDecode(compressedMap);
+    return exportWorldToImage(worldMap, width, height);
 }
 
 /**
