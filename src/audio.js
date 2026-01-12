@@ -45,10 +45,63 @@ export class SoundManager {
         }
     }
 
+    /**
+     * Resume audio context after suspension (e.g., app switch on iOS/iPadOS PWA).
+     * Handles multiple states: suspended, interrupted, and closed.
+     */
     resume() {
-        if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
+        if (!this.ctx) return;
+
+        const state = this.ctx.state;
+
+        // iOS/iPadOS can put AudioContext into 'interrupted' state when PWA goes to background
+        if (state === 'suspended' || state === 'interrupted') {
+            this.ctx.resume().catch(() => {
+                // Resume failed - might need user interaction, will retry on next touch/click
+            });
         }
+
+        // If AudioContext is closed (can happen after long background on iOS), recreate it
+        if (state === 'closed') {
+            this._recreateContext();
+        }
+    }
+
+    /**
+     * Recreate AudioContext after it was closed.
+     * Used for iOS/iPadOS PWA recovery after app switching.
+     */
+    _recreateContext() {
+        const wasMusicPlaying = this.isMusicPlaying;
+
+        // Stop existing music scheduling
+        if (this.nextNoteTimeout) {
+            clearTimeout(this.nextNoteTimeout);
+            this.nextNoteTimeout = null;
+        }
+
+        // Reset state
+        this.ctx = null;
+        this.ready = false;
+        this.reverbNode = null;
+        this.musicGainNode = null;
+        this.isMusicPlaying = false;
+
+        // Recreate context
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.ready = true;
+
+        // Setup master gain for music
+        this.musicGainNode = this.ctx.createGain();
+        this.musicGainNode.gain.value = 0.1;
+        this.musicGainNode.connect(this.ctx.destination);
+
+        // Re-initialize reverb and restart music if it was playing
+        this.setupReverb().then(() => {
+            if (wasMusicPlaying) {
+                this.startMusic();
+            }
+        });
     }
 
     /**
