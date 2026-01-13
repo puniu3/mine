@@ -1,7 +1,7 @@
 /**
  * 2D Minecraft Clone - Audio Module
  * Sound Engine (Web Audio API)
- * Updated with Generative Ambient Music
+ * Updated with Generative Ambient Music and Volume Controls
  */
 
 export class SoundManager {
@@ -9,11 +9,19 @@ export class SoundManager {
         this.ctx = null;
         this.ready = false;
 
-        // Music specific properties
+        // Settings
+        this.bgmVolume = 0.5;
+        this.sfxVolume = 0.5;
+        this.loadSettings();
+
+        // Nodes
+        this.musicGainNode = null;
+        this.sfxGainNode = null; // Master gain for SFX
         this.reverbNode = null;
+
+        // Music State
         this.isMusicPlaying = false;
         this.nextNoteTimeout = null;
-        this.musicGainNode = null;
 
         // C Major Pentatonic Scale (C, D, E, G, A) across varied octaves
         this.scale = [
@@ -23,15 +31,57 @@ export class SoundManager {
         ];
     }
 
+    loadSettings() {
+        try {
+            const storedBgm = localStorage.getItem('pictoco_bgm_volume');
+            const storedSfx = localStorage.getItem('pictoco_sfx_volume');
+            if (storedBgm !== null) this.bgmVolume = parseFloat(storedBgm);
+            if (storedSfx !== null) this.sfxVolume = parseFloat(storedSfx);
+        } catch (e) {
+            console.warn('Failed to load audio settings', e);
+        }
+    }
+
+    saveSettings() {
+        try {
+            localStorage.setItem('pictoco_bgm_volume', this.bgmVolume);
+            localStorage.setItem('pictoco_sfx_volume', this.sfxVolume);
+        } catch (e) {
+            console.warn('Failed to save audio settings', e);
+        }
+    }
+
+    setBgmVolume(val) {
+        this.bgmVolume = Math.max(0, Math.min(1, val));
+        if (this.musicGainNode) {
+            // Base volume for music is 0.1, so we scale it
+            this.musicGainNode.gain.setValueAtTime(0.1 * this.bgmVolume, this.ctx.currentTime);
+        }
+        this.saveSettings();
+    }
+
+    setSfxVolume(val) {
+        this.sfxVolume = Math.max(0, Math.min(1, val));
+        if (this.sfxGainNode) {
+            this.sfxGainNode.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
+        }
+        this.saveSettings();
+    }
+
     init() {
         if (!this.ctx) {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             this.ready = true;
 
-            // Setup master gain for music to keep it subtle behind SFX
+            // Setup master gain for music
             this.musicGainNode = this.ctx.createGain();
-            this.musicGainNode.gain.value = 0.1; // 40% volume for music
+            this.musicGainNode.gain.value = 0.1 * this.bgmVolume;
             this.musicGainNode.connect(this.ctx.destination);
+
+            // Setup master gain for SFX
+            this.sfxGainNode = this.ctx.createGain();
+            this.sfxGainNode.gain.value = this.sfxVolume;
+            this.sfxGainNode.connect(this.ctx.destination);
 
             // Initialize Reverb and Start Music
             this.setupReverb().then(() => {
@@ -39,29 +89,22 @@ export class SoundManager {
             });
         }
         
-        // Ensure context is running (needed if init is called after user interaction)
+        // Ensure context is running
         if (this.ctx.state === 'suspended') {
             this.ctx.resume();
         }
     }
 
     /**
-     * Resume audio context after suspension (e.g., app switch on iOS/iPadOS PWA).
-     * Handles multiple states: suspended, interrupted, and closed.
+     * Resume audio context after suspension.
      */
     resume() {
         if (!this.ctx) return;
 
         const state = this.ctx.state;
-
-        // iOS/iPadOS can put AudioContext into 'interrupted' state when PWA goes to background
         if (state === 'suspended' || state === 'interrupted') {
-            this.ctx.resume().catch(() => {
-                // Resume failed - might need user interaction, will retry on next touch/click
-            });
+            this.ctx.resume().catch(() => {});
         }
-
-        // If AudioContext is closed (can happen after long background on iOS), recreate it
         if (state === 'closed') {
             this._recreateContext();
         }
@@ -69,34 +112,33 @@ export class SoundManager {
 
     /**
      * Recreate AudioContext after it was closed.
-     * Used for iOS/iPadOS PWA recovery after app switching.
      */
     _recreateContext() {
         const wasMusicPlaying = this.isMusicPlaying;
 
-        // Stop existing music scheduling
         if (this.nextNoteTimeout) {
             clearTimeout(this.nextNoteTimeout);
             this.nextNoteTimeout = null;
         }
 
-        // Reset state
         this.ctx = null;
         this.ready = false;
         this.reverbNode = null;
         this.musicGainNode = null;
+        this.sfxGainNode = null;
         this.isMusicPlaying = false;
 
-        // Recreate context
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         this.ready = true;
 
-        // Setup master gain for music
         this.musicGainNode = this.ctx.createGain();
-        this.musicGainNode.gain.value = 0.1;
+        this.musicGainNode.gain.value = 0.1 * this.bgmVolume;
         this.musicGainNode.connect(this.ctx.destination);
 
-        // Re-initialize reverb and restart music if it was playing
+        this.sfxGainNode = this.ctx.createGain();
+        this.sfxGainNode.gain.value = this.sfxVolume;
+        this.sfxGainNode.connect(this.ctx.destination);
+
         this.setupReverb().then(() => {
             if (wasMusicPlaying) {
                 this.startMusic();
@@ -104,15 +146,11 @@ export class SoundManager {
         });
     }
 
-    /**
-     * Generates a synthetic impulse response for reverb.
-     * Creates a "large space" feel without loading external assets.
-     */
     async setupReverb() {
         if (!this.ctx) return;
 
         const sampleRate = this.ctx.sampleRate;
-        const length = sampleRate * 3; // 3 seconds tail
+        const length = sampleRate * 3;
         const impulse = this.ctx.createBuffer(2, length, sampleRate);
         const leftChannel = impulse.getChannelData(0);
         const rightChannel = impulse.getChannelData(1);
@@ -126,7 +164,6 @@ export class SoundManager {
         this.reverbNode = this.ctx.createConvolver();
         this.reverbNode.buffer = impulse;
         
-        // Connect reverb to music master gain
         this.reverbNode.connect(this.musicGainNode);
     }
 
@@ -154,12 +191,10 @@ export class SoundManager {
     scheduleNextNote() {
         if (!this.isMusicPlaying) return;
 
-        // Only play if context is running to prevent queuing sounds while suspended (e.g. background tab)
         if (this.ctx && this.ctx.state === 'running') {
             this.playAmbientNote();
         }
 
-        // Random delay between 2s and 7s
         const delay = 2000 + Math.random() * 5000;
         this.nextNoteTimeout = setTimeout(() => this.scheduleNextNote(), delay);
     }
@@ -176,13 +211,10 @@ export class SoundManager {
         osc.frequency.value = freq;
         panner.pan.value = Math.random() * 2 - 1;
 
-        // Signal Path: Osc -> Gain -> Panner -> (Split to Reverb & Dry)
         osc.connect(gainNode);
         gainNode.connect(panner);
 
-        // Connect to Music Master Gain (Dry signal)
         panner.connect(this.musicGainNode);
-        // Connect to Reverb (Wet signal)
         panner.connect(this.reverbNode);
 
         const now = this.ctx.currentTime;
@@ -191,23 +223,22 @@ export class SoundManager {
         const release = 3.0 + Math.random() * 2.0;
 
         gainNode.gain.setValueAtTime(0, now);
-        // Fade in to random low volume
         gainNode.gain.linearRampToValueAtTime(0.1 + Math.random() * 0.1, now + attack);
-        // Fade out
         gainNode.gain.exponentialRampToValueAtTime(0.001, now + attack + duration + release);
 
         osc.start(now);
         osc.stop(now + attack + duration + release + 1);
     }
 
-    // --- Existing SFX Methods ---
+    // --- SFX Methods ---
+    // All SFX now route through this.sfxGainNode instead of ctx.destination directly
 
     playJump() {
-        if (!this.ready) return;
+        if (!this.ready || !this.sfxGainNode) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode); // Changed destination
         osc.type = 'square';
         osc.frequency.setValueAtTime(150, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.1);
@@ -218,11 +249,11 @@ export class SoundManager {
     }
 
     playBigJump() {
-        if (!this.ready) return;
+        if (!this.ready || !this.sfxGainNode) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
         osc.type = 'square';
         osc.frequency.setValueAtTime(100, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(500, this.ctx.currentTime + 0.3);
@@ -233,7 +264,7 @@ export class SoundManager {
     }
 
     playDig(type) {
-        if (!this.ready) return;
+        if (!this.ready || !this.sfxGainNode) return;
         const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.1, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < data.length; i++) {
@@ -255,18 +286,18 @@ export class SoundManager {
         }
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
         gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
         noise.start();
     }
 
     playPop() {
-        if (!this.ready) return;
+        if (!this.ready || !this.sfxGainNode) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
         osc.frequency.setValueAtTime(600, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.05);
         gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
@@ -276,7 +307,7 @@ export class SoundManager {
     }
     
     playExplosion() {
-        if (!this.ready) return;
+        if (!this.ready || !this.sfxGainNode) return;
 
         const bufferSize = this.ctx.sampleRate * 0.5;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
@@ -294,7 +325,7 @@ export class SoundManager {
 
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
 
         filter.type = 'lowpass';
         filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
@@ -307,7 +338,7 @@ export class SoundManager {
     }
 
     playCoin() {
-        if (!this.ready) return;
+        if (!this.ready || !this.sfxGainNode) return;
 
         const osc1 = this.ctx.createOscillator();
         const osc2 = this.ctx.createOscillator();
@@ -320,7 +351,7 @@ export class SoundManager {
 
         osc1.connect(gain);
         osc2.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
 
         gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);

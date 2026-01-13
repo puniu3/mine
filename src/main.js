@@ -92,6 +92,58 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 
+function initAudioControls() {
+    const bgmBtn = document.getElementById('bgm-btn');
+    const sfxBtn = document.getElementById('sfx-btn');
+    const bgmSlider = document.getElementById('bgm-slider');
+    const sfxSlider = document.getElementById('sfx-slider');
+    const bgmContainer = bgmBtn.previousElementSibling;
+    const sfxContainer = sfxBtn.previousElementSibling;
+
+    // Initialize values from SoundManager
+    bgmSlider.value = Math.round(sounds.bgmVolume * 100);
+    sfxSlider.value = Math.round(sounds.sfxVolume * 100);
+
+    const toggle = (container, otherContainer) => {
+        const isOpen = container.classList.contains('open');
+        // Close others
+        document.querySelectorAll('.volume-slider-container').forEach(el => el.classList.remove('open'));
+        if (!isOpen) {
+            container.classList.add('open');
+        }
+    };
+
+    bgmBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggle(bgmContainer);
+    });
+
+    sfxBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggle(sfxContainer);
+    });
+
+    // Prevent closing when clicking slider
+    bgmContainer.addEventListener('click', (e) => e.stopPropagation());
+    sfxContainer.addEventListener('click', (e) => e.stopPropagation());
+
+    // Update volume
+    bgmSlider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10) / 100;
+        sounds.setBgmVolume(val);
+    });
+
+    sfxSlider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10) / 100;
+        sounds.setSfxVolume(val);
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.volume-slider-container').forEach(el => el.classList.remove('open'));
+    });
+}
+
 function init(savedState = null) {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
 
@@ -475,6 +527,9 @@ window.addEventListener('click', resumeAudio);
 window.addEventListener('keydown', resumeAudio);
 window.addEventListener('touchstart', resumeAudio);
 window.addEventListener('touchend', resumeAudio);
+
+// Initialize Audio Controls
+initAudioControls();
 
 initUI({
     onStartGame: () => {

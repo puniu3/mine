@@ -506,6 +506,116 @@ button {
     background: rgba(76, 175, 80, 0.15);
 }
 
+/* =========================================
+   Audio Controls
+   ========================================= */
+
+#audio-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 80px; /* Left of lang selector (20px + 44px + gap) */
+    display: flex;
+    gap: 15px;
+    z-index: 100;
+}
+
+.audio-control-group {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.audio-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+    color: #555;
+    text-shadow: none;
+}
+
+.audio-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.audio-btn:active {
+    transform: scale(0.95);
+}
+
+/* Slider Popup */
+.volume-slider-container {
+    display: none; /* Toggled by JS */
+    position: absolute;
+    bottom: 55px; /* Above button */
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    padding: 10px 5px;
+    border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    width: 30px;
+    height: 100px;
+    justify-content: center;
+}
+
+.volume-slider-container.open {
+    display: flex;
+}
+
+/* Vertical Range Slider */
+.volume-slider-container input[type=range] {
+    writing-mode: bt-lr; /* IE/Edge */
+    -webkit-appearance: slider-vertical; /* Webkit */
+    width: 8px;
+    height: 100%;
+    cursor: pointer;
+}
+
+.icon-music {
+    font-size: 20px;
+}
+.icon-sfx {
+    width: 6px;
+    height: 6px;
+    background: #555;
+    position: relative;
+    margin-right: 6px; /* Offset to center the composition */
+}
+
+.icon-sfx::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 6px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid #555;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+}
+
+.icon-sfx::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 12px;
+    width: 4px;
+    height: 10px;
+    border-right: 2px solid #555;
+    border-radius: 0 50% 50% 0;
+}
+
 
 /* =========================================
    Game HUD (Hotbar, Mobile Controls)
@@ -940,6 +1050,19 @@ button {
     #language-selector {
         bottom: 10px;
         right: 10px;
+    }
+
+    /* Audio Controls on Mobile */
+    #audio-controls {
+        bottom: 10px;
+        right: 60px; /* Adjusted for smaller lang btn margin */
+        gap: 10px;
+    }
+
+    .audio-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
     }
 
     .lang-btn {
