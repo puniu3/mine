@@ -62,6 +62,9 @@ let saplingManager = null;
 let saveManager = null;
 let breakCooldownTimer = 0;
 
+// Render Mode State
+window.ZOOM_RENDER_MODE = 0; // 0: Default, 1: Overlap, 2: Nearest, 3: Snap, 4: Offscreen
+
 // Physics Settings (720Hz High-Frequency Step)
 // - Syncs perfectly with 144Hz monitors (5 steps per frame).
 // - Prevents "tunneling" (clipping through blocks) at high speeds.
@@ -310,6 +313,13 @@ function init(savedState = null) {
     }
 }
 
+// --- Toggle Zoom Render Mode ---
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyZ') {
+        window.ZOOM_RENDER_MODE = (window.ZOOM_RENDER_MODE + 1) % 5;
+    }
+});
+
 // --- Tick Loop (Physics) ---
 function tick() {
     if (!player) return;
@@ -405,7 +415,8 @@ function draw() {
         logicalHeight,
         textures,
         input,
-        tntManager
+        tntManager,
+        renderMode: window.ZOOM_RENDER_MODE
     });
 }
 
