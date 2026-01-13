@@ -52,12 +52,12 @@ export function initUI(callbacks) {
     const volumePopup = document.getElementById('volume-popup');
 
     function initVolumeSettings() {
-        // Load from LocalStorage (default 0.5)
+        // Load from LocalStorage (default 1.0)
         const savedBgm = localStorage.getItem('pictoco_vol_bgm');
         const savedSfx = localStorage.getItem('pictoco_vol_sfx');
 
-        const bgmVol = savedBgm !== null ? parseFloat(savedBgm) : 0.5;
-        const sfxVol = savedSfx !== null ? parseFloat(savedSfx) : 0.5;
+        const bgmVol = savedBgm !== null ? parseFloat(savedBgm) : 1.0;
+        const sfxVol = savedSfx !== null ? parseFloat(savedSfx) : 1.0;
 
         // Update Sliders
         if (bgmSlider) bgmSlider.value = bgmVol;
