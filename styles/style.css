@@ -1432,7 +1432,7 @@ button {
 .gp-label.select { top: 0px; left: 50%; transform: translateX(-50%); }
 
 /* Make (LT) */
-.gp-label.make { top: 5px; left: -10px; }
+.gp-label.make { top: 5px; left: 0px; }
 
 /* Break (RT) */
-.gp-label.break { top: 5px; right: -10px; }
+.gp-label.break { top: 5px; right: 0px; }
