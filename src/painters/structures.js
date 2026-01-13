@@ -405,26 +405,43 @@ export function drawAncientRuins(accessor, cx, floorY) {
 export function drawAtlantis(accessor, cx, bottomY) {
     const width = 15 + Math.floor(Math.random() * 10); // Half-width of rift
 
+    // Helper to calculate rift floor at a given offset
+    const getRiftFloorY = (dx) => {
+        const dist = Math.abs(dx) / width;
+        // Cubic curve for steep walls at bottom, opening up at top.
+        // Offset of 100 ensures we reach up towards the seabed from the deep bottom.
+        const offset = Math.floor(100 * (dist * dist * dist));
+        return bottomY - offset;
+    };
+
     // 1. Dig the Rift
     for (let dx = -width; dx <= width; dx++) {
-        const dist = Math.abs(dx) / width;
-        // Parabolic floor curve
-        const floorOffset = Math.floor(35 * (dist * dist * dist));
-        const localFloorY = bottomY - floorOffset;
+        const tx = cx + dx;
+        const targetFloorY = getRiftFloorY(dx);
 
-        // Clear water upwards
-        for (let y = localFloorY; y >= localFloorY - 60; y--) {
-            if (y < 0) break;
-            const existing = accessor.get(cx + dx, y);
-            // Replace solid blocks with water, or air with water (though air should already be water in ocean)
-            if (existing !== BLOCKS.WATER) {
-                 accessor.set(cx + dx, y, BLOCKS.WATER);
+        // Find existing seabed by scanning down
+        let seabedY = -1;
+        // Start scanning from a reasonable height (e.g. 50) to find the ocean floor
+        for (let y = 50; y < accessor.height; y++) {
+            const block = accessor.get(tx, y);
+            // Found solid ground (not air, water, or cloud)
+            if (block !== BLOCKS.AIR && block !== BLOCKS.WATER && block !== BLOCKS.CLOUD) {
+                seabedY = y;
+                break;
             }
         }
 
-        // Place floor
-        accessor.set(cx + dx, localFloorY, BLOCKS.SAND);
-        accessor.set(cx + dx, localFloorY + 1, BLOCKS.STONE);
+        // Only dig if the rift floor is deeper than the current seabed
+        if (seabedY !== -1 && targetFloorY > seabedY) {
+            // Excavate: Fill from seabedY down to targetFloorY with WATER
+            // This ensures a continuous water connection from the ocean above
+            for (let y = seabedY; y <= targetFloorY; y++) {
+                accessor.set(tx, y, BLOCKS.WATER);
+            }
+            // Place new floor
+            accessor.set(tx, targetFloorY, BLOCKS.SAND);
+            accessor.set(tx, targetFloorY + 1, BLOCKS.STONE);
+        }
     }
 
     // 2. Build Ruins
@@ -470,12 +487,17 @@ export function drawAtlantis(accessor, cx, bottomY) {
         const rx = centerX + (Math.random() < 0.5 ? 1 : -1) * (templeWidth/2 + 2 + Math.floor(Math.random() * 8));
         if (Math.abs(rx - centerX) >= width - 2) continue;
 
-        const ry = bottomY - Math.floor(35 * Math.pow(Math.abs(rx - centerX)/width, 3)); // Match floor height roughly
+        // Ensure ruin sits on the new rift floor
+        const ry = getRiftFloorY(rx - centerX);
 
-        const rh = 3 + Math.floor(Math.random() * 5);
-        for (let j = 1; j < rh; j++) {
-            accessor.set(rx, ry - j, BLOCKS.SNOW);
+        // Only place if we are deeper than seabed (meaning the rift exists here)
+        // We can check block at ry to be safe
+        if (accessor.get(rx, ry) === BLOCKS.SAND) {
+            const rh = 3 + Math.floor(Math.random() * 5);
+            for (let j = 1; j < rh; j++) {
+                accessor.set(rx, ry - j, BLOCKS.SNOW);
+            }
+            if (Math.random() < 0.5) accessor.set(rx, ry - rh, BLOCKS.STONE);
         }
-        if (Math.random() < 0.5) accessor.set(rx, ry - rh, BLOCKS.STONE);
     }
 }
