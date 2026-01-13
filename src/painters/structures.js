@@ -401,3 +401,13 @@ export function drawAncientRuins(accessor, cx, floorY) {
     accessor.set(cx - 1, floorY - 1, BLOCKS.GOLD);
     accessor.set(cx + 1, floorY - 1, BLOCKS.GOLD);
 }
+
+export function drawHydrothermalVent(accessor, x, y) {
+    const height = 2 + Math.floor(Math.random() * 3); // 2 to 4 blocks high
+    for (let i = 0; i < height; i++) {
+        const ty = y - i;
+        // Mostly COAL, small chance of GOLD
+        const block = Math.random() < 0.2 ? BLOCKS.GOLD : BLOCKS.COAL;
+        accessor.set(x, ty, block);
+    }
+}

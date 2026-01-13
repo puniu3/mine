@@ -120,6 +120,19 @@ export function generateSurfacePonds(world, heights, biomeByColumn, seaLevel) {
     }
 }
 
+export function generateHydrothermalVents(world, heights, biomeByColumn) {
+    const paint = world.getAccessor();
+    for (let x = 0; x < world.width; x++) {
+        if (biomeByColumn[x] === BIOMES.OCEAN) {
+            // Low probability check (e.g., 2% per column)
+            if (Math.random() < 0.02) {
+                 Painters.drawHydrothermalVent(paint, x, heights[x]);
+                 x += 2; // Spacing
+            }
+        }
+    }
+}
+
 export function generateWaterfalls(world, heights, biomeByColumn, seaLevel) {
     const paint = world.getAccessor();
     const maxWaterfalls = 2 + Math.floor(Math.random() * 2); // 2 to 3 waterfalls
