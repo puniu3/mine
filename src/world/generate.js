@@ -8,7 +8,7 @@ import { BIOMES, getBiomeConfigs, getSurfaceBlock, getSubSurfaceBlock } from './
 import { createExtremeTerrain, paintCliffFaces } from './terrain.js';
 import { simulateWaterSettling, restoreOceanLevels } from './water.js';
 import { generateVegetation } from './vegetation.js';
-import { generateStructures, generateHiddenFeatures, generateSurfacePonds, generateWaterfalls } from './features.js';
+import { generateStructures, generateHiddenFeatures, generateSurfacePonds, generateWaterfalls, generateOceanRifts } from './features.js';
 import { generateCaves, generateGeology } from './caves.js';
 import { generateClouds } from './clouds.js';
 import { generateBottomErosion } from './erosion.js';
@@ -75,6 +75,7 @@ export function generate(world) {
     generateWaterfalls(world, heights, biomeByColumn, SEA_LEVEL);
     generateStructures(world, heights, biomeByColumn, SEA_LEVEL);
     generateHiddenFeatures(world, heights, biomeByColumn);
+    generateOceanRifts(world, heights, biomeByColumn);
     generateBottomErosion(world);
 
     // Workbench placement

@@ -98,6 +98,73 @@ export function generateHiddenFeatures(world, heights, biomeByColumn) {
     Painters.drawLaputa(paint, laputaX, laputaY);
 }
 
+export function generateOceanRifts(world, heights, biomeByColumn) {
+    let riftCooldown = 0;
+
+    for (let x = 0; x < world.width; x++) {
+        if (riftCooldown > 0) {
+            riftCooldown--;
+            continue;
+        }
+
+        if (biomeByColumn[x] !== BIOMES.OCEAN) continue;
+
+        // Chance to start a rift (approx 1 every 200 blocks in ocean)
+        if (Math.random() < 0.005) {
+            const riftWidth = 12 + Math.floor(Math.random() * 16); // 12-27 blocks wide
+            const riftDepth = 20 + Math.floor(Math.random() * 20); // 20-39 blocks deep
+
+            // Check if we have enough space (ocean)
+            let isSafe = true;
+            for (let k = -2; k < riftWidth + 2; k++) {
+                 const tx = (x + k + world.width) % world.width;
+                 if (biomeByColumn[tx] !== BIOMES.OCEAN) {
+                     isSafe = false;
+                     break;
+                 }
+            }
+            if (!isSafe) continue;
+
+            // Carve the rift
+            for (let i = 0; i < riftWidth; i++) {
+                const tx = (x + i) % world.width;
+                // Parabolic shape
+                const dist = (i - riftWidth / 2) / (riftWidth / 2); // -1 to 1
+                const depthAtX = Math.floor(riftDepth * (1 - dist * dist));
+
+                if (depthAtX <= 0) continue;
+
+                // Find current floor. Since heights array might be outdated by other features,
+                // we should find the first solid block from top down or use heights as a guide.
+                // Using heights[tx] is safer as a reference for "original floor".
+                const originalFloorY = heights[tx];
+                const targetFloorY = Math.min(world.height - 2, originalFloorY + depthAtX);
+
+                // Carve down to new floor
+                for (let y = originalFloorY; y <= targetFloorY; y++) {
+                     world.setBlock(tx, y, BLOCKS.WATER);
+                }
+
+                // Place Coal at the bottom
+                // Only if we carved deep enough
+                if (depthAtX > riftDepth * 0.6) {
+                    if (Math.random() < 0.7) {
+                         // Place coal
+                         if (targetFloorY + 1 < world.height) {
+                             world.setBlock(tx, targetFloorY + 1, BLOCKS.COAL);
+                             // Chance for deeper coal
+                             if (Math.random() < 0.5 && targetFloorY + 2 < world.height) {
+                                 world.setBlock(tx, targetFloorY + 2, BLOCKS.COAL);
+                             }
+                         }
+                    }
+                }
+            }
+            riftCooldown = riftWidth + 50; // Don't overlap rifts
+        }
+    }
+}
+
 export function generateSurfacePonds(world, heights, biomeByColumn, seaLevel) {
     const paint = world.getAccessor();
     const pondCount = Math.floor(world.width / 60);
