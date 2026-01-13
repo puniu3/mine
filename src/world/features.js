@@ -96,6 +96,27 @@ export function generateHiddenFeatures(world, heights, biomeByColumn) {
     const laputaX = 150 + Math.floor(Math.random() * (world.width - 300));
     const laputaY = 30 + Math.floor(Math.random() * 10); // Y: 30-40 (High Sky)
     Painters.drawLaputa(paint, laputaX, laputaY);
+
+    // 6. Atlantis (Deep Ocean Rift + Ruins) - Only ONE per world
+    // Attempt to find a suitable location in the Ocean
+    let atlantisX = -1;
+    for (let attempt = 0; attempt < 50; attempt++) {
+        const tx = 50 + Math.floor(Math.random() * (world.width - 100));
+        // Check if this column and surroundings are OCEAN
+        if (biomeByColumn[tx] === BIOMES.OCEAN &&
+            biomeByColumn[tx - 15] === BIOMES.OCEAN &&
+            biomeByColumn[tx + 15] === BIOMES.OCEAN) {
+            atlantisX = tx;
+            break;
+        }
+    }
+
+    if (atlantisX !== -1) {
+        // Place it deep near the bottom of the world
+        // We use world.height - 15 to give some buffer from bedrock
+        const atlantisY = world.height - 15;
+        Painters.drawAtlantis(paint, atlantisX, atlantisY);
+    }
 }
 
 export function generateSurfacePonds(world, heights, biomeByColumn, seaLevel) {

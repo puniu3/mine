@@ -401,3 +401,81 @@ export function drawAncientRuins(accessor, cx, floorY) {
     accessor.set(cx - 1, floorY - 1, BLOCKS.GOLD);
     accessor.set(cx + 1, floorY - 1, BLOCKS.GOLD);
 }
+
+export function drawAtlantis(accessor, cx, bottomY) {
+    const width = 15 + Math.floor(Math.random() * 10); // Half-width of rift
+
+    // 1. Dig the Rift
+    for (let dx = -width; dx <= width; dx++) {
+        const dist = Math.abs(dx) / width;
+        // Parabolic floor curve
+        const floorOffset = Math.floor(35 * (dist * dist * dist));
+        const localFloorY = bottomY - floorOffset;
+
+        // Clear water upwards
+        for (let y = localFloorY; y >= localFloorY - 60; y--) {
+            if (y < 0) break;
+            const existing = accessor.get(cx + dx, y);
+            // Replace solid blocks with water, or air with water (though air should already be water in ocean)
+            if (existing !== BLOCKS.WATER) {
+                 accessor.set(cx + dx, y, BLOCKS.WATER);
+            }
+        }
+
+        // Place floor
+        accessor.set(cx + dx, localFloorY, BLOCKS.SAND);
+        accessor.set(cx + dx, localFloorY + 1, BLOCKS.STONE);
+    }
+
+    // 2. Build Ruins
+    const ruinsWidth = Math.floor(width * 0.7);
+    const centerX = cx;
+    const centerFloorY = bottomY;
+
+    // A. Main Temple
+    const templeWidth = 8 + Math.floor(Math.random() * 5);
+    const templeHeight = 10 + Math.floor(Math.random() * 5);
+
+    // Columns
+    for (let i = 0; i <= templeWidth; i += 2) {
+        const colX = centerX - Math.floor(templeWidth / 2) + i;
+        if (Math.abs(colX - centerX) > ruinsWidth) continue;
+
+        const h = templeHeight - (Math.random() < 0.3 ? Math.floor(Math.random() * 5) : 0); // Broken columns
+        for (let j = 1; j < h; j++) {
+            accessor.set(colX, centerFloorY - j, BLOCKS.SNOW); // Marble columns
+        }
+        // Capital
+        accessor.set(colX, centerFloorY - h, BLOCKS.GOLD);
+    }
+
+    // Roof (Fragmented)
+    const roofY = centerFloorY - templeHeight;
+    for (let dx = -Math.floor(templeWidth/2) - 1; dx <= Math.floor(templeWidth/2) + 1; dx++) {
+        if (Math.random() > 0.2) {
+             accessor.set(centerX + dx, roofY, BLOCKS.STONE);
+        }
+        if (Math.abs(dx) < templeWidth/2 && Math.random() < 0.3) {
+             accessor.set(centerX + dx, roofY - 1, BLOCKS.LEAVES); // Seaweed on roof
+        }
+    }
+
+    // Altar
+    accessor.set(centerX, centerFloorY - 1, BLOCKS.JACKPOT);
+    accessor.set(centerX - 1, centerFloorY - 1, BLOCKS.GOLD);
+    accessor.set(centerX + 1, centerFloorY - 1, BLOCKS.GOLD);
+
+    // B. Random scattered ruins nearby
+    for (let k = 0; k < 5; k++) {
+        const rx = centerX + (Math.random() < 0.5 ? 1 : -1) * (templeWidth/2 + 2 + Math.floor(Math.random() * 8));
+        if (Math.abs(rx - centerX) >= width - 2) continue;
+
+        const ry = bottomY - Math.floor(35 * Math.pow(Math.abs(rx - centerX)/width, 3)); // Match floor height roughly
+
+        const rh = 3 + Math.floor(Math.random() * 5);
+        for (let j = 1; j < rh; j++) {
+            accessor.set(rx, ry - j, BLOCKS.SNOW);
+        }
+        if (Math.random() < 0.5) accessor.set(rx, ry - rh, BLOCKS.STONE);
+    }
+}
