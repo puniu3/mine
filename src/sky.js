@@ -64,7 +64,7 @@ function lerpColor(c1, c2, t) {
  * Calculates visibility factor based on altitude.
  * Returns 1.0 (visible) at surface/space, 0.0 (hidden) deep underground.
  */
-function getAltitudeVisibility(altitude) {
+export function getAltitudeVisibility(altitude) {
     if (altitude > ALTITUDE_UNDERGROUND_START) {
         // Fade out as we go deeper (0.5 to 0.7)
         const depth = (altitude - ALTITUDE_UNDERGROUND_START) * 5; 

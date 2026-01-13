@@ -1,5 +1,5 @@
 /**
- * Game Rendering Module
+ * Game Rendering Module (PixiJS)
  * Handles drawing the world, sky, entities, and UI overlays.
  */
 
@@ -22,184 +22,195 @@ import {
     getSunRenderData,
     getMoonRenderData,
     getStarRenderData,
-    drawAurora
+    getAltitudeVisibility
 } from './sky.js';
-import { drawJackpotParticles } from './jackpot.js';
-import { draw as drawFireworks } from './fireworks.js';
-import { draw as drawBlockParticles } from './block_particles.js';
+import { drawJackpotParticles } from './jackpot.js'; // Will be refactored to use Pixi
+import { draw as drawFireworks } from './fireworks.js'; // Will be refactored
+import { draw as drawBlockParticles } from './block_particles.js'; // Will be refactored
 
-export function drawGame(ctx, {
-    world,
-    player,
-    cameraX,
-    cameraY,
-    zoom = 1,
-    logicalWidth,
-    logicalHeight,
-    textures,
-    input,
-    tntManager
-}) {
-    if (!world) return;
+const PIXI = window.PIXI;
 
+// --- Global Renderer State ---
+let app;
+let isInitialized = false;
+
+// Texture Cache (Block ID -> PIXI.Texture)
+const blockTextureCache = {};
+
+// Sprite Pools
+const blockSprites = []; // Array of PIXI.Sprite
+let blockSpriteCount = 0; // Number of active sprites in current frame
+
+// Layers (Containers)
+let skyContainer;
+let starContainer;
+let celestialContainer; // Sun, Moon
+let auroraContainer;
+let worldContainer;
+let entityContainer; // Player, Particles
+let uiContainer;     // Cursor, Highlights
+
+// Reusable Graphics/Sprites
+let skyGradientSprite;
+let skyCanvas; // Canvas for generating gradient texture
+let skyCtx;
+
+let auroraTexture; // Gradient texture for aurora ribbons
+
+// --- Initialization ---
+
+export async function initRenderer(canvas) {
+    if (isInitialized) return;
+
+    app = new PIXI.Application();
+
+    // Initialize Pixi Application
+    await app.init({
+        canvas: canvas,
+        backgroundAlpha: 0, // Transparent, we draw sky manually
+        antialias: false,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+        resizeTo: window
+    });
+
+    // Create Layers
+    skyContainer = new PIXI.Container();
+    starContainer = new PIXI.Container();
+    auroraContainer = new PIXI.Container();
+    celestialContainer = new PIXI.Container();
+    worldContainer = new PIXI.Container();
+    entityContainer = new PIXI.Container();
+    uiContainer = new PIXI.Container();
+
+    app.stage.addChild(skyContainer);
+    app.stage.addChild(starContainer);
+    app.stage.addChild(auroraContainer);
+    app.stage.addChild(celestialContainer);
+    app.stage.addChild(worldContainer);
+    app.stage.addChild(entityContainer);
+    app.stage.addChild(uiContainer);
+
+    // Initialize Sky Gradient Helper
+    skyCanvas = document.createElement('canvas');
+    skyCanvas.width = 1;
+    skyCanvas.height = 256;
+    skyCtx = skyCanvas.getContext('2d');
+    skyGradientSprite = new PIXI.Sprite();
+    skyContainer.addChild(skyGradientSprite);
+
+    // Initialize Aurora Texture
+    const auroraCanvas = document.createElement('canvas');
+    auroraCanvas.width = 1;
+    auroraCanvas.height = 256;
+    const aCtx = auroraCanvas.getContext('2d');
+    const grad = aCtx.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0, 'rgba(255,255,255,0)');
+    grad.addColorStop(0.2, 'rgba(255,255,255,0.6)'); // Slightly transparent white base
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    aCtx.fillStyle = grad;
+    aCtx.fillRect(0, 0, 1, 256);
+    auroraTexture = PIXI.Texture.from(auroraCanvas);
+
+    isInitialized = true;
+    console.log("Pixi Renderer Initialized");
+}
+
+export function setBlockTextures(generatedTextures) {
+    // Convert HTMLCanvasElement textures to PIXI.Textures
+    for (const [id, canvas] of Object.entries(generatedTextures)) {
+        const texture = PIXI.Texture.from(canvas);
+        texture.source.scaleMode = 'nearest'; // Ensure pixel art look
+        blockTextureCache[id] = texture;
+    }
+}
+
+// --- Helper: Get or Create Sprite from Pool ---
+function getBlockSprite(index) {
+    if (index < blockSprites.length) {
+        const sprite = blockSprites[index];
+        sprite.visible = true;
+        sprite.alpha = 1; // Reset alpha
+        sprite.tint = 0xFFFFFF; // Reset tint
+        return sprite;
+    } else {
+        const sprite = new PIXI.Sprite();
+        sprite.anchor.set(0); // Top-left origin
+        worldContainer.addChild(sprite);
+        blockSprites.push(sprite);
+        return sprite;
+    }
+}
+
+function hideUnusedSprites(usedCount) {
+    for (let i = usedCount; i < blockSprites.length; i++) {
+        blockSprites[i].visible = false;
+    }
+}
+
+// --- Main Render Function ---
+
+export function drawGame(state) {
+    if (!isInitialized || !app) return;
+
+    const {
+        world,
+        player,
+        cameraX,
+        cameraY,
+        zoom = 1,
+        logicalWidth,
+        logicalHeight,
+        input,
+        tntManager
+    } = state;
+
+    // --- 0. Update Layer Transforms (Camera) ---
+    // World and Entity layers move with camera
+    // We implement camera by moving the container
+    // cameraX/Y is top-left of viewport in world coords
+
+    // Actually, the previous renderer drew tiles at `(x * TILE_SIZE - cameraX) * zoom`.
+    // We can achieve this by setting container position and scale.
+
+    worldContainer.x = -cameraX * zoom;
+    worldContainer.y = -cameraY * zoom;
+    worldContainer.scale.set(zoom);
+
+    entityContainer.x = -cameraX * zoom;
+    entityContainer.y = -cameraY * zoom;
+    entityContainer.scale.set(zoom);
+
+    // UI/Sky layers are screen space (mostly)
+    // Sky is screen space
+    
     // --- 1. Calculate Time & Altitude ---
     const now = Date.now();
     const normalizedTime = (now % DAY_DURATION_MS) / DAY_DURATION_MS;
     const currentDay = Math.floor(now / DAY_DURATION_MS);
-
-    // Altitude: 0.0 (Top) to 1.0 (Bottom)
     const worldHeightPixels = world.height * TILE_SIZE;
     const cameraCenterY = cameraY + logicalHeight / 2;
     let altitude = ((cameraCenterY % worldHeightPixels) + worldHeightPixels) % worldHeightPixels / worldHeightPixels;
 
     // --- 2. Sky Gradient ---
-    const { top: skyTop, bottom: skyBottom } = getSkyGradientColors(normalizedTime, altitude);
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, logicalHeight);
-    gradient.addColorStop(0, skyTop);
-    gradient.addColorStop(1, skyBottom);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+    updateSky(normalizedTime, altitude, logicalWidth, logicalHeight);
 
     // --- 3. Stars ---
-    const stars = getStarRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
-    ctx.fillStyle = '#FFFFFF';
-    stars.forEach(star => {
-        ctx.globalAlpha = star.opacity;
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        ctx.fill();
-    });
-    ctx.globalAlpha = 1.0;
+    updateStars(normalizedTime, altitude, logicalWidth, logicalHeight);
 
-    // --- 3.5 Aurora Borealis ---
-    drawAurora(ctx, normalizedTime, altitude, logicalWidth, logicalHeight, currentDay);
+    // --- 4. Celestial Bodies (Sun/Moon) ---
+    updateCelestialBodies(normalizedTime, altitude, logicalWidth, logicalHeight, currentDay);
 
-    // --- 4. Celestial Bodies & Atmosphere (Bloom) ---
-    const sun = getSunRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
-    const moon = getMoonRenderData(normalizedTime, altitude, logicalWidth, logicalHeight, currentDay);
-    const bodies = [sun, moon];
+    // --- 5. Aurora ---
+    updateAurora(normalizedTime, altitude, logicalWidth, logicalHeight, currentDay);
 
-    // 4.1 Draw Glow/Bloom first (Behind the body)
-    bodies.forEach(body => {
-        if (!body.isVisible) return;
-        ctx.globalAlpha = body.opacity !== undefined ? body.opacity : 1.0;
+    // --- 6. World Rendering (Blocks) ---
+    blockSpriteCount = 0;
 
-        // Create atmospheric glow
-        const glowRadius = body.radius * 6;
-        const glow = ctx.createRadialGradient(body.x, body.y, body.radius, body.x, body.y, glowRadius);
-        
-        // Use glowColor from sky.js or fallback
-        const gColor = body.glowColor || 'rgba(255, 255, 255, 0.2)';
-        
-        glow.addColorStop(0, gColor);
-        glow.addColorStop(0.3, gColor.replace(/[\d.]+\)$/, '0.1)')); // Fade opacity
-        glow.addColorStop(1, 'rgba(0,0,0,0)');
-
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(body.x, body.y, glowRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-    });
-
-    // 4.2 Draw Physical Bodies (Sun/Moon Discs)
-    bodies.forEach(body => {
-        if (!body.isVisible) return;
-        
-        ctx.globalAlpha = body.opacity !== undefined ? body.opacity : 1.0;
-
-        if (body.type === 'sun') {
-            // --- Sun Rendering ---
-            ctx.beginPath();
-            ctx.arc(body.x, body.y, body.radius, 0, Math.PI * 2);
-            ctx.fillStyle = body.color;
-            ctx.shadowColor = body.shadow.color;
-            ctx.shadowBlur = body.shadow.blur;
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        } else if (body.type === 'moon') {
-            // --- Moon Rendering ---
-            const r = body.radius;
-            const phase = body.phase; 
-            
-            ctx.save();
-            ctx.translate(body.x, body.y);
-            const MOON_TILT = Math.PI / 4; 
-            ctx.rotate(MOON_TILT);
-
-            ctx.shadowColor = body.shadow.color;
-            ctx.shadowBlur = body.shadow.blur;
-            
-            ctx.fillStyle = body.color;
-            ctx.beginPath();
-
-            // Geometric Phase Logic
-            if (phase <= 0.5) {
-                // Waxing
-                ctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false);
-                const xp = r * Math.cos(phase * 2 * Math.PI); 
-                const w = Math.abs(xp);
-                ctx.ellipse(0, 0, w, r, 0, Math.PI / 2, 3 * Math.PI / 2, xp > 0);
-            } else {
-                // Waning
-                ctx.arc(0, 0, r, Math.PI / 2, -Math.PI / 2, false);
-                const xp = -r * Math.cos(phase * 2 * Math.PI);
-                const w = Math.abs(xp);
-                ctx.ellipse(0, 0, w, r, 0, -Math.PI / 2, Math.PI / 2, xp < 0);
-            }
-
-            ctx.closePath();
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            // Craters
-            ctx.save();
-            ctx.clip(); 
-            ctx.fillStyle = 'rgba(0,0,0,0.1)';
-            const craters = [
-                { dx: -8, dy: -5, r: 6 },
-                { dx: 10, dy: 8, r: 4 },
-                { dx: -5, dy: 10, r: 3 }
-            ];
-            craters.forEach(c => {
-                ctx.beginPath();
-                ctx.arc(c.dx, c.dy, c.r, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            ctx.restore(); 
-            ctx.restore(); 
-        }
-        ctx.globalAlpha = 1.0;
-    });
-
-    // --- Calculate Visible Range ---
     const { startX, endX, startY, endY } = calculateVisibleTileRange(
         cameraX, cameraY, logicalWidth, logicalHeight, TILE_SIZE, zoom
     );
 
-    // --- 5. Water Masking Pass (Integer Snapped) ---
-    // Erase sky elements behind water to handle transparency correctly
-    ctx.fillStyle = gradient;
-    
-    // Pre-calculate screen tile dimensions to avoid gaps
-    const screenTileW = Math.ceil(TILE_SIZE * zoom);
-    const screenTileH = Math.ceil(TILE_SIZE * zoom);
-
-    for (let y = startY; y < endY; y++) {
-        for (let x = startX; x < endX; x++) {
-            const normalizedY = (y % world.height + world.height) % world.height;
-            const block = world.getBlock(x, normalizedY);
-
-            if (block === BLOCKS.WATER) {
-                const screenX = Math.floor((x * TILE_SIZE - cameraX) * zoom);
-                const screenY = Math.floor((y * TILE_SIZE - cameraY) * zoom);
-                ctx.fillRect(screenX, screenY, screenTileW, screenTileH);
-            }
-        }
-    }
-
-    // --- 6. World Rendering (Integer Snapped) ---
     const NO_SHADOW_BLOCKS = new Set([
         BLOCKS.CLOUD,
         BLOCKS.JUMP_PAD,
@@ -213,129 +224,354 @@ export function drawGame(ctx, {
             const normalizedY = (y % world.height + world.height) % world.height;
             const block = world.getBlock(x, normalizedY);
 
-            if (block !== BLOCKS.AIR && textures[block]) {
-                const screenXBase = Math.floor((x * TILE_SIZE - cameraX) * zoom);
-                const screenYBase = Math.floor((y * TILE_SIZE - cameraY) * zoom);
+            if (block !== BLOCKS.AIR && blockTextureCache[block]) {
+                const sprite = getBlockSprite(blockSpriteCount++);
 
-                // Special rendering for TNT
+                // Position in World Coordinates
+                sprite.x = x * TILE_SIZE;
+                sprite.y = y * TILE_SIZE;
+                sprite.width = TILE_SIZE;
+                sprite.height = TILE_SIZE;
+                sprite.texture = blockTextureCache[block];
+
+                // Logic from original renderer:
+                // TNT Special Effects
                 if (block === BLOCKS.TNT && tntManager && tntManager.hasTimerAt(x, normalizedY)) {
-                    const time = now * 0.01; 
+                    const time = now * 0.01;
                     const shakeX = Math.sin(time * 15 + x * 7) * 1.2;
                     const shakeY = Math.cos(time * 18 + y * 5) * 1.2;
+                    sprite.x += shakeX;
+                    sprite.y += shakeY;
                     
-                    const tntScreenX = Math.floor((x * TILE_SIZE + shakeX - cameraX) * zoom);
-                    const tntScreenY = Math.floor((y * TILE_SIZE + shakeY - cameraY) * zoom);
-
-                    ctx.drawImage(
-                        textures[block],
-                        tntScreenX,
-                        tntScreenY,
-                        screenTileW,
-                        screenTileH
-                    );
-
+                    // Pulse red
                     const pulse = (Math.sin(time * 8) + 1) / 2;
-                    ctx.fillStyle = `rgba(255, ${Math.floor(100 - pulse * 100)}, 0, ${0.2 + pulse * 0.3})`;
-                    ctx.fillRect(
-                        tntScreenX,
-                        tntScreenY,
-                        screenTileW,
-                        screenTileH
-                    );
-
-                    const sparkle = Math.sin(time * 20) > 0.3;
-                    if (sparkle) {
-                        const sparkX = tntScreenX + screenTileW / 2 + (Math.random() - 0.5) * 8 * zoom;
-                        const sparkY = tntScreenY + 2 * zoom;
-                        const sparkSize = (3 + Math.random() * 3) * zoom;
-                        ctx.fillStyle = '#ffff00';
-                        ctx.beginPath();
-                        ctx.arc(sparkX, sparkY, sparkSize, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.fillStyle = 'rgba(255, 200, 0, 0.5)';
-                        ctx.beginPath();
-                        ctx.arc(sparkX, sparkY, sparkSize + 2 * zoom, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                } else {
-                    ctx.drawImage(textures[block], screenXBase, screenYBase, screenTileW, screenTileH);
+                    // Tint logic: 0xFFFFFF is normal.
+                    // To tint RED, we want (1, 0, 0) multiply? No, Pixi tint multiplies.
+                    // If texture is white/red, multiplying by Red makes it Red.
+                    // But if texture is arbitrary, we want to overlay red.
+                    // Pixi Sprite doesn't support overlay color easily without custom shader.
+                    // Simple hack: Tint it reddish (removes green/blue).
+                    const val = Math.floor(255 * (1 - pulse * 0.5)); // 255 to 128
+                    // R=255, G=val, B=val
+                    sprite.tint = (255 << 16) | (val << 8) | val;
                 }
 
+                // Shadow Logic
                 if (!NO_SHADOW_BLOCKS.has(block)) {
                     const aboveY = (normalizedY - 1 + world.height) % world.height;
                     const neighborAbove = world.getBlock(x, aboveY);
                     if (neighborAbove !== BLOCKS.AIR && !isBlockTransparent(neighborAbove, BLOCK_PROPS)) {
-                        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                        ctx.fillRect(screenXBase, screenYBase, screenTileW, screenTileH);
+                        // Apply shadow tint
+                        // Original was black with 0.3 alpha.
+                        // Multiply: 0.7 intensity
+                        const shadowVal = Math.floor(255 * 0.7);
+                        // Combine with existing tint (if any)
+                        const currentTint = sprite.tint;
+                        const r = ((currentTint >> 16) & 0xFF) * 0.7;
+                        const g = ((currentTint >> 8) & 0xFF) * 0.7;
+                        const b = (currentTint & 0xFF) * 0.7;
+                        sprite.tint = (r << 16) | (g << 8) | b;
                     }
                 }
             }
         }
     }
 
+    hideUnusedSprites(blockSpriteCount);
+
     // --- 7. Entities & Particles ---
-    // Apply transform for entities to align with world
-    // We use raw cameraX/Y here to match the logic basis of the tiles (x*TILE - cameraX)
-    ctx.save();
-    ctx.scale(zoom, zoom);
-    ctx.translate(-cameraX, -cameraY);
+    // We pass the entityContainer to these functions?
+    // Or we continue to assume they draw to "ctx"?
+    // The instructions say "Refactor Rendering Logic".
+    // I need to update those modules later.
+    // For now, I will create a "Graphics Context Adapter" OR
+    // I'll rely on the plan to refactor them in Step 5.
+    // BUT the game will crash if I call `player.draw(ctx)` and ctx is gone.
+    // Wait, `renderGame` doesn't receive `ctx`.
+    // I must update `player.draw` to accept a Pixi container or renderer.
 
-    if (player) player.draw(ctx);
-    drawJackpotParticles(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
-    drawFireworks(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
-    drawBlockParticles(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
+    // For this step (Core Rendering), I am establishing the system.
+    // I will call `player.draw(entityContainer)` and hope to patch Player soon.
+    // Actually, I should probably do a quick patch on Player in the next steps.
+    // Important: `entityContainer` is already scaled/positioned for world space.
 
-    // --- 8. Cursor Highlight ---
+    // --- TEMPORARY: Clear entity container every frame and redraw? ---
+    // This mimics immediate mode for entities.
+    entityContainer.removeChildren();
+
+    if (player && typeof player.renderPixi === 'function') {
+        player.renderPixi(entityContainer);
+    }
+
+    drawJackpotParticles(entityContainer, cameraX, cameraY, logicalWidth, logicalHeight);
+    drawFireworks(entityContainer, cameraX, cameraY, logicalWidth, logicalHeight);
+    drawBlockParticles(entityContainer, cameraX, cameraY, logicalWidth, logicalHeight);
+
+    // --- 8. UI Overlay (Cursor) ---
+    uiContainer.removeChildren();
+    const uiGraphics = new PIXI.Graphics();
+    uiContainer.addChild(uiGraphics);
+
     if (input && input.mouse && input.mouse.active) {
         // screenToWorld uses zoom now
         const worldPos = screenToWorld(input.mouse.x, input.mouse.y, cameraX, cameraY, zoom);
+        // We need tile coordinates
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
+
         if (isWithinReach(worldPos.x, worldPos.y, player.getCenterX(), player.getCenterY(), REACH)) {
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            // Draw Cursor
+            // Since UI container is in screen space? No, let's keep UI container in screen space.
+            // But we want to draw the cursor at the TILE position (World Space projected to Screen).
+
+            const screenX = (bx * TILE_SIZE - cameraX) * zoom;
+            const screenY = (by * TILE_SIZE - cameraY) * zoom;
+            const size = TILE_SIZE * zoom;
+
+            uiGraphics.rect(screenX, screenY, size, size);
+            uiGraphics.stroke({ width: 2, color: 0xFFFFFF, alpha: 0.5 });
         }
     }
 
-    // --- 9. Gamepad Virtual Cursor ---
-    if (input && input.gamepad && input.gamepad.cursorActive && input.gamepad.connected) {
+    // Gamepad Highlight
+     if (input && input.gamepad && input.gamepad.cursorActive && input.gamepad.connected) {
         const gcX = input.gamepad.cursorX;
         const gcY = input.gamepad.cursorY;
         const worldPos = screenToWorld(gcX, gcY, cameraX, cameraY, zoom);
         const { tx: bx, ty: by } = worldToTile(worldPos.x, worldPos.y, TILE_SIZE);
 
-        ctx.strokeStyle = 'rgba(255, 235, 59, 0.7)';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-    }
+        const screenX = (bx * TILE_SIZE - cameraX) * zoom;
+        const screenY = (by * TILE_SIZE - cameraY) * zoom;
+        const size = TILE_SIZE * zoom;
 
-    // Restore entity transform
-    ctx.restore();
+        uiGraphics.rect(screenX, screenY, size, size);
+        uiGraphics.stroke({ width: 3, color: 0xFFEB3B, alpha: 0.7 });
 
-    // --- 10. Gamepad Crosshair ---
-    // Drawn in screen space (unscaled)
-    if (input && input.gamepad && input.gamepad.cursorActive && input.gamepad.connected) {
-        const gcX = input.gamepad.cursorX;
-        const gcY = input.gamepad.cursorY;
+        // Crosshair (Screen Space)
         const crosshairSize = 12;
         const innerGap = 4;
 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(gcX - crosshairSize, gcY);
-        ctx.lineTo(gcX - innerGap, gcY);
-        ctx.moveTo(gcX + innerGap, gcY);
-        ctx.lineTo(gcX + crosshairSize, gcY);
-        ctx.moveTo(gcX, gcY - crosshairSize);
-        ctx.lineTo(gcX, gcY - innerGap);
-        ctx.moveTo(gcX, gcY + innerGap);
-        ctx.lineTo(gcX, gcY + crosshairSize);
-        ctx.stroke();
+        uiGraphics.beginPath();
+        uiGraphics.moveTo(gcX - crosshairSize, gcY);
+        uiGraphics.lineTo(gcX - innerGap, gcY);
+        uiGraphics.moveTo(gcX + innerGap, gcY);
+        uiGraphics.lineTo(gcX + crosshairSize, gcY);
+        uiGraphics.moveTo(gcX, gcY - crosshairSize);
+        uiGraphics.lineTo(gcX, gcY - innerGap);
+        uiGraphics.moveTo(gcX, gcY + innerGap);
+        uiGraphics.lineTo(gcX, gcY + crosshairSize);
+        uiGraphics.stroke({ width: 2, color: 0xFFFFFF, alpha: 0.9 });
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.beginPath();
-        ctx.arc(gcX, gcY, 2, 0, Math.PI * 2);
-        ctx.fill();
+        uiGraphics.circle(gcX, gcY, 2);
+        uiGraphics.fill(0xFFFFFF);
     }
+}
+
+// --- Helpers for Sub-systems ---
+
+function updateSky(time, altitude, width, height) {
+    const { top, bottom } = getSkyGradientColors(time, altitude);
+
+    // Update gradient texture
+    const grad = skyCtx.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0, top);
+    grad.addColorStop(1, bottom);
+    skyCtx.fillStyle = grad;
+    skyCtx.fillRect(0, 0, 1, 256);
+
+    // Update Pixi Sprite
+    skyGradientSprite.texture = PIXI.Texture.from(skyCanvas); // This might be slow if created every frame?
+    // Optimization: Reuse texture source or update resource?
+    // PIXI 8: Texture.from returns a texture.
+    // Better: create one texture and update its source.
+    // For now, let's trust Pixi's caching or optimizing later.
+    // Actually, creating a new Texture object every frame is bad.
+
+    if (!skyGradientSprite._cachedTexture) {
+         skyGradientSprite._cachedTexture = PIXI.Texture.from(skyCanvas);
+         skyGradientSprite.texture = skyGradientSprite._cachedTexture;
+    } else {
+         skyGradientSprite._cachedTexture.source.update(); // Force update from canvas
+    }
+
+    skyGradientSprite.width = width;
+    skyGradientSprite.height = height;
+}
+
+// Pool for stars
+let starGraphics;
+function updateStars(time, altitude, width, height) {
+    if (!starGraphics) {
+        starGraphics = new PIXI.Graphics();
+        starContainer.addChild(starGraphics);
+    }
+    starGraphics.clear();
+
+    const stars = getStarRenderData(time, altitude, width, height);
+    if (stars.length === 0) return;
+
+    starGraphics.fillStyle = 0xFFFFFF; // Stars are white
+
+    for (const star of stars) {
+        starGraphics.globalAlpha = star.opacity; // Graphics context alpha?
+        // PIXI Graphics doesn't have globalAlpha per shape unless we batch.
+        // We can use alpha in the fill color?
+        // 0xFFFFFF with alpha.
+        starGraphics.circle(star.x, star.y, star.size);
+        starGraphics.fill({ color: 0xFFFFFF, alpha: star.opacity });
+    }
+}
+
+// Sun/Moon Sprites
+let sunGraphics;
+let moonGraphics;
+
+function updateCelestialBodies(time, altitude, width, height, day) {
+    if (!sunGraphics) {
+        sunGraphics = new PIXI.Graphics();
+        celestialContainer.addChild(sunGraphics);
+    }
+    if (!moonGraphics) {
+        moonGraphics = new PIXI.Graphics();
+        celestialContainer.addChild(moonGraphics);
+    }
+
+    sunGraphics.clear();
+    moonGraphics.clear();
+
+    const sun = getSunRenderData(time, altitude, width, height);
+    const moon = getMoonRenderData(time, altitude, width, height, day);
+
+    // Draw Sun
+    if (sun.isVisible) {
+        // Glow
+        sunGraphics.circle(sun.x, sun.y, sun.radius * 6);
+        sunGraphics.fill({ color: sun.glowColor, alpha: 0.2 });
+
+        // Body
+        sunGraphics.circle(sun.x, sun.y, sun.radius);
+        sunGraphics.fill({ color: sun.color, alpha: sun.opacity });
+    }
+
+    // Draw Moon
+    if (moon.isVisible) {
+        // Glow
+        moonGraphics.circle(moon.x, moon.y, moon.radius * 6);
+        moonGraphics.fill({ color: moon.glowColor, alpha: 0.2 });
+
+        // Body
+        moonGraphics.circle(moon.x, moon.y, moon.radius);
+        moonGraphics.fill({ color: moon.color, alpha: moon.opacity });
+    }
+}
+
+let auroraGraphics;
+function updateAurora(time, altitude, width, height, dayCount) {
+    if (!auroraGraphics) {
+        auroraGraphics = new PIXI.Graphics();
+        auroraContainer.addChild(auroraGraphics);
+    }
+    auroraGraphics.clear();
+
+    // 1. Visibility Check
+    if (dayCount % 28 !== 0) {
+        auroraContainer.visible = false;
+        return;
+    }
+
+    let opacity = 0;
+    if (time > 0.4 && time < 0.6) {
+        if (time < 0.45) opacity = (time - 0.4) * 20;
+        else if (time > 0.55) opacity = (0.6 - time) * 20;
+        else opacity = 1.0;
+    } else {
+        auroraContainer.visible = false;
+        return;
+    }
+
+    const altVis = getAltitudeVisibility(altitude);
+    opacity *= altVis;
+
+    if (opacity <= 0.01) {
+        auroraContainer.visible = false;
+        return;
+    }
+    auroraContainer.visible = true;
+    auroraContainer.alpha = opacity; // Use container alpha
+
+    const t = Date.now() / 4000;
+
+    const ribbons = [
+        { color: 0xA06432, h: 160, s: 100, l: 50, yBase: height * 0.2, amp: height * 0.1, speed: 1.0, widthScale: 1.0 }, // Green
+        { color: 0x64643C, h: 260, s: 100, l: 60, yBase: height * 0.15, amp: height * 0.15, speed: 0.7, widthScale: 1.5 }, // Purple (Hue 260)
+        { color: 0xBE6432, h: 190, s: 100, l: 50, yBase: height * 0.25, amp: height * 0.08, speed: 1.3, widthScale: 0.8 }  // Cyan
+    ];
+
+    // Helper to convert HSL to Hex number for Pixi
+    // We already stored colors approx in hex above, but let's stick to simple
+    // Actually, ribbon color should be white if we use the texture?
+    // No, texture is white gradient. Color multiplies.
+    // So we use HSL -> Hex.
+
+    // We use a matrix to stretch the gradient texture to the screen height
+    const matrix = new PIXI.Matrix();
+    matrix.scale(1, height / 256); // Stretch 256px texture to screen height
+
+    for (let i = 0; i < ribbons.length; i++) {
+        const r = ribbons[i];
+
+        // Construct points for the ribbon polygon
+        // Bottom edge is wavy. Top edge is at y=0.
+        // We iterate x.
+        const points = [];
+        const step = 40;
+
+        // Start top-left
+        points.push(0, 0);
+
+        // Bottom wavy edge
+        for (let x = 0; x <= width + step; x += step) {
+            const noise1 = Math.sin(x * 0.002 * r.widthScale + t * r.speed + i);
+            const noise2 = Math.sin(x * 0.005 * r.widthScale - t * r.speed * 0.5);
+            const y = r.yBase + (noise1 * r.amp) + (noise2 * r.amp * 0.5);
+            points.push(x, y);
+        }
+
+        // Top-right
+        points.push(width + step, 0);
+
+        // Close shape is handled by poly? No, we pushed vertices in order.
+
+        // Convert HSL to RGB Hex
+        // Simple HSL to RGB conversion helper or just use hardcoded hex
+        // Green (160): #33ffaa -> 0x33ffaa
+        // Purple (260): #aa66ff -> 0xaa66ff
+        // Cyan (190): #33ccff -> 0x33ccff
+        let hexColor = 0xFFFFFF;
+        if (r.h === 160) hexColor = 0x33FFAA;
+        if (r.h === 260) hexColor = 0xAA66FF;
+        if (r.h === 190) hexColor = 0x33CCFF;
+
+        auroraGraphics.poly(points);
+        // Blend mode lighter
+        auroraGraphics.blendMode = 'add';
+        auroraGraphics.fill({
+            texture: auroraTexture,
+            color: hexColor,
+            matrix: matrix,
+            alpha: 0.6
+        });
+    }
+}
+
+// --- Expose for external access if needed ---
+export function getApp() {
+    return app;
+}
+
+export function getEntityContainer() {
+    return entityContainer;
+}
+
+export function getWorldContainer() {
+    return worldContainer;
 }

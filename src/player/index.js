@@ -29,7 +29,9 @@ import { handleCollisions, checkHeadClearance } from './collision.js';
 import { processHorizontalInput, processMizukiri, processJumpPad, processJump } from './movement.js';
 
 // Rendering
-import { drawPlayer } from './render.js';
+import { updatePlayerGraphics } from './render.js';
+
+const PIXI = window.PIXI;
 
 export class Player {
     constructor(world, addToInventory = null, onTNTJumpPad = null, onSplash = null) {
@@ -330,7 +332,17 @@ export class Player {
         while (this._y + this._height <= 0) this._y += worldSpan_FP;
     }
 
-    draw(ctx) {
-        drawPlayer(ctx, this.x, this.y, this.vx, this.facingRight, this.animTimer);
+    renderPixi(container) {
+        if (!this.graphics) {
+            this.graphics = new PIXI.Graphics();
+            container.addChild(this.graphics);
+        }
+        // Ensure it's in the container (in case container was cleared/rebuilt)
+        if (this.graphics.parent !== container) {
+            container.addChild(this.graphics);
+        }
+
+        this.graphics.position.set(Math.floor(this.x), Math.floor(this.y));
+        updatePlayerGraphics(this.graphics, this.vx, this.facingRight, this.animTimer);
     }
 }

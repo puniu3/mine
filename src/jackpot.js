@@ -1,5 +1,8 @@
 import { BLOCKS, TILE_SIZE, JACKPOT_COOLDOWN_TICKS, JACKPOT_PARTICLE_LIFE_BASE_TICKS, JACKPOT_PARTICLE_LIFE_VARIANCE_TICKS, TICK_TIME_SCALE } from './constants.js';
 
+const PIXI = window.PIXI;
+let graphics;
+
 // ============================================================
 // High-Performance Jackpot Particle System using TypedArrays (SoA)
 // ============================================================
@@ -166,8 +169,20 @@ export function tick() {
  * Draw all particles with culling and batch rendering
  * Uses fillRect instead of arc for better performance
  */
-export function drawJackpotParticles(ctx, cameraX, cameraY, viewWidth, viewHeight) {
-    if (particles.count === 0) return;
+export function drawJackpotParticles(container, cameraX, cameraY, viewWidth, viewHeight) {
+    if (particles.count === 0) {
+        if (graphics) graphics.clear();
+        return;
+    }
+
+    if (!graphics) {
+        graphics = new PIXI.Graphics();
+    }
+    if (graphics.parent !== container) {
+        container.addChild(graphics);
+    }
+
+    graphics.clear();
 
     // Update culling bounds
     cullMinX = cameraX - CULL_MARGIN;
@@ -197,18 +212,16 @@ export function drawJackpotParticles(ctx, cameraX, cameraY, viewWidth, viewHeigh
 
     // Batch render color 0 (gold light)
     if (color0Indices.length > 0) {
-        ctx.fillStyle = COLORS[0];
         for (const i of color0Indices) {
             // 6x6 square (similar visual size to radius 3 circle)
-            ctx.fillRect(particles.x[i] - 3, particles.y[i] - 3, 6, 6);
+            graphics.rect(particles.x[i] - 3, particles.y[i] - 3, 6, 6).fill(COLORS[0]);
         }
     }
 
     // Batch render color 1 (gold dark)
     if (color1Indices.length > 0) {
-        ctx.fillStyle = COLORS[1];
         for (const i of color1Indices) {
-            ctx.fillRect(particles.x[i] - 3, particles.y[i] - 3, 6, 6);
+            graphics.rect(particles.x[i] - 3, particles.y[i] - 3, 6, 6).fill(COLORS[1]);
         }
     }
 }

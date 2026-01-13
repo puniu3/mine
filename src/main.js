@@ -36,7 +36,7 @@ import { handleAcceleratorOverlap, tick as tickAccelerators, initAccelerator } f
 import { createSaveManager, loadGameState } from './save.js';
 import { createTNTManager } from './tnt.js';
 import { findSpawnPosition } from './world_share.js';
-import { drawGame } from './renderer.js';
+import { drawGame, initRenderer, setBlockTextures } from './renderer.js';
 
 // --- New Modules ---
 import { createSaplingManager } from './sapling_manager.js';
@@ -51,7 +51,6 @@ let textures = {};
 
 // --- Main Loop Variables ---
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
 let world, player;
 let lastTime = 0;
 let camera; // Camera instance
@@ -77,18 +76,8 @@ let logicalHeight = window.innerHeight;
 
 // --- Initialization ---
 function resize() {
-    const dpr = window.devicePixelRatio || 1;
     logicalWidth = window.innerWidth;
     logicalHeight = window.innerHeight;
-
-    canvas.width = logicalWidth * dpr;
-    canvas.height = logicalHeight * dpr;
-
-    canvas.style.width = logicalWidth + 'px';
-    canvas.style.height = logicalHeight + 'px';
-
-    ctx.scale(dpr, dpr);
-    ctx.imageSmoothingEnabled = false;
 }
 window.addEventListener('resize', resize);
 
@@ -114,7 +103,9 @@ function init(savedState = null) {
         createSplashParticles(x, y);
     });
     textures = generateTextures();
+    setBlockTextures(textures);
     initBlockParticles(textures);
+    initRenderer(canvas);
 
     // Initialize Camera
     camera = createCamera();
@@ -395,7 +386,7 @@ function updateCamera() {
 
 // --- Draw Loop ---
 function draw() {
-    drawGame(ctx, {
+    drawGame({
         world,
         player,
         cameraX: camera.x,

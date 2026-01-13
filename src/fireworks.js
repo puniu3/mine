@@ -1,6 +1,9 @@
 import { BLOCKS, TILE_SIZE } from './constants.js';
 import { calculateVisibleTileRange } from './utils.js';
 
+const PIXI = window.PIXI;
+let graphics;
+
 // ============================================================
 // High-Performance Particle System using TypedArrays (SoA)
 // ============================================================
@@ -216,8 +219,20 @@ export function tick(world, cameraX, cameraY, canvas) {
 /**
  * Draw all particles with culling and batch rendering
  */
-export function draw(ctx, cameraX, cameraY, viewWidth, viewHeight) {
-    if (particles.count === 0) return;
+export function draw(container, cameraX, cameraY, viewWidth, viewHeight) {
+    if (particles.count === 0) {
+        if (graphics) graphics.clear();
+        return;
+    }
+
+    if (!graphics) {
+        graphics = new PIXI.Graphics();
+    }
+    if (graphics.parent !== container) {
+        container.addChild(graphics);
+    }
+
+    graphics.clear();
 
     // Update culling bounds
     cullMinX = cameraX - CULL_MARGIN;
@@ -249,21 +264,19 @@ export function draw(ctx, cameraX, cameraY, viewWidth, viewHeight) {
     for (const [hue, indices] of hueGroups) {
         if (hue === ROCKET_HUE) {
             // Rockets: white, elongated
-            ctx.fillStyle = '#ffffff';
             for (const i of indices) {
-                ctx.fillRect(particles.x[i] - 2, particles.y[i] - 2, 4, 8);
+                graphics.rect(particles.x[i] - 2, particles.y[i] - 2, 4, 8).fill(0xFFFFFF);
             }
         } else if (hue === BUBBLE_HUE) {
             // Bubbles: cyan/white, small, square
-            ctx.fillStyle = 'rgba(200, 240, 255, 0.6)';
             for (const i of indices) {
-                ctx.fillRect(particles.x[i], particles.y[i], 3, 3);
+                graphics.rect(particles.x[i], particles.y[i], 3, 3).fill({ color: 0xC8F0FF, alpha: 0.6 });
             }
         } else {
             // Particles: colored squares
-            ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+            const color = `hsl(${hue}, 100%, 50%)`;
             for (const i of indices) {
-                ctx.fillRect(particles.x[i], particles.y[i], 4, 4);
+                graphics.rect(particles.x[i], particles.y[i], 4, 4).fill(color);
             }
         }
     }
