@@ -1,6 +1,7 @@
 import { loadGameState } from './save.js';
 import { exportWorldToImage, importWorldFromImage, downloadBlob } from './world_share.js';
 import { strings, setLanguage } from './i18n.js';
+import { sounds } from './audio.js';
 
 // Gamepad button indices
 const GP_A = 0;
@@ -43,6 +44,59 @@ export function initUI(callbacks) {
 
     // Initialize button state immediately on load
     updateStartScreenState();
+
+    // --- Volume Settings Logic ---
+    const bgmSlider = document.getElementById('vol-bgm');
+    const sfxSlider = document.getElementById('vol-sfx');
+    const volumeToggleBtn = document.getElementById('volume-toggle-btn');
+    const volumePopup = document.getElementById('volume-popup');
+
+    function initVolumeSettings() {
+        // Load from LocalStorage (default 1.0)
+        const savedBgm = localStorage.getItem('pictoco_vol_bgm');
+        const savedSfx = localStorage.getItem('pictoco_vol_sfx');
+
+        const bgmVol = savedBgm !== null ? parseFloat(savedBgm) : 1.0;
+        const sfxVol = savedSfx !== null ? parseFloat(savedSfx) : 1.0;
+
+        // Update Sliders
+        if (bgmSlider) bgmSlider.value = bgmVol;
+        if (sfxSlider) sfxSlider.value = sfxVol;
+
+        // Apply to Sound Manager
+        sounds.setMusicVolume(bgmVol);
+        sounds.setSfxVolume(sfxVol);
+    }
+
+    if (bgmSlider) {
+        bgmSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            sounds.setMusicVolume(val);
+            localStorage.setItem('pictoco_vol_bgm', val);
+        });
+    }
+
+    if (sfxSlider) {
+        sfxSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            sounds.setSfxVolume(val);
+            localStorage.setItem('pictoco_vol_sfx', val);
+        });
+    }
+
+    // Toggle Volume Popup
+    if (volumeToggleBtn && volumePopup) {
+        volumeToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (volumePopup.classList.contains('open')) {
+                volumePopup.classList.remove('open');
+            } else {
+                volumePopup.classList.add('open');
+            }
+        });
+    }
+
+    initVolumeSettings();
 
     // Event: Start New Game (Fresh Start)
     const startButton = document.getElementById('start-btn');
@@ -217,11 +271,19 @@ export function initUI(callbacks) {
         });
     });
 
-    // Event: Close popup when clicking outside
+    // Event: Close popups when clicking outside
     document.addEventListener('click', (e) => {
+        // Close Language Popup
         if (langPopup && langPopup.classList.contains('open')) {
             if (!langPopup.contains(e.target) && e.target !== langCurrentBtn) {
                 closeLangPopup();
+            }
+        }
+
+        // Close Volume Popup
+        if (volumePopup && volumePopup.classList.contains('open')) {
+            if (!volumePopup.contains(e.target) && e.target !== volumeToggleBtn) {
+                volumePopup.classList.remove('open');
             }
         }
     });

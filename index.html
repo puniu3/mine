@@ -60,7 +60,7 @@
                 <span class="char c6">c</span>
                 <span class="char c7">o</span>
             </h1>
-            
+
             <div class="start-buttons">
                 <button id="continue-btn" class="action-btn primary-style" data-i18n="continue_btn">Continue</button>
 
@@ -116,6 +116,28 @@
                         <div class="gp-label climb" data-i18n="label_climb">Climb</div>
                         <div class="gp-label select" data-i18n="label_select">Select</div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="volume-controls-wrapper">
+            <button id="volume-toggle-btn" class="lang-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="#555">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+            </button>
+            <div id="volume-popup" class="lang-popup">
+                <div class="volume-row">
+                    <svg class="volume-icon-dark" viewBox="0 0 24 24" width="24" height="24" fill="#555">
+                        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                    </svg>
+                    <input type="range" id="vol-bgm" min="0" max="1" step="0.1" value="0.5">
+                </div>
+                <div class="volume-row">
+                    <svg class="volume-icon-dark" viewBox="0 0 24 24" width="24" height="24" fill="#555">
+                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                    <input type="range" id="vol-sfx" min="0" max="1" step="0.1" value="0.5">
                 </div>
             </div>
         </div>
