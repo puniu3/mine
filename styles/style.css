@@ -1264,7 +1264,7 @@ button {
     position: relative;
     width: 220px;
     height: 140px;
-    margin: 15px auto 5px;
+    margin: 0px auto 5px;
     flex-shrink: 0;
 }
 
@@ -1429,17 +1429,7 @@ button {
 .gp-label.climb { top: 60px; right: 80px; }
 
 /* Select (Shoulders) */
-.gp-label.select { top: -15px; left: 50%; transform: translateX(-50%); }
-.gp-label.select::before {
-    content: ''; position: absolute; top: 100%; right: 50%;
-    width: 65px; height: 1px; background: rgba(255,255,255,0.8);
-    transform: rotate(25deg); transform-origin: right top;
-}
-.gp-label.select::after {
-    content: ''; position: absolute; top: 100%; left: 50%;
-    width: 65px; height: 1px; background: rgba(255,255,255,0.8);
-    transform: rotate(-25deg); transform-origin: left top;
-}
+.gp-label.select { top: 0px; left: 50%; transform: translateX(-50%); }
 
 /* Make (LT) */
 .gp-label.make { top: 5px; left: -10px; }
