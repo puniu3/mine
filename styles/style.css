@@ -1436,3 +1436,87 @@ button {
 
 /* Break (RT) */
 .gp-label.break { top: 5px; right: 0px; }
+
+/* =========================================
+   Volume Settings
+   ========================================= */
+
+#volume-settings {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    margin-bottom: 25px; /* Reduced margin to fit */
+    background: rgba(255, 255, 255, 0.2);
+    padding: 10px 20px;
+    border-radius: 25px;
+    backdrop-filter: blur(2px);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.volume-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.volume-icon {
+    font-size: 24px;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+    /* Prevent emoji discoloration on some systems */
+    color: white;
+}
+
+/* Custom Range Slider */
+input[type=range] {
+    -webkit-appearance: none;
+    width: 100px;
+    background: transparent;
+}
+
+input[type=range]:focus {
+    outline: none;
+}
+
+/* Webkit Track */
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Webkit Thumb */
+input[type=range]::-webkit-slider-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    -webkit-appearance: none;
+    margin-top: -7px; /* (trackHeight / 2) - (thumbHeight / 2) */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border: 2px solid #ccc;
+}
+
+/* Firefox Track */
+input[type=range]::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox Thumb */
+input[type=range]::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border: 2px solid #ccc;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}

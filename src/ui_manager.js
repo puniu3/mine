@@ -1,6 +1,7 @@
 import { loadGameState } from './save.js';
 import { exportWorldToImage, importWorldFromImage, downloadBlob } from './world_share.js';
 import { strings, setLanguage } from './i18n.js';
+import { sounds } from './audio.js';
 
 // Gamepad button indices
 const GP_A = 0;
@@ -43,6 +44,45 @@ export function initUI(callbacks) {
 
     // Initialize button state immediately on load
     updateStartScreenState();
+
+    // --- Volume Settings Logic ---
+    const bgmSlider = document.getElementById('vol-bgm');
+    const sfxSlider = document.getElementById('vol-sfx');
+
+    function initVolumeSettings() {
+        // Load from LocalStorage (default 0.5)
+        const savedBgm = localStorage.getItem('pictoco_vol_bgm');
+        const savedSfx = localStorage.getItem('pictoco_vol_sfx');
+
+        const bgmVol = savedBgm !== null ? parseFloat(savedBgm) : 0.5;
+        const sfxVol = savedSfx !== null ? parseFloat(savedSfx) : 0.5;
+
+        // Update Sliders
+        if (bgmSlider) bgmSlider.value = bgmVol;
+        if (sfxSlider) sfxSlider.value = sfxVol;
+
+        // Apply to Sound Manager
+        sounds.setMusicVolume(bgmVol);
+        sounds.setSfxVolume(sfxVol);
+    }
+
+    if (bgmSlider) {
+        bgmSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            sounds.setMusicVolume(val);
+            localStorage.setItem('pictoco_vol_bgm', val);
+        });
+    }
+
+    if (sfxSlider) {
+        sfxSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            sounds.setSfxVolume(val);
+            localStorage.setItem('pictoco_vol_sfx', val);
+        });
+    }
+
+    initVolumeSettings();
 
     // Event: Start New Game (Fresh Start)
     const startButton = document.getElementById('start-btn');

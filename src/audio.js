@@ -1,7 +1,7 @@
 /**
  * 2D Minecraft Clone - Audio Module
  * Sound Engine (Web Audio API)
- * Updated with Generative Ambient Music
+ * Updated with Generative Ambient Music and Volume Controls
  */
 
 export class SoundManager {
@@ -14,6 +14,15 @@ export class SoundManager {
         this.isMusicPlaying = false;
         this.nextNoteTimeout = null;
         this.musicGainNode = null;
+        this.sfxGainNode = null;
+
+        // Volume State (0.0 - 1.0)
+        this.musicVolume = 0.5;
+        this.sfxVolume = 0.5;
+
+        // Max Gain Constants (Balancing)
+        this.MAX_MUSIC_GAIN = 0.2; // Music is generally louder, so scale it down
+        this.MAX_SFX_GAIN = 1.0;
 
         // C Major Pentatonic Scale (C, D, E, G, A) across varied octaves
         this.scale = [
@@ -28,10 +37,16 @@ export class SoundManager {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             this.ready = true;
 
-            // Setup master gain for music to keep it subtle behind SFX
+            // Setup master gain for music
             this.musicGainNode = this.ctx.createGain();
-            this.musicGainNode.gain.value = 0.1; // 40% volume for music
             this.musicGainNode.connect(this.ctx.destination);
+
+            // Setup master gain for SFX
+            this.sfxGainNode = this.ctx.createGain();
+            this.sfxGainNode.connect(this.ctx.destination);
+
+            // Apply initial volumes
+            this.updateVolumes();
 
             // Initialize Reverb and Start Music
             this.setupReverb().then(() => {
@@ -43,6 +58,26 @@ export class SoundManager {
         if (this.ctx.state === 'suspended') {
             this.ctx.resume();
         }
+    }
+
+    setMusicVolume(vol) {
+        this.musicVolume = Math.max(0, Math.min(1, vol));
+        if (this.ready) {
+            this.musicGainNode.gain.value = this.musicVolume * this.MAX_MUSIC_GAIN;
+        }
+    }
+
+    setSfxVolume(vol) {
+        this.sfxVolume = Math.max(0, Math.min(1, vol));
+        if (this.ready) {
+            this.sfxGainNode.gain.value = this.sfxVolume * this.MAX_SFX_GAIN;
+        }
+    }
+
+    updateVolumes() {
+        if (!this.ready) return;
+        this.musicGainNode.gain.value = this.musicVolume * this.MAX_MUSIC_GAIN;
+        this.sfxGainNode.gain.value = this.sfxVolume * this.MAX_SFX_GAIN;
     }
 
     /**
@@ -85,6 +120,7 @@ export class SoundManager {
         this.ready = false;
         this.reverbNode = null;
         this.musicGainNode = null;
+        this.sfxGainNode = null;
         this.isMusicPlaying = false;
 
         // Recreate context
@@ -93,8 +129,14 @@ export class SoundManager {
 
         // Setup master gain for music
         this.musicGainNode = this.ctx.createGain();
-        this.musicGainNode.gain.value = 0.1;
         this.musicGainNode.connect(this.ctx.destination);
+
+        // Setup master gain for SFX
+        this.sfxGainNode = this.ctx.createGain();
+        this.sfxGainNode.connect(this.ctx.destination);
+
+        // Apply volumes
+        this.updateVolumes();
 
         // Re-initialize reverb and restart music if it was playing
         this.setupReverb().then(() => {
@@ -200,14 +242,14 @@ export class SoundManager {
         osc.stop(now + attack + duration + release + 1);
     }
 
-    // --- Existing SFX Methods ---
+    // --- Existing SFX Methods (Routed to sfxGainNode) ---
 
     playJump() {
         if (!this.ready) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
         osc.type = 'square';
         osc.frequency.setValueAtTime(150, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.1);
@@ -222,7 +264,7 @@ export class SoundManager {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
         osc.type = 'square';
         osc.frequency.setValueAtTime(100, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(500, this.ctx.currentTime + 0.3);
@@ -255,7 +297,7 @@ export class SoundManager {
         }
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
         gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
         noise.start();
@@ -266,7 +308,7 @@ export class SoundManager {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
         osc.frequency.setValueAtTime(600, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.05);
         gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
@@ -294,7 +336,7 @@ export class SoundManager {
 
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
 
         filter.type = 'lowpass';
         filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
@@ -320,7 +362,7 @@ export class SoundManager {
 
         osc1.connect(gain);
         osc2.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.sfxGainNode);
 
         gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
