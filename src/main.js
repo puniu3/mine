@@ -36,7 +36,7 @@ import { handleAcceleratorOverlap, tick as tickAccelerators, initAccelerator } f
 import { createSaveManager, loadGameState } from './save.js';
 import { createTNTManager } from './tnt.js';
 import { findSpawnPosition } from './world_share.js';
-import { drawGame } from './renderer.js';
+import { PixiRenderer } from './renderer.js';
 
 // --- New Modules ---
 import { createSaplingManager } from './sapling_manager.js';
@@ -46,12 +46,14 @@ import { initI18n } from './i18n.js';
 
 initI18n();
 
-// --- Texture Generator ---
-let textures = {};
+// --- Texture Storage ---
+let textures = {};      // Pixi Textures (for Renderer)
+let rawTextures = {};   // HTMLCanvasElements (for UI/Particles)
 
 // --- Main Loop Variables ---
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const renderer = new PixiRenderer();
+
 let world, player;
 let lastTime = 0;
 let camera; // Camera instance
@@ -77,22 +79,15 @@ let logicalHeight = window.innerHeight;
 
 // --- Initialization ---
 function resize() {
-    const dpr = window.devicePixelRatio || 1;
+    // Update logical dimensions for game logic
     logicalWidth = window.innerWidth;
     logicalHeight = window.innerHeight;
 
-    canvas.width = logicalWidth * dpr;
-    canvas.height = logicalHeight * dpr;
-
-    canvas.style.width = logicalWidth + 'px';
-    canvas.style.height = logicalHeight + 'px';
-
-    ctx.scale(dpr, dpr);
-    ctx.imageSmoothingEnabled = false;
+    // Note: Pixi handles physical canvas resizing via resizeTo: window
 }
 window.addEventListener('resize', resize);
 
-function init(savedState = null) {
+async function init(savedState = null) {
     world = new World(WORLD_WIDTH, WORLD_HEIGHT);
 
     // TNT + JUMP_PAD super launch callback
@@ -113,8 +108,19 @@ function init(savedState = null) {
     player = new Player(world, addToInventory, handleTNTJumpPad, (x, y) => {
         createSplashParticles(x, y);
     });
-    textures = generateTextures();
-    initBlockParticles(textures);
+
+    // Generate Textures
+    rawTextures = generateTextures();
+    initBlockParticles(rawTextures);
+
+    // Convert to Pixi Textures
+    textures = {};
+    for (const key in rawTextures) {
+        textures[key] = PIXI.Texture.from(rawTextures[key]);
+    }
+
+    // Initialize Renderer
+    await renderer.init(canvas, textures);
 
     // Initialize Camera
     camera = createCamera();
@@ -266,7 +272,7 @@ function init(savedState = null) {
         onClimb: () => actions.triggerClimb()
     });
 
-    initHotbarUI(textures);
+    initHotbarUI(rawTextures);
 
     // Initialize Save Manager
     saveManager = createSaveManager({
@@ -366,7 +372,7 @@ function tick() {
     }
 
     // System Updates
-    updateCrafting(player, world, textures);
+    updateCrafting(player, world, rawTextures);
 
     // Poll gamepad for crafting UI navigation
     if (isCraftingOpen) {
@@ -395,7 +401,7 @@ function updateCamera() {
 
 // --- Draw Loop ---
 function draw() {
-    drawGame(ctx, {
+    renderer.render({
         world,
         player,
         cameraX: camera.x,

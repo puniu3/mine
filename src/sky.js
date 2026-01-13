@@ -257,7 +257,7 @@ export function getStarRenderData(time, altitude, screenWidth, screenHeight) {
 /**
  * Draws the Aurora Borealis effect.
  */
-export function drawAurora(ctx, time, altitude, width, height, dayCount = 0) {
+export function drawAurora(g, time, altitude, width, height, dayCount = 0) {
     // 1. Visibility Check
     // Only visible on New Moon (dayCount % 28 === 0)
     if (dayCount % 28 !== 0) return;
@@ -278,14 +278,10 @@ export function drawAurora(ctx, time, altitude, width, height, dayCount = 0) {
 
     if (opacity <= 0.01) return;
 
-    // 2. Setup
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-
+    // g is PIXI.Graphics passed from renderer
     const t = Date.now() / 4000; // Very slow animation
 
     // 3. Draw Ribbons
-    // Define ribbons with base properties
     const ribbons = [
         { color: [160, 100, 50], yBase: height * 0.2, amp: height * 0.1, speed: 1.0, widthScale: 1.0 }, // Green
         { color: [260, 100, 60], yBase: height * 0.15, amp: height * 0.15, speed: 0.7, widthScale: 1.5 }, // Purple
@@ -294,39 +290,36 @@ export function drawAurora(ctx, time, altitude, width, height, dayCount = 0) {
 
     for (let i = 0; i < ribbons.length; i++) {
         const r = ribbons[i];
+        const [h, s, l] = r.color;
 
-        ctx.beginPath();
+        // Use PIXI.FillGradient
+        const grad = new PIXI.FillGradient(0, 0, 0, height * 0.6);
 
-        // Draw the wavy bottom edge of the curtain
+        grad.addColorStop(0, `hsla(${h}, ${s}%, ${l}%, 0)`);
+        grad.addColorStop(0.2, `hsla(${h}, ${s}%, ${l}%, ${0.15 * opacity})`);
+        grad.addColorStop(1, `hsla(${h}, ${s}%, ${l}%, 0)`);
+
+        let startX = 0;
+        let startY = 0;
+
         const step = 40;
         for (let x = 0; x <= width + step; x += step) {
             const noise1 = Math.sin(x * 0.002 * r.widthScale + t * r.speed + i);
             const noise2 = Math.sin(x * 0.005 * r.widthScale - t * r.speed * 0.5);
             const y = r.yBase + (noise1 * r.amp) + (noise2 * r.amp * 0.5);
 
-            if (x === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
+            if (x === 0) {
+                g.moveTo(x, y);
+                startX = x; startY = y;
+            } else {
+                g.lineTo(x, y);
+            }
         }
 
-        // Close shape at top (auroras hang from the sky)
-        // We draw the bottom curve, then go up to the top of the screen to fill the "curtain"
-        ctx.lineTo(width, 0);
-        ctx.lineTo(0, 0);
-        ctx.closePath();
+        g.lineTo(width, 0);
+        g.lineTo(0, 0);
+        g.lineTo(startX, startY);
 
-        // Create Gradient (Top to Bottom)
-        // The gradient determines the visibility of the "curtain"
-        // It fades out at the bottom edge (the wavy part) and at the very top
-        const grad = ctx.createLinearGradient(0, 0, 0, height * 0.6);
-        const [h, s, l] = r.color;
-
-        grad.addColorStop(0, `hsla(${h}, ${s}%, ${l}%, 0)`);       // Top fade
-        grad.addColorStop(0.2, `hsla(${h}, ${s}%, ${l}%, ${0.15 * opacity})`); // Main body
-        grad.addColorStop(1, `hsla(${h}, ${s}%, ${l}%, 0)`);       // Bottom fade
-
-        ctx.fillStyle = grad;
-        ctx.fill();
+        g.fill(grad);
     }
-
-    ctx.restore();
 }

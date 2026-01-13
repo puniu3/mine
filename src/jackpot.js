@@ -166,7 +166,7 @@ export function tick() {
  * Draw all particles with culling and batch rendering
  * Uses fillRect instead of arc for better performance
  */
-export function drawJackpotParticles(ctx, cameraX, cameraY, viewWidth, viewHeight) {
+export function drawJackpotParticles(g, cameraX, cameraY, viewWidth, viewHeight) {
     if (particles.count === 0) return;
 
     // Update culling bounds
@@ -197,48 +197,19 @@ export function drawJackpotParticles(ctx, cameraX, cameraY, viewWidth, viewHeigh
 
     // Batch render color 0 (gold light)
     if (color0Indices.length > 0) {
-        ctx.fillStyle = COLORS[0];
         for (const i of color0Indices) {
             // 6x6 square (similar visual size to radius 3 circle)
-            ctx.fillRect(particles.x[i] - 3, particles.y[i] - 3, 6, 6);
+            g.rect(particles.x[i] - 3, particles.y[i] - 3, 6, 6);
         }
+        g.fill(COLORS[0]);
     }
 
     // Batch render color 1 (gold dark)
     if (color1Indices.length > 0) {
-        ctx.fillStyle = COLORS[1];
         for (const i of color1Indices) {
-            ctx.fillRect(particles.x[i] - 3, particles.y[i] - 3, 6, 6);
+            g.rect(particles.x[i] - 3, particles.y[i] - 3, 6, 6);
         }
+        g.fill(COLORS[1]);
     }
 }
 
-// Legacy draw function for backward compatibility (without camera info)
-export function drawJackpotParticlesLegacy(ctx) {
-    if (particles.count === 0) return;
-
-    const color0Indices = [];
-    const color1Indices = [];
-
-    for (let i = 0; i < particles.count; i++) {
-        if (particles.colorIdx[i] === 0) {
-            color0Indices.push(i);
-        } else {
-            color1Indices.push(i);
-        }
-    }
-
-    if (color0Indices.length > 0) {
-        ctx.fillStyle = COLORS[0];
-        for (const i of color0Indices) {
-            ctx.fillRect(particles.x[i] - 3, particles.y[i] - 3, 6, 6);
-        }
-    }
-
-    if (color1Indices.length > 0) {
-        ctx.fillStyle = COLORS[1];
-        for (const i of color1Indices) {
-            ctx.fillRect(particles.x[i] - 3, particles.y[i] - 3, 6, 6);
-        }
-    }
-}

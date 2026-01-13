@@ -205,7 +205,7 @@ export function tick() {
 /**
  * Draw all particles with culling and batch rendering
  */
-export function draw(ctx, cameraX, cameraY, viewWidth, viewHeight) {
+export function draw(g, cameraX, cameraY, viewWidth, viewHeight) {
     if (particles.count === 0) return;
 
     // Update culling bounds
@@ -236,26 +236,21 @@ export function draw(ctx, cameraX, cameraY, viewWidth, viewHeight) {
 
     // Batch render by color
     for (const [colorKey, indices] of colorGroups) {
-        const r = (colorKey >> 16) & 0xFF;
-        const g = (colorKey >> 8) & 0xFF;
-        const b = colorKey & 0xFF;
-
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        const color = colorKey; // Integer color
 
         for (const i of indices) {
             // Calculate alpha based on remaining life
             const lifeRatio = particles.life[i] / PARTICLE_LIFE;
-            ctx.globalAlpha = lifeRatio * 0.9 + 0.1;
+            const alpha = lifeRatio * 0.9 + 0.1;
 
             // Draw small square particle
-            ctx.fillRect(
+            g.rect(
                 Math.floor(particles.x[i]) - 2,
                 Math.floor(particles.y[i]) - 2,
                 4,
                 4
             );
+            g.fill({ color: color, alpha: alpha });
         }
     }
-
-    ctx.globalAlpha = 1.0;
 }

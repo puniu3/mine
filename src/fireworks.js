@@ -216,7 +216,7 @@ export function tick(world, cameraX, cameraY, canvas) {
 /**
  * Draw all particles with culling and batch rendering
  */
-export function draw(ctx, cameraX, cameraY, viewWidth, viewHeight) {
+export function draw(g, cameraX, cameraY, viewWidth, viewHeight) {
     if (particles.count === 0) return;
 
     // Update culling bounds
@@ -249,57 +249,23 @@ export function draw(ctx, cameraX, cameraY, viewWidth, viewHeight) {
     for (const [hue, indices] of hueGroups) {
         if (hue === ROCKET_HUE) {
             // Rockets: white, elongated
-            ctx.fillStyle = '#ffffff';
             for (const i of indices) {
-                ctx.fillRect(particles.x[i] - 2, particles.y[i] - 2, 4, 8);
+                g.rect(particles.x[i] - 2, particles.y[i] - 2, 4, 8);
             }
+            g.fill(0xffffff);
         } else if (hue === BUBBLE_HUE) {
             // Bubbles: cyan/white, small, square
-            ctx.fillStyle = 'rgba(200, 240, 255, 0.6)';
             for (const i of indices) {
-                ctx.fillRect(particles.x[i], particles.y[i], 3, 3);
+                g.rect(particles.x[i], particles.y[i], 3, 3);
             }
+            g.fill({ color: 0xc8f0ff, alpha: 0.6 });
         } else {
             // Particles: colored squares
-            ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
             for (const i of indices) {
-                ctx.fillRect(particles.x[i], particles.y[i], 4, 4);
+                g.rect(particles.x[i], particles.y[i], 4, 4);
             }
+            g.fill(`hsl(${hue}, 100%, 50%)`);
         }
     }
 }
 
-// Legacy draw function for backward compatibility (without camera info)
-export function drawLegacy(ctx) {
-    if (particles.count === 0) return;
-
-    // No culling, render all
-    const hueGroups = new Map();
-
-    for (let i = 0; i < particles.count; i++) {
-        const hue = particles.hue[i];
-        if (!hueGroups.has(hue)) {
-            hueGroups.set(hue, []);
-        }
-        hueGroups.get(hue).push(i);
-    }
-
-    for (const [hue, indices] of hueGroups) {
-        if (hue === ROCKET_HUE) {
-            ctx.fillStyle = '#ffffff';
-            for (const i of indices) {
-                ctx.fillRect(particles.x[i] - 2, particles.y[i] - 2, 4, 8);
-            }
-        } else if (hue === BUBBLE_HUE) {
-            ctx.fillStyle = 'rgba(200, 240, 255, 0.6)';
-            for (const i of indices) {
-                ctx.fillRect(particles.x[i], particles.y[i], 3, 3);
-            }
-        } else {
-            ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-            for (const i of indices) {
-                ctx.fillRect(particles.x[i], particles.y[i], 4, 4);
-            }
-        }
-    }
-}
