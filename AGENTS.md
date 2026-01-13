@@ -9,6 +9,9 @@ AI-readable project specification for Block Craft 2D XL, a browser-based 2D Mine
 - **Target Audience**: Children ~6 years old
 - **UI Language**: Japanese (simple phrasing)
 - **Code Language**: English (all comments, identifiers, documentation)
+- **Key Components**:
+  - **Inventory State**: Managed in `inventory.js`, persists across sessions.
+  - **Visual Effects**: `fireworks.js`, `block_particles.js`, `jackpot.js`.
 
 ## Directory Structure
 
@@ -37,13 +40,14 @@ mine/
     │   ├── water.js    # Water simulation (settling, ocean restoration)
     │   ├── vegetation.js # Biome-specific plant selection logic
     │   ├── features.js # Structures, hidden features, ponds, waterfalls
-    │   ├── caves.js    # Cave walker and geology generation
+    │   ├── caves.js    # Cave walker and geology generation (drawBlob)
+    │   ├── erosion.js  # Bottom erosion generation
     │   └── clouds.js   # Cloud placement
     ├── painters/       # Dumb drawing functions (coordinate-based block placement)
     │   ├── index.js    # Re-exports all painters
     │   ├── core.js     # drawBlob, drawPond, drawCavePocket
     │   ├── vegetation.js # Trees (oak, pine, jungle, acacia, swamp, dead), bush, cactus, boulder
-    │   ├── structures.js # Oasis, monolith, bunker, world tree, islands, ruins, mineshaft
+    │   ├── structures.js # Oasis, monolith, bunker, world tree, islands, ruins, mineshaft, laputa, ancient ruins
     │   └── clouds.js   # Cloud shapes (puffy, long, layered, cluster)
     ├── player/         # Player system (modular, Q20.12 fixed-point physics)
     │   ├── index.js    # Player class orchestrator (state, tick, spawn, wrap)
@@ -141,11 +145,11 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 
 | File | Lines | Responsibility |
 |------|-------|----------------|
-| `index.js` | ~150 | Player class orchestrator (state, tick loop, spawn, wrap) |
+| `index.js` | ~150 | Player class orchestrator (state, tick loop, spawn, wrap, fluid state logic) |
 | `fixed_point.js` | ~90 | Q20.12 constants, conversion functions, physics lookup tables |
 | `physics.js` | ~80 | Gravity, friction, board decay, explosion impulse (pure functions) |
 | `collision.js` | ~100 | Collision detection/resolution, block breaking from below |
-| `movement.js` | ~120 | Input processing, jump, mizukiri (water skip), jump pad logic |
+| `movement.js` | ~120 | Input processing, jump, mizukiri (water skip), jump pad logic, underwater double jump logic |
 | `render.js` | ~25 | Player character drawing (pure function) |
 
 **Editing guide**:
@@ -164,12 +168,13 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 |------|-------|----------------|
 | `index.js` | ~55 | World class core (getBlock, setBlock, checkAreaFree) |
 | `biomes.js` | ~57 | BIOMES enum, getBiomeConfigs, getSurfaceBlock, getSubSurfaceBlock |
-| `generate.js` | ~85 | Main generation loop orchestration |
+| `generate.js` | ~85 | Main generation loop orchestration (Geology, Surface Ponds, Waterfalls, Bottom Erosion) |
 | `terrain.js` | ~160 | Extreme terrain (canyon, volcano, plateau, hills, cliff painting) |
 | `water.js` | ~116 | Water settling simulation, ocean level restoration |
 | `vegetation.js` | ~47 | Biome-specific plant selection (delegates to painters) |
-| `features.js` | ~134 | Structures, hidden features, ponds, waterfalls |
-| `caves.js` | ~56 | Cave walker algorithm, geology (dirt/sand/water pockets) |
+| `features.js` | ~134 | Structures (Laputa, Ruins), hidden features, ponds, waterfalls |
+| `caves.js` | ~56 | Cave walker algorithm, geology (dirt/sand/water pockets using `drawBlob`) |
+| `erosion.js` | ~30 | Bottom erosion generation logic |
 | `clouds.js` | ~30 | Cloud placement logic |
 
 **Editing guide**:
@@ -189,25 +194,27 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 | `index.js` | ~8 | Re-exports all painters |
 | `core.js` | ~49 | drawBlob, drawPond, drawCavePocket |
 | `vegetation.js` | ~175 | drawTreeOak/Pine/Jungle/Acacia/Swamp/Dead, drawCactus, drawBush, drawBoulder |
-| `structures.js` | ~260 | drawOasis, drawMonolith, drawBuriedBunker, drawWorldTree, drawFloatingIsland, drawOceanIsland, drawDesertRuin, drawMineshaft, drawAncientRuins |
+| `structures.js` | ~260 | drawOasis, drawMonolith, drawBuriedBunker, drawWorldTree, drawFloatingIsland, drawOceanIsland, drawDesertRuin, drawMineshaft, drawLaputa, drawAncientRuins |
 | `clouds.js` | ~95 | drawCloudPuffy/Long/Layered/Cluster, drawCloudByShapeId |
 
 ### Camera (camera.js)
 - Manages viewport position (x, y)
 - Handles smooth camera movement (lerp)
 - Implements intelligent horizontal wrapping logic (follows player across world edges)
+- Maintains fixed `zoom` level (1.0) logic.
 
 ### Renderer (renderer.js)
 - Handles all canvas drawing operations
-- **Sky**: Draws gradients, stars, sun, and moon based on time/altitude
-- **World**: Renders visible tiles with optimization (clipping)
-- **Entities**: Draws player, particles (fireworks, jackpots, block destruction)
-- **UI**: Renders cursor highlight and overlays
+- **Sky**: Draws gradients, stars, sun, moon (with phases), and atmospheric glow (`sky.js` provides data).
+- **World**: Renders visible tiles with optimization (clipping). Applies global scale (`ctx.scale(zoom, zoom)`).
+- **Entities**: Draws player, particles (fireworks, jackpots, block destruction).
+- **UI**: Renders cursor highlight and overlays.
 
 ### Actions (actions.js)
 - Block breaking: reach check, breakability check, inventory add, particle emission
 - Block placing: reach check, adjacency check, collision check, inventory consume
 - TNT/Sapling placement triggers delegation to respective managers via callbacks
+- Uses dependency injection for World, Player, Inventory, etc.
 
 ### Block Particles (block_particles.js)
 - Emits colored particles when blocks are destroyed (click/tap or jump-break)
@@ -256,6 +263,7 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 - **Update Loop**:
   - Updates Physics, Input
   - Delegates specific updates to `camera`, `tntManager`, `saplingManager`, `jackpot`, `fireworks`, `block_particles`
+  - Enforces 50ms cap on `frameTime`.
 - **Draw Loop**: Calls `renderer.drawGame()`
 - **Service Worker Registration**: Registers PWA service worker on page load
 
@@ -275,6 +283,35 @@ AIR, DIRT, GRASS, STONE, WOOD, LEAVES, SAND, WATER, BEDROCK, COAL_ORE, IRON_ORE,
 | Mouse Left Click | Break/place block |
 | 1-9 Keys | Select hotbar slot |
 | Touch (mobile) | Virtual controls |
+| Gamepad | Analog movement, Virtual Cursor (Right Stick), Triggers |
+
+**Note**: Gamepad cursor coordinates are normalized to the canvas logical dimensions. Horizontal movement speed uses linear interpolation based on stick magnitude.
+
+## Visual Effects
+
+### Fireworks (fireworks.js)
+- **Reserved Hues**: >360 (361=Rocket, 362=Bubble).
+- **Particle Lifespans**: Set in hundreds (300-800) due to 720Hz update rate.
+- **Splash Particles**: Hue 195 (Light Blue/Cyan).
+
+### Inventory (inventory.js)
+- Manages hotbar UI, item counts, scrolling (relative navigation).
+- `updateInventoryUI`: Syncs DOM with internal state.
+
+## Verification
+
+- **Frontend**: Playwright scripts (Python) in `verification/`.
+  - Use `force=True` for clicks on animated elements.
+  - Interact via standard inputs (gamepad/mouse emulation).
+- **Backend/Logic**: Node.js scripts.
+  - Mock DOM dependencies (World, Input, Audio).
+  - Use dependency injection to test specific modules (Player physics, World generation).
+
+## General
+
+- **Coordinate System**: Y-down (0 is top, increasing downwards).
+- **Scale**: 1 Block = 1 Meter (32 pixels).
+- **Audio**: `src/audio.js` manages Web Audio API.
 
 ## Coding Conventions
 
