@@ -48,6 +48,8 @@ export function initUI(callbacks) {
     // --- Volume Settings Logic ---
     const bgmSlider = document.getElementById('vol-bgm');
     const sfxSlider = document.getElementById('vol-sfx');
+    const volumeToggleBtn = document.getElementById('volume-toggle-btn');
+    const volumePopup = document.getElementById('volume-popup');
 
     function initVolumeSettings() {
         // Load from LocalStorage (default 0.5)
@@ -79,6 +81,18 @@ export function initUI(callbacks) {
             const val = parseFloat(e.target.value);
             sounds.setSfxVolume(val);
             localStorage.setItem('pictoco_vol_sfx', val);
+        });
+    }
+
+    // Toggle Volume Popup
+    if (volumeToggleBtn && volumePopup) {
+        volumeToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (volumePopup.classList.contains('open')) {
+                volumePopup.classList.remove('open');
+            } else {
+                volumePopup.classList.add('open');
+            }
         });
     }
 
@@ -257,11 +271,19 @@ export function initUI(callbacks) {
         });
     });
 
-    // Event: Close popup when clicking outside
+    // Event: Close popups when clicking outside
     document.addEventListener('click', (e) => {
+        // Close Language Popup
         if (langPopup && langPopup.classList.contains('open')) {
             if (!langPopup.contains(e.target) && e.target !== langCurrentBtn) {
                 closeLangPopup();
+            }
+        }
+
+        // Close Volume Popup
+        if (volumePopup && volumePopup.classList.contains('open')) {
+            if (!volumePopup.contains(e.target) && e.target !== volumeToggleBtn) {
+                volumePopup.classList.remove('open');
             }
         }
     });

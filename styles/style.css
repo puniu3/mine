@@ -1520,3 +1520,86 @@ input[type=range]::-moz-range-thumb {
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
+
+/* =========================================
+   Volume Settings (Revised)
+   ========================================= */
+
+#volume-controls-wrapper {
+    position: absolute;
+    bottom: 20px;
+    right: 80px; /* Left of Language Selector */
+    z-index: 100;
+}
+
+#volume-toggle-btn {
+    /* Styles are handled by .lang-btn, ensuring consistency */
+    padding: 0;
+}
+
+/* Adjust button SVG alignment if needed */
+#volume-toggle-btn svg {
+    pointer-events: none;
+}
+
+#volume-popup {
+    /* Inherits .lang-popup styles (hidden, background, etc) */
+    width: auto;
+    flex-direction: column;
+    padding: 15px;
+    gap: 15px;
+    bottom: 60px; /* Above button */
+    right: 0;
+    /* Reset display to flex when open is handled by .lang-popup.open */
+}
+
+/* Ensure sliders fit in the popup */
+.volume-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.volume-icon-dark {
+    flex-shrink: 0;
+}
+
+/* Override slider styles for the popup context (light background) */
+#volume-popup input[type=range]::-webkit-slider-runnable-track {
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+#volume-popup input[type=range]::-moz-range-track {
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+#volume-popup input[type=range]::-webkit-slider-thumb {
+    background: #fff;
+    border: 2px solid #888;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+#volume-popup input[type=range]::-moz-range-thumb {
+    background: #fff;
+    border: 2px solid #888;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+@media (max-width: 480px) {
+    #volume-controls-wrapper {
+        bottom: 10px;
+        right: 60px; /* Tighter spacing on mobile */
+    }
+
+    #volume-popup {
+        bottom: 50px;
+        right: -50px; /* Center relative to button? Or shift? */
+        /* Actually, lang-popup is relative to the container.
+           right:0 means right aligned to wrapper.
+           If wrapper is at right:60px, popup expands left.
+           This is fine. */
+    }
+}
