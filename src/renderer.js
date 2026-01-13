@@ -26,6 +26,7 @@ import {
 import { drawJackpotParticles } from './jackpot.js';
 import { draw as drawFireworks } from './fireworks.js';
 import { draw as drawBlockParticles } from './block_particles.js';
+import { drawBackground } from './background.js';
 
 export function drawGame(ctx, {
     world,
@@ -75,6 +76,12 @@ export function drawGame(ctx, {
     const sun = getSunRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
     const moon = getMoonRenderData(normalizedTime, altitude, logicalWidth, logicalHeight, currentDay);
     const bodies = [sun, moon];
+
+    // 4.0 Draw Background Mountains (Before Celestial Bodies or After? Usually Behind sun/moon or in front?)
+    // In real life, mountains cover the setting sun. So mountains should be AFTER celestial bodies.
+    // However, the "Glow" of the sun should probably bleed over the mountains?
+    // Let's draw mountains AFTER the celestial bodies so they silhouette against the sun/moon.
+    // But we want the background to be BEHIND the world (Step 6).
 
     // 4.1 Draw Glow/Bloom first (Behind the body)
     bodies.forEach(body => {
@@ -167,6 +174,17 @@ export function drawGame(ctx, {
             ctx.restore(); 
         }
         ctx.globalAlpha = 1.0;
+    });
+
+    // --- 4.5 Draw Distant Background ---
+    drawBackground(ctx, {
+        cameraX,
+        cameraY,
+        zoom,
+        logicalWidth,
+        logicalHeight,
+        worldWidth: world.width,
+        skyColors: { top: skyTop, bottom: skyBottom }
     });
 
     // --- Calculate Visible Range ---
