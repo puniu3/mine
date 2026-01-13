@@ -21,7 +21,8 @@ import {
     getSkyGradientColors,
     getSunRenderData,
     getMoonRenderData,
-    getStarRenderData
+    getStarRenderData,
+    drawAurora
 } from './sky.js';
 import { drawJackpotParticles } from './jackpot.js';
 import { draw as drawFireworks } from './fireworks.js';
@@ -70,6 +71,9 @@ export function drawGame(ctx, {
         ctx.fill();
     });
     ctx.globalAlpha = 1.0;
+
+    // --- 3.5 Aurora Borealis ---
+    drawAurora(ctx, normalizedTime, altitude, logicalWidth, logicalHeight, currentDay);
 
     // --- 4. Celestial Bodies & Atmosphere (Bloom) ---
     const sun = getSunRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
