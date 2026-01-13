@@ -182,6 +182,10 @@ export function drawGame(ctx, {
     ctx.save();
     ctx.scale(zoom, zoom);
 
+    // Calculate overlap to prevent seams between tiles when zooming
+    // Ensure at least ~0.8 screen pixel overlap
+    const overlap = 0.8 / zoom;
+
     // --- 5. Water Masking Pass ---
     // Erase sky elements behind water to handle transparency correctly
     ctx.fillStyle = gradient;
@@ -194,7 +198,7 @@ export function drawGame(ctx, {
             if (block === BLOCKS.WATER) {
                 const screenX = x * TILE_SIZE - Math.floor(cameraX);
                 const screenY = y * TILE_SIZE - Math.floor(cameraY);
-                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                ctx.fillRect(screenX, screenY, TILE_SIZE + overlap, TILE_SIZE + overlap);
             }
         }
     }
@@ -235,7 +239,9 @@ export function drawGame(ctx, {
                     ctx.drawImage(
                         textures[block],
                         x * TILE_SIZE + shakeX,
-                        y * TILE_SIZE + shakeY
+                        y * TILE_SIZE + shakeY,
+                        TILE_SIZE + overlap,
+                        TILE_SIZE + overlap
                     );
 
                     const pulse = (Math.sin(time * 8) + 1) / 2;
@@ -243,8 +249,8 @@ export function drawGame(ctx, {
                     ctx.fillRect(
                         x * TILE_SIZE + shakeX,
                         y * TILE_SIZE + shakeY,
-                        TILE_SIZE,
-                        TILE_SIZE
+                        TILE_SIZE + overlap,
+                        TILE_SIZE + overlap
                     );
 
                     const sparkle = Math.sin(time * 20) > 0.3;
@@ -262,7 +268,17 @@ export function drawGame(ctx, {
                         ctx.fill();
                     }
                 } else {
-                    ctx.drawImage(textures[block], x * TILE_SIZE, y * TILE_SIZE);
+                    if (isBlockTransparent(block, BLOCK_PROPS)) {
+                        ctx.drawImage(textures[block], x * TILE_SIZE, y * TILE_SIZE);
+                    } else {
+                        ctx.drawImage(
+                            textures[block],
+                            x * TILE_SIZE,
+                            y * TILE_SIZE,
+                            TILE_SIZE + overlap,
+                            TILE_SIZE + overlap
+                        );
+                    }
                 }
 
                 if (!NO_SHADOW_BLOCKS.has(block)) {
