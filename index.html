@@ -88,13 +88,52 @@
                     <span data-i18n="inst_climb_pc">Climb: Click Player</span>
                 </div>
                 <div class="inst-line"></div>
-                <div class="inst-col">
+                <div class="inst-col gamepad-col">
                     <strong data-i18n="inst_gamepad">Gamepad</strong>
-                    <span data-i18n="inst_place_gamepad">Make: LT</span>
-                    <span data-i18n="inst_break_gamepad">Break: RT</span>
-                    <span data-i18n="inst_jump_gamepad">Jump: A</span>
-                    <span data-i18n="inst_climb_gamepad">Climb: X</span>
-                    <span data-i18n="inst_select_gamepad">Select: LB / RB</span>
+                    <div class="gamepad-visual">
+                        <div class="gp-labels-left">
+                            <span class="gp-label" data-i18n="inst_place_gamepad">Make: LT</span>
+                            <span class="gp-label" data-i18n="inst_select_gamepad">Select: LB / RB</span>
+                            <span class="gp-label" data-i18n="inst_move_mobile">Move: ← →</span>
+                        </div>
+                        <svg class="gp-svg" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid meet">
+                            <!-- Controller Body -->
+                            <path d="M60,50 h180 c25,0 40,15 40,40 v50 c0,25 -15,40 -40,40 h-40 l-10,-30 h-80 l-10,30 h-40 c-25,0 -40,-15 -40,-40 v-50 c0,-25 15,-40 40,-40 z" fill="#333" stroke="#222" stroke-width="2"/>
+                            <!-- Triggers -->
+                            <path d="M50,30 h70 v15 h-70 c-10,0 -15,5 -15,15 v-15 c0,-10 5,-15 15,-15 z" fill="#555"/>
+                            <path d="M180,30 h70 c10,0 15,5 15,15 v15 c0,-10 -5,-15 -15,-15 h-70 v-15 z" fill="#555"/>
+                            <!-- Bumpers -->
+                            <rect x="50" y="48" width="70" height="12" rx="2" fill="#666"/>
+                            <rect x="180" y="48" width="70" height="12" rx="2" fill="#666"/>
+                            <!-- Sticks -->
+                            <circle cx="90" cy="100" r="22" fill="#222" stroke="#444" stroke-width="2"/>
+                            <circle cx="190" cy="130" r="18" fill="#222" stroke="#444" stroke-width="2"/>
+                            <!-- D-Pad -->
+                            <path d="M100,130 h-12 v-12 h-12 v12 h-12 v12 h12 v12 h12 v-12 h12 z" fill="#151515" transform="translate(-15, 15) scale(0.9)"/>
+                            <!-- ABXY Buttons -->
+                            <g transform="translate(220, 90)">
+                                <circle cx="0" cy="18" r="8" fill="#4CAF50"/> <!-- A -->
+                                <circle cx="18" cy="0" r="8" fill="#F44336"/> <!-- B -->
+                                <circle cx="-18" cy="0" r="8" fill="#2196F3"/> <!-- X -->
+                                <circle cx="0" cy="-18" r="8" fill="#FFEB3b"/> <!-- Y -->
+                                <text x="0" y="18" text-anchor="middle" dy="3" fill="rgba(0,0,0,0.5)" font-size="10" font-family="sans-serif" font-weight="bold">A</text>
+                                <text x="-18" y="0" text-anchor="middle" dy="3" fill="rgba(0,0,0,0.5)" font-size="10" font-family="sans-serif" font-weight="bold">X</text>
+                            </g>
+                            <!-- Connecting Lines -->
+                            <path d="M50,38 L30,38" stroke="white" stroke-width="2" fill="none" opacity="0.5"/> <!-- LT Line -->
+                            <path d="M50,54 L30,54" stroke="white" stroke-width="2" fill="none" opacity="0.5"/> <!-- LB Line -->
+                            <path d="M68,100 L30,100" stroke="white" stroke-width="2" fill="none" opacity="0.5"/> <!-- L-Stick Line -->
+
+                            <path d="M250,38 L270,38" stroke="white" stroke-width="2" fill="none" opacity="0.5"/> <!-- RT Line -->
+                            <path d="M220,108 L250,120" stroke="white" stroke-width="2" fill="none" opacity="0.5"/> <!-- A Line -->
+                            <path d="M202,90 L230,70 L250,70" stroke="white" stroke-width="2" fill="none" opacity="0.5"/> <!-- X Line -->
+                        </svg>
+                        <div class="gp-labels-right">
+                            <span class="gp-label" data-i18n="inst_break_gamepad">Break: RT</span>
+                            <span class="gp-label" data-i18n="inst_climb_gamepad">Climb: X</span>
+                            <span class="gp-label" data-i18n="inst_jump_gamepad">Jump: A</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
