@@ -72,7 +72,15 @@ export const resources = {
 
         craft_missing: "ざいりょうがたりないよ",
         craft_done: "できたよ！",
-        msg_import_err: "この えでは ワールドを つくれないよ"
+        msg_import_err: "この えでは ワールドを つくれないよ",
+
+        label_move: "うごく",
+        label_cursor: "カーソル",
+        label_jump: "とぶ",
+        label_make: "つくる",
+        label_break: "こわす",
+        label_climb: "のぼる",
+        label_select: "えらぶ"
     },
     en: {
         continue_btn: "Continue",
@@ -106,7 +114,15 @@ export const resources = {
 
         craft_missing: "Need more items!",
         craft_done: "Done!",
-        msg_import_err: "Can't use this picture."
+        msg_import_err: "Can't use this picture.",
+
+        label_move: "Move",
+        label_cursor: "Cursor",
+        label_jump: "Jump",
+        label_make: "Make",
+        label_break: "Break",
+        label_climb: "Climb",
+        label_select: "Select"
     },
     zh: {
         continue_btn: "继续玩",
