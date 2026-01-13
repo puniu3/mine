@@ -96,6 +96,25 @@ export function generateHiddenFeatures(world, heights, biomeByColumn) {
     const laputaX = 150 + Math.floor(Math.random() * (world.width - 300));
     const laputaY = 30 + Math.floor(Math.random() * 10); // Y: 30-40 (High Sky)
     Painters.drawLaputa(paint, laputaX, laputaY);
+
+    // 6. Ryugu-jo (Dragon Palace) - Only ONE per world
+    // Bottom of the Ocean
+    const oceanColumns = [];
+    for (let x = 40; x < world.width - 40; x++) {
+        if (biomeByColumn[x] === BIOMES.OCEAN) {
+            oceanColumns.push(x);
+        }
+    }
+
+    if (oceanColumns.length > 0) {
+        // Pick a random column in the ocean
+        const ryuguX = oceanColumns[Math.floor(Math.random() * oceanColumns.length)];
+        // Place at the bottom (heights[x] is the seabed surface)
+        // We might want to embed it slightly or place it exactly on top.
+        // heights[x] is the solid block Y. So draw at heights[x].
+        const ryuguY = heights[ryuguX];
+        Painters.drawRyugu(paint, ryuguX, ryuguY);
+    }
 }
 
 export function generateSurfacePonds(world, heights, biomeByColumn, seaLevel) {

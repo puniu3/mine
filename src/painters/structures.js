@@ -401,3 +401,141 @@ export function drawAncientRuins(accessor, cx, floorY) {
     accessor.set(cx - 1, floorY - 1, BLOCKS.GOLD);
     accessor.set(cx + 1, floorY - 1, BLOCKS.GOLD);
 }
+
+export function drawRyugu(accessor, cx, floorY) {
+    // Ryugu-jo (Dragon Palace)
+    // Style: Raised Stone foundation, White walls (SNOW), Green roof (LEAVES), Red/Wood accents (WOOD)
+
+    // 1. Foundation
+    const baseWidth = 14 + Math.floor(Math.random() * 6); // 14-20 radius
+    const baseHeight = 4 + Math.floor(Math.random() * 3);
+
+    for (let dy = 0; dy < baseHeight; dy++) {
+        const w = baseWidth - dy; // Taper upwards slightly
+        for (let dx = -w; dx <= w; dx++) {
+            accessor.set(cx + dx, floorY - dy, BLOCKS.STONE);
+        }
+    }
+
+    const platformY = floorY - baseHeight;
+
+    // 2. Main Hall
+    const hallWidth = 8;
+    const hallHeight = 6;
+    const hallY = platformY;
+
+    // Floor (connect to foundation)
+    for (let dx = -hallWidth; dx <= hallWidth; dx++) {
+        accessor.set(cx + dx, hallY, BLOCKS.STONE);
+    }
+
+    // Walls & Interior
+    for (let dx = -hallWidth; dx <= hallWidth; dx++) {
+        for (let dy = 1; dy <= hallHeight; dy++) {
+            const x = cx + dx;
+            const y = hallY - dy;
+
+            // Corners are Wood pillars
+            if (Math.abs(dx) === hallWidth) {
+                accessor.set(x, y, BLOCKS.WOOD);
+            }
+            // Walls are Snow (White)
+            else if (dy === hallHeight) {
+                accessor.set(x, y, BLOCKS.WOOD); // Beam
+            }
+            else {
+                // Interior or Wall
+                 // Check if it's the outer layer
+                 // Note: Since we are filling a block, we just set walls.
+                 // We need to ensure inside is WATER
+                 accessor.set(x, y, BLOCKS.WATER); // Fill inside with water
+            }
+        }
+        // Draw actual walls (overwriting water at edges)
+        // If it's the edge column
+        if (Math.abs(dx) === hallWidth) {
+             // Already set to WOOD above
+        } else {
+             // Back wall is implicitly there if we view 2D, but we are painting a slice.
+             // In 2D side view, we just see the "front" cutaway or the "inside".
+             // Let's make it open so we can swim in?
+             // Or maybe just columns?
+             // Let's make solid walls with an entrance.
+        }
+    }
+
+    // Draw Background/Foreground Walls (visualized as blocks in the plane)
+    for (let dy = 1; dy < hallHeight; dy++) {
+        accessor.set(cx - hallWidth, hallY - dy, BLOCKS.WOOD); // Left Pillar
+        accessor.set(cx + hallWidth, hallY - dy, BLOCKS.WOOD); // Right Pillar
+
+        // Inner walls (white)
+        accessor.set(cx - hallWidth + 1, hallY - dy, BLOCKS.SNOW);
+        accessor.set(cx + hallWidth - 1, hallY - dy, BLOCKS.SNOW);
+    }
+
+    // Gate/Entrance
+    for (let dy = 1; dy < 4; dy++) {
+        accessor.set(cx, hallY - dy, BLOCKS.WATER); // Open door
+        accessor.set(cx - 1, hallY - dy, BLOCKS.WATER);
+        accessor.set(cx + 1, hallY - dy, BLOCKS.WATER);
+    }
+    // Lintel above door
+    accessor.set(cx, hallY - 4, BLOCKS.WOOD);
+    accessor.set(cx - 1, hallY - 4, BLOCKS.WOOD);
+    accessor.set(cx + 1, hallY - 4, BLOCKS.WOOD);
+
+
+    // 3. Roof (Irimoya style - ish)
+    const roofStartY = hallY - hallHeight;
+    const roofOverhang = 3;
+
+    for (let h = 0; h < 5; h++) {
+        const w = hallWidth + roofOverhang - h;
+        for (let dx = -w; dx <= w; dx++) {
+            accessor.set(cx + dx, roofStartY - 1 - h, BLOCKS.LEAVES); // Green Tile Roof
+        }
+    }
+    // Decor on roof
+    accessor.set(cx, roofStartY - 6, BLOCKS.GOLD);
+    accessor.set(cx - (hallWidth + roofOverhang), roofStartY - 1, BLOCKS.GOLD); // Eaves tip
+    accessor.set(cx + (hallWidth + roofOverhang), roofStartY - 1, BLOCKS.GOLD);
+
+    // 4. Side Annex (Randomly Left or Right or Both)
+    const sides = [];
+    if (Math.random() < 0.7) sides.push(-1);
+    if (Math.random() < 0.7) sides.push(1);
+
+    sides.forEach(dir => {
+        const annexDist = hallWidth + 4;
+        const annexCX = cx + (dir * annexDist);
+        const annexW = 4;
+        const annexH = 4;
+
+        // Foundation
+        for(let dx=-annexW; dx<=annexW; dx++) {
+            accessor.set(annexCX+dx, platformY, BLOCKS.STONE);
+        }
+
+        // Walls
+        for(let dx=-annexW; dx<=annexW; dx++) {
+            for(let dy=1; dy<=annexH; dy++) {
+                if (Math.abs(dx) === annexW) accessor.set(annexCX+dx, platformY-dy, BLOCKS.WOOD);
+                else accessor.set(annexCX+dx, platformY-dy, BLOCKS.WATER);
+            }
+        }
+
+        // Roof
+        for(let h=0; h<3; h++) {
+            const w = annexW + 1 - h;
+            for(let dx=-w; dx<=w; dx++) {
+                accessor.set(annexCX+dx, platformY-annexH-1-h, BLOCKS.LEAVES);
+            }
+        }
+    });
+
+    // 5. Treasure
+    accessor.set(cx, platformY - 1, BLOCKS.JACKPOT);
+    accessor.set(cx - 2, platformY - 1, BLOCKS.GOLD);
+    accessor.set(cx + 2, platformY - 1, BLOCKS.GOLD);
+}
