@@ -56,6 +56,7 @@ let skyCanvas; // Canvas for generating gradient texture
 let skyCtx;
 
 let auroraTexture; // Gradient texture for aurora ribbons
+let glowTexture; // Radial gradient for sun/moon glow
 
 // --- Initialization ---
 
@@ -111,6 +112,19 @@ export async function initRenderer(canvas) {
     aCtx.fillStyle = grad;
     aCtx.fillRect(0, 0, 1, 256);
     auroraTexture = PIXI.Texture.from(auroraCanvas);
+
+    // Initialize Glow Texture (Radial Gradient)
+    const glowCanvas = document.createElement('canvas');
+    glowCanvas.width = 128;
+    glowCanvas.height = 128;
+    const gCtx = glowCanvas.getContext('2d');
+    const glowGrad = gCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    glowGrad.addColorStop(0, 'rgba(255,255,255,1)');
+    glowGrad.addColorStop(0.3, 'rgba(255,255,255,0.1)');
+    glowGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    gCtx.fillStyle = glowGrad;
+    gCtx.fillRect(0, 0, 128, 128);
+    glowTexture = PIXI.Texture.from(glowCanvas);
 
     isInitialized = true;
     console.log("Pixi Renderer Initialized");
@@ -183,7 +197,7 @@ export function drawGame(state) {
 
     // UI/Sky layers are screen space (mostly)
     // Sky is screen space
-    
+
     // --- 1. Calculate Time & Altitude ---
     const now = Date.now();
     const normalizedTime = (now % DAY_DURATION_MS) / DAY_DURATION_MS;
@@ -379,15 +393,11 @@ function updateSky(time, altitude, width, height) {
     skyCtx.fillRect(0, 0, 1, 256);
 
     // Update Pixi Sprite
-    skyGradientSprite.texture = PIXI.Texture.from(skyCanvas); // This might be slow if created every frame?
-    // Optimization: Reuse texture source or update resource?
-    // PIXI 8: Texture.from returns a texture.
-    // Better: create one texture and update its source.
-    // For now, let's trust Pixi's caching or optimizing later.
-    // Actually, creating a new Texture object every frame is bad.
-
     if (!skyGradientSprite._cachedTexture) {
-         skyGradientSprite._cachedTexture = PIXI.Texture.from(skyCanvas);
+         skyGradientSprite._cachedTexture = PIXI.Texture.from(skyCanvas, {
+            scaleMode: 'linear' // Ensure smooth gradient scaling
+         });
+         skyGradientSprite._cachedTexture.source.scaleMode = 'linear';
          skyGradientSprite.texture = skyGradientSprite._cachedTexture;
     } else {
          skyGradientSprite._cachedTexture.source.update(); // Force update from canvas
@@ -423,16 +433,33 @@ function updateStars(time, altitude, width, height) {
 
 // Sun/Moon Sprites
 let sunGraphics;
+let sunGlowSprite;
 let moonGraphics;
+let moonGlowSprite;
 
 function updateCelestialBodies(time, altitude, width, height, day) {
     if (!sunGraphics) {
+        // Sun Body
         sunGraphics = new PIXI.Graphics();
         celestialContainer.addChild(sunGraphics);
+
+        // Sun Glow (Sprite with texture)
+        sunGlowSprite = new PIXI.Sprite(glowTexture);
+        sunGlowSprite.anchor.set(0.5);
+        // Blend mode add or normal? Glows are usually additive.
+        // Original canvas used source-over, but additive is nicer.
+        // Let's stick to default for now to match Canvas.
+        celestialContainer.addChildAt(sunGlowSprite, 0); // Behind body
     }
     if (!moonGraphics) {
+        // Moon Body
         moonGraphics = new PIXI.Graphics();
         celestialContainer.addChild(moonGraphics);
+
+        // Moon Glow
+        moonGlowSprite = new PIXI.Sprite(glowTexture);
+        moonGlowSprite.anchor.set(0.5);
+        celestialContainer.addChildAt(moonGlowSprite, 0); // Behind body
     }
 
     sunGraphics.clear();
@@ -441,26 +468,61 @@ function updateCelestialBodies(time, altitude, width, height, day) {
     const sun = getSunRenderData(time, altitude, width, height);
     const moon = getMoonRenderData(time, altitude, width, height, day);
 
-    // Draw Sun
+    // Update Sun
     if (sun.isVisible) {
         // Glow
-        sunGraphics.circle(sun.x, sun.y, sun.radius * 6);
-        sunGraphics.fill({ color: sun.glowColor, alpha: 0.2 });
+        sunGlowSprite.visible = true;
+        sunGlowSprite.x = sun.x;
+        sunGlowSprite.y = sun.y;
+
+        // Radius * 6 is total radius.
+        // Texture is 128x128 (radius 64).
+        // Scale = (DesiredRadius * 2) / 128
+        const scale = (sun.radius * 6 * 2) / 128;
+        sunGlowSprite.scale.set(scale);
+
+        // Tint
+        // glowColor string "rgba(r,g,b,a)" needs parsing for Tint + Alpha
+        // Quick/dirty: Use a known color or parse it?
+        // sun.glowColor is used for fill color in original.
+        // We can just tint the white texture.
+        // But Pixi tint expects Hex.
+        // We need a helper to convert color string to hex.
+        // Or hardcode based on sky logic?
+        // Sky module returns: 'rgba(255, 255, 200, 0.4)' or 'rgba(255, 100, 50, 0.4)'
+
+        let glowHex = 0xFFFFC8; // Default
+        if (sun.glowColor.includes('100, 50')) glowHex = 0xFF6432;
+
+        sunGlowSprite.tint = glowHex;
+        sunGlowSprite.alpha = 0.4; // Hardcoded from sky.js string for now, or use generic
 
         // Body
         sunGraphics.circle(sun.x, sun.y, sun.radius);
         sunGraphics.fill({ color: sun.color, alpha: sun.opacity });
+    } else {
+        sunGlowSprite.visible = false;
     }
 
-    // Draw Moon
+    // Update Moon
     if (moon.isVisible) {
         // Glow
-        moonGraphics.circle(moon.x, moon.y, moon.radius * 6);
-        moonGraphics.fill({ color: moon.glowColor, alpha: 0.2 });
+        moonGlowSprite.visible = true;
+        moonGlowSprite.x = moon.x;
+        moonGlowSprite.y = moon.y;
+
+        const scale = (moon.radius * 6 * 2) / 128;
+        moonGlowSprite.scale.set(scale);
+
+        // Moon glow: 'rgba(200, 220, 255, 0.2)'
+        moonGlowSprite.tint = 0xC8DCFF;
+        moonGlowSprite.alpha = 0.2;
 
         // Body
         moonGraphics.circle(moon.x, moon.y, moon.radius);
         moonGraphics.fill({ color: moon.color, alpha: moon.opacity });
+    } else {
+        moonGlowSprite.visible = false;
     }
 }
 
