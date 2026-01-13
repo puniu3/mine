@@ -257,8 +257,11 @@ export function getStarRenderData(time, altitude, screenWidth, screenHeight) {
 /**
  * Draws the Aurora Borealis effect.
  */
-export function drawAurora(ctx, time, altitude, width, height) {
+export function drawAurora(ctx, time, altitude, width, height, dayCount = 0) {
     // 1. Visibility Check
+    // Only visible on New Moon (dayCount % 28 === 0)
+    if (dayCount % 28 !== 0) return;
+
     // Auroras visible roughly when stars are (0.4 to 0.6)
     let opacity = 0;
     if (time > 0.4 && time < 0.6) {

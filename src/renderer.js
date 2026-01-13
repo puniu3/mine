@@ -73,7 +73,7 @@ export function drawGame(ctx, {
     ctx.globalAlpha = 1.0;
 
     // --- 3.5 Aurora Borealis ---
-    drawAurora(ctx, normalizedTime, altitude, logicalWidth, logicalHeight);
+    drawAurora(ctx, normalizedTime, altitude, logicalWidth, logicalHeight, currentDay);
 
     // --- 4. Celestial Bodies & Atmosphere (Bloom) ---
     const sun = getSunRenderData(normalizedTime, altitude, logicalWidth, logicalHeight);
