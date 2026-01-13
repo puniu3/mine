@@ -55,6 +55,9 @@ let skyGradientSprite;
 let skyCanvas; // Canvas for generating gradient texture
 let skyCtx;
 
+let moonCanvas; // Canvas for moon phases
+let moonCtx;
+
 let auroraTexture; // Gradient texture for aurora ribbons
 let glowTexture; // Radial gradient for sun/moon glow
 
@@ -99,6 +102,12 @@ export async function initRenderer(canvas) {
     skyCtx = skyCanvas.getContext('2d');
     skyGradientSprite = new PIXI.Sprite();
     skyContainer.addChild(skyGradientSprite);
+
+    // Initialize Moon Texture Helper
+    moonCanvas = document.createElement('canvas');
+    moonCanvas.width = 64;
+    moonCanvas.height = 64;
+    moonCtx = moonCanvas.getContext('2d');
 
     // Initialize Aurora Texture
     const auroraCanvas = document.createElement('canvas');
@@ -434,8 +443,73 @@ function updateStars(time, altitude, width, height) {
 // Sun/Moon Sprites
 let sunGraphics;
 let sunGlowSprite;
-let moonGraphics;
+let moonBodySprite;
 let moonGlowSprite;
+
+function drawMoonToCanvas(ctx, phase) {
+    const size = 64;
+    const r = size / 2;
+    const cx = r;
+    const cy = r;
+
+    // Clear
+    ctx.clearRect(0, 0, size, size);
+
+    // Draw Lit Moon
+    ctx.fillStyle = '#F4F6F0';
+
+    const p = phase;
+
+    // Waxing (0.0 - 0.5): Light Right
+    if (p <= 0.5) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, -Math.PI/2, Math.PI/2); // Right Semi-Circle
+        ctx.fill();
+
+        const w = (0.25 - p) * 4 * r; // Width of subtraction/addition
+
+        if (p < 0.25) { // Crescent: Subtract from Semi-Circle
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, Math.abs(w), r, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+        } else { // Gibbous: Add to Semi-Circle
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, Math.abs(w), r, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    } else {
+        // Waning (0.5 - 1.0): Light Left
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, Math.PI/2, -Math.PI/2); // Left Semi-Circle
+        ctx.fill();
+
+        const w = (p - 0.75) * 4 * r;
+
+        if (p < 0.75) { // Gibbous: Add
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, Math.abs(w), r, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else { // Crescent: Subtract
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, Math.abs(w), r, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+        }
+    }
+
+    // Craters (Only on Lit Parts)
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
+    ctx.beginPath();
+    ctx.arc(cx - r*0.3, cy - r*0.2, r*0.15, 0, Math.PI*2);
+    ctx.arc(cx + r*0.4, cy + r*0.3, r*0.1, 0, Math.PI*2);
+    ctx.arc(cx - r*0.1, cy + r*0.5, r*0.08, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+}
 
 function updateCelestialBodies(time, altitude, width, height, day) {
     if (!sunGraphics) {
@@ -446,15 +520,13 @@ function updateCelestialBodies(time, altitude, width, height, day) {
         // Sun Glow (Sprite with texture)
         sunGlowSprite = new PIXI.Sprite(glowTexture);
         sunGlowSprite.anchor.set(0.5);
-        // Blend mode add or normal? Glows are usually additive.
-        // Original canvas used source-over, but additive is nicer.
-        // Let's stick to default for now to match Canvas.
         celestialContainer.addChildAt(sunGlowSprite, 0); // Behind body
     }
-    if (!moonGraphics) {
-        // Moon Body
-        moonGraphics = new PIXI.Graphics();
-        celestialContainer.addChild(moonGraphics);
+    if (!moonBodySprite) {
+        // Moon Body (Sprite from Canvas)
+        moonBodySprite = new PIXI.Sprite();
+        moonBodySprite.anchor.set(0.5);
+        celestialContainer.addChild(moonBodySprite);
 
         // Moon Glow
         moonGlowSprite = new PIXI.Sprite(glowTexture);
@@ -463,7 +535,6 @@ function updateCelestialBodies(time, altitude, width, height, day) {
     }
 
     sunGraphics.clear();
-    moonGraphics.clear();
 
     const sun = getSunRenderData(time, altitude, width, height);
     const moon = getMoonRenderData(time, altitude, width, height, day);
@@ -475,27 +546,14 @@ function updateCelestialBodies(time, altitude, width, height, day) {
         sunGlowSprite.x = sun.x;
         sunGlowSprite.y = sun.y;
 
-        // Radius * 6 is total radius.
-        // Texture is 128x128 (radius 64).
-        // Scale = (DesiredRadius * 2) / 128
         const scale = (sun.radius * 6 * 2) / 128;
         sunGlowSprite.scale.set(scale);
 
-        // Tint
-        // glowColor string "rgba(r,g,b,a)" needs parsing for Tint + Alpha
-        // Quick/dirty: Use a known color or parse it?
-        // sun.glowColor is used for fill color in original.
-        // We can just tint the white texture.
-        // But Pixi tint expects Hex.
-        // We need a helper to convert color string to hex.
-        // Or hardcode based on sky logic?
-        // Sky module returns: 'rgba(255, 255, 200, 0.4)' or 'rgba(255, 100, 50, 0.4)'
-
-        let glowHex = 0xFFFFC8; // Default
+        let glowHex = 0xFFFFC8;
         if (sun.glowColor.includes('100, 50')) glowHex = 0xFF6432;
 
         sunGlowSprite.tint = glowHex;
-        sunGlowSprite.alpha = 0.4; // Hardcoded from sky.js string for now, or use generic
+        sunGlowSprite.alpha = 0.4;
 
         // Body
         sunGraphics.circle(sun.x, sun.y, sun.radius);
@@ -514,15 +572,31 @@ function updateCelestialBodies(time, altitude, width, height, day) {
         const scale = (moon.radius * 6 * 2) / 128;
         moonGlowSprite.scale.set(scale);
 
-        // Moon glow: 'rgba(200, 220, 255, 0.2)'
         moonGlowSprite.tint = 0xC8DCFF;
         moonGlowSprite.alpha = 0.2;
 
         // Body
-        moonGraphics.circle(moon.x, moon.y, moon.radius);
-        moonGraphics.fill({ color: moon.color, alpha: moon.opacity });
+        moonBodySprite.visible = true;
+        moonBodySprite.x = moon.x;
+        moonBodySprite.y = moon.y;
+
+        // Update Texture
+        drawMoonToCanvas(moonCtx, moon.phase);
+
+        if (!moonBodySprite.texture || !moonBodySprite.texture.source) {
+            moonBodySprite.texture = PIXI.Texture.from(moonCanvas);
+        } else {
+             moonBodySprite.texture.source.update();
+        }
+
+        const moonScale = (moon.radius * 2) / 64;
+        moonBodySprite.scale.set(moonScale);
+
+        moonBodySprite.alpha = moon.opacity;
+
     } else {
         moonGlowSprite.visible = false;
+        moonBodySprite.visible = false;
     }
 }
 
