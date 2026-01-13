@@ -178,40 +178,28 @@ export function drawGame(ctx, {
         cameraX, cameraY, logicalWidth, logicalHeight, TILE_SIZE, zoom
     );
 
-    // Apply global zoom and translation for the world rendering
-    ctx.save();
-    ctx.scale(zoom, zoom);
-
-    // --- 5. Water Masking Pass ---
+    // --- 5. Water Masking Pass (Integer Snapped) ---
     // Erase sky elements behind water to handle transparency correctly
     ctx.fillStyle = gradient;
     
+    // Pre-calculate screen tile dimensions to avoid gaps
+    const screenTileW = Math.ceil(TILE_SIZE * zoom);
+    const screenTileH = Math.ceil(TILE_SIZE * zoom);
+
     for (let y = startY; y < endY; y++) {
         for (let x = startX; x < endX; x++) {
             const normalizedY = (y % world.height + world.height) % world.height;
             const block = world.getBlock(x, normalizedY);
 
             if (block === BLOCKS.WATER) {
-                const screenX = x * TILE_SIZE - Math.floor(cameraX);
-                const screenY = y * TILE_SIZE - Math.floor(cameraY);
-                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                const screenX = Math.floor((x * TILE_SIZE - cameraX) * zoom);
+                const screenY = Math.floor((y * TILE_SIZE - cameraY) * zoom);
+                ctx.fillRect(screenX, screenY, screenTileW, screenTileH);
             }
         }
     }
 
-    // Note: Water Mask (Step 5) uses explicit subtraction (x*TILE - cameraX)
-    // so it naturally works inside the scaled context, producing (World - Camera) * Zoom.
-    // However, Steps 6-9 use a global translation.
-    // To harmonize, we will wrap Steps 6-9 in the translation as before,
-    // but ensure Step 5's manual calculation is consistent or updated.
-    // Actually, Step 5 relies on `screenX = x * TILE - cameraX`.
-    // Inside `scale(zoom)`, this draws at `(x * TILE - cameraX) * zoom`. Correct.
-
-    // Global translation for World Entities (Steps 6, 7, 8, 9)
-    ctx.save();
-    ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
-
-    // --- 6. World Rendering ---
+    // --- 6. World Rendering (Integer Snapped) ---
     const NO_SHADOW_BLOCKS = new Set([
         BLOCKS.CLOUD,
         BLOCKS.JUMP_PAD,
@@ -226,43 +214,51 @@ export function drawGame(ctx, {
             const block = world.getBlock(x, normalizedY);
 
             if (block !== BLOCKS.AIR && textures[block]) {
+                const screenXBase = Math.floor((x * TILE_SIZE - cameraX) * zoom);
+                const screenYBase = Math.floor((y * TILE_SIZE - cameraY) * zoom);
+
                 // Special rendering for TNT
                 if (block === BLOCKS.TNT && tntManager && tntManager.hasTimerAt(x, normalizedY)) {
                     const time = now * 0.01; 
                     const shakeX = Math.sin(time * 15 + x * 7) * 1.2;
                     const shakeY = Math.cos(time * 18 + y * 5) * 1.2;
                     
+                    const tntScreenX = Math.floor((x * TILE_SIZE + shakeX - cameraX) * zoom);
+                    const tntScreenY = Math.floor((y * TILE_SIZE + shakeY - cameraY) * zoom);
+
                     ctx.drawImage(
                         textures[block],
-                        x * TILE_SIZE + shakeX,
-                        y * TILE_SIZE + shakeY
+                        tntScreenX,
+                        tntScreenY,
+                        screenTileW,
+                        screenTileH
                     );
 
                     const pulse = (Math.sin(time * 8) + 1) / 2;
                     ctx.fillStyle = `rgba(255, ${Math.floor(100 - pulse * 100)}, 0, ${0.2 + pulse * 0.3})`;
                     ctx.fillRect(
-                        x * TILE_SIZE + shakeX,
-                        y * TILE_SIZE + shakeY,
-                        TILE_SIZE,
-                        TILE_SIZE
+                        tntScreenX,
+                        tntScreenY,
+                        screenTileW,
+                        screenTileH
                     );
 
                     const sparkle = Math.sin(time * 20) > 0.3;
                     if (sparkle) {
-                        const sparkX = x * TILE_SIZE + TILE_SIZE / 2 + shakeX + (Math.random() - 0.5) * 8;
-                        const sparkY = y * TILE_SIZE + shakeY + 2;
-                        const sparkSize = 3 + Math.random() * 3;
+                        const sparkX = tntScreenX + screenTileW / 2 + (Math.random() - 0.5) * 8 * zoom;
+                        const sparkY = tntScreenY + 2 * zoom;
+                        const sparkSize = (3 + Math.random() * 3) * zoom;
                         ctx.fillStyle = '#ffff00';
                         ctx.beginPath();
                         ctx.arc(sparkX, sparkY, sparkSize, 0, Math.PI * 2);
                         ctx.fill();
                         ctx.fillStyle = 'rgba(255, 200, 0, 0.5)';
                         ctx.beginPath();
-                        ctx.arc(sparkX, sparkY, sparkSize + 2, 0, Math.PI * 2);
+                        ctx.arc(sparkX, sparkY, sparkSize + 2 * zoom, 0, Math.PI * 2);
                         ctx.fill();
                     }
                 } else {
-                    ctx.drawImage(textures[block], x * TILE_SIZE, y * TILE_SIZE);
+                    ctx.drawImage(textures[block], screenXBase, screenYBase, screenTileW, screenTileH);
                 }
 
                 if (!NO_SHADOW_BLOCKS.has(block)) {
@@ -270,7 +266,7 @@ export function drawGame(ctx, {
                     const neighborAbove = world.getBlock(x, aboveY);
                     if (neighborAbove !== BLOCKS.AIR && !isBlockTransparent(neighborAbove, BLOCK_PROPS)) {
                         ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        ctx.fillRect(screenXBase, screenYBase, screenTileW, screenTileH);
                     }
                 }
             }
@@ -278,6 +274,12 @@ export function drawGame(ctx, {
     }
 
     // --- 7. Entities & Particles ---
+    // Apply transform for entities to align with world
+    // We use raw cameraX/Y here to match the logic basis of the tiles (x*TILE - cameraX)
+    ctx.save();
+    ctx.scale(zoom, zoom);
+    ctx.translate(-cameraX, -cameraY);
+
     if (player) player.draw(ctx);
     drawJackpotParticles(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
     drawFireworks(ctx, cameraX, cameraY, logicalWidth, logicalHeight);
@@ -307,13 +309,11 @@ export function drawGame(ctx, {
         ctx.strokeRect(bx * TILE_SIZE, by * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 
-    // Restore translation
-    ctx.restore();
-
-    // Restore scale
+    // Restore entity transform
     ctx.restore();
 
     // --- 10. Gamepad Crosshair ---
+    // Drawn in screen space (unscaled)
     if (input && input.gamepad && input.gamepad.cursorActive && input.gamepad.connected) {
         const gcX = input.gamepad.cursorX;
         const gcY = input.gamepad.cursorY;
