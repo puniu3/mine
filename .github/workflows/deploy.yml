@@ -7,12 +7,11 @@ on:
     types:
       - completed
     branches: [main]
-  # 手動でファイルをpushした時もトリガー
+  # 手動でファイルをpushした時もトリガー（app.jsはbuild.yml経由のためworkflow_runで処理）
   push:
     branches: [main]
     paths:
       - 'index.html'
-      - 'app.js'
       - 'manifest.json'
       - 'styles/**'
       - 'icons/**'
