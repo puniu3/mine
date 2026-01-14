@@ -1,0 +1,25 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "service-worker.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "esbuild src/main.js --bundle --minify --outfile=app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/puniu3/mine.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/puniu3/mine/issues"
+  },
+  "homepage": "https://github.com/puniu3/mine#readme",
+  "devDependencies": {
+    "esbuild": "^0.27.2"
+  }
+}
