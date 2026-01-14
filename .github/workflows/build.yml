@@ -34,4 +34,5 @@ jobs:
           git remote set-url origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
           git add app.js
           git diff --staged --quiet || git commit -m "build: bundle app.js"
+          git pull --rebase origin main
           git push
