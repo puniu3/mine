@@ -707,6 +707,14 @@ export function setLanguage(langCode) {
     }
     localStorage.setItem(LANG_STORAGE_KEY, langCode);
     applyLanguage(langCode);
+
+    // Notify service worker to cache language-specific fonts
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'CACHE_LANGUAGE_FONTS',
+            lang: langCode
+        });
+    }
 }
 
 /**
@@ -715,4 +723,12 @@ export function setLanguage(langCode) {
 export function initI18n() {
     const langCode = detectLanguage();
     applyLanguage(langCode);
+
+    // Notify service worker to cache language-specific fonts
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'CACHE_LANGUAGE_FONTS',
+            lang: langCode
+        });
+    }
 }

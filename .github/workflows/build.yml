@@ -1,0 +1,33 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install esbuild
+        run: npm install esbuild
+
+      - name: Build
+        run: npx esbuild src/main.js --bundle --minify --outfile=app.js
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app.js
+          git diff --staged --quiet || git commit -m "build: bundle app.js"
+          git push
