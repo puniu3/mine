@@ -9,6 +9,68 @@ const SAVE_KEY = 'blockCraftSave';
 const AUTOSAVE_INTERVAL = 5000;
 
 /**
+ * Inline Worker code as a string (to work with bundled builds)
+ */
+const WORKER_CODE = `
+const SAVE_SCHEMA_VERSION = 2;
+
+function rleEncode(data) {
+    if (data.length === 0) return new Uint8Array(0);
+    const result = [];
+    let i = 0;
+    while (i < data.length) {
+        const value = data[i];
+        let count = 1;
+        while (i + count < data.length && data[i + count] === value && count < 65535) {
+            count++;
+        }
+        result.push(value);
+        if (count <= 255) {
+            result.push(count);
+        } else {
+            result.push(0);
+            result.push((count >> 8) & 0xff);
+            result.push(count & 0xff);
+        }
+        i += count;
+    }
+    return new Uint8Array(result);
+}
+
+function uint8ToBase64(bytes) {
+    const chunkSize = 0x8000;
+    const chunks = [];
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const slice = bytes.subarray(i, i + chunkSize);
+        chunks.push(String.fromCharCode(...slice));
+    }
+    return btoa(chunks.join(''));
+}
+
+self.onmessage = function(e) {
+    const { type, payload } = e.data;
+    if (type === 'SAVE') {
+        try {
+            const { map, width, height, player, inventory, timers } = payload;
+            const compressedMap = rleEncode(map);
+            const base64Map = uint8ToBase64(compressedMap);
+            const state = {
+                schema: SAVE_SCHEMA_VERSION,
+                world: { width, height, map: base64Map },
+                player,
+                inventory,
+                timers
+            };
+            const jsonString = JSON.stringify(state);
+            self.postMessage({ type: 'SAVE_COMPLETE', data: jsonString });
+        } catch (err) {
+            self.postMessage({ type: 'SAVE_ERROR', error: err.message });
+        }
+    }
+};
+`;
+
+/**
  * Convert base64 string to Uint8Array
  * (Used for loading on main thread)
  */
@@ -45,9 +107,11 @@ export function createSaveManager({ world, player, timers, inventory, utils, con
     let isSaving = false;
     let worker = null;
 
-    // Initialize Web Worker
+    // Initialize Web Worker using inline Blob (works with bundled builds)
     try {
-        worker = new Worker(new URL('./save.worker.js', import.meta.url), { type: 'module' });
+        const blob = new Blob([WORKER_CODE], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        worker = new Worker(workerUrl);
         
         worker.onmessage = (e) => {
             const { type, data, error } = e.data;
