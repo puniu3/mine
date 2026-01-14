@@ -128,6 +128,7 @@ export function createInput(canvas, { onHotbarSelect, onTouch, onClimb }) {
     setupTouch('btn-right', 'right');
     setupTouch('btn-jump', 'jump');
     canvas.addEventListener('touchstart', e => {
+        if (e.cancelable) e.preventDefault();
         const t = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         input.mouse.active = false;
