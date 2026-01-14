@@ -25,7 +25,7 @@ import {
     initHotbarUI, selectHotbar, getSelectedBlockId,
     getInventoryState, loadInventoryState
 } from './inventory.js';
-import { isCraftingOpen, updateCrafting, pollCraftingGamepad } from './crafting.js';
+import { isCraftingOpen, updateCrafting, pollCraftingGamepad, closeCraftingUI } from './crafting.js';
 import { tick as tickFireworks, createExplosionParticles, createSplashParticles } from './fireworks.js';
 import { tick as tickBlockParticles, initBlockParticles } from './block_particles.js';
 import { createActions } from './actions.js';
@@ -262,7 +262,13 @@ function init(savedState = null) {
     // Initialize Input
     input = createInput(canvas, {
         onHotbarSelect: selectHotbar,
-        onTouch: (x, y) => actions.handlePointer(x, y),
+        onTouch: (x, y) => {
+            if (isCraftingOpen) {
+                closeCraftingUI(true);
+            } else {
+                actions.handlePointer(x, y);
+            }
+        },
         onClimb: () => actions.triggerClimb()
     });
 
@@ -341,6 +347,8 @@ function tick() {
     if (input.mouse.leftDown) {
         if (!isCraftingOpen) {
             actions.handlePointer(input.mouse.x, input.mouse.y);
+        } else {
+            closeCraftingUI(true);
         }
         input.mouse.leftDown = false;
     }
