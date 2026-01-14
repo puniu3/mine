@@ -3,6 +3,14 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+    paths:
+      - 'index.html'
+      - 'app.js'
+      - 'manifest.json'
+      - 'styles/**'
+      - 'icons/**'
+      - 'fonts/**'
+      - 'service-worker.js'
 
 # 重要: 同時実行を制御し、古いデプロイをキャンセル
 concurrency:

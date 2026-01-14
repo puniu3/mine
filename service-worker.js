@@ -1,69 +1,51 @@
-const CACHE_NAME = 'pictoco-v21';
+const CACHE_NAME = 'pictoco-v22';
 
-const ASSETS_TO_CACHE = [
+// Core assets - always cached
+const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './styles/style.css',
+  './app.js'
+];
+
+// PWA icons
+const PWA_ICONS = [
   './icons/icon-192.png',
-  './icons/icon-512.png',
-  // Main JS
-  './src/main.js',
-  './src/input.js',
-  './src/renderer.js',
-  './src/accelerator.js',
-  './src/sky.js',
-  './src/inventory.js',
-  './src/actions.js',
-  './src/i18n.js',
-  './src/block_particles.js',
-  './src/audio.js',
-  './src/save.js',
-  './src/fireworks.js',
-  './src/sapling_manager.js',
-  './src/constants.js',
-  './src/texture_gen.js',
-  './src/jackpot.js',
-  './src/utils.js',
-  './src/crafting.js',
-  './src/ui_manager.js',
-  './src/world_share.js',
-  './src/tnt.js',
-  './src/camera.js',
-  // Painters
-  './src/painters/index.js',
-  './src/painters/core.js',
-  './src/painters/structures.js',
-  './src/painters/clouds.js',
-  './src/painters/vegetation.js',
-  // World
-  './src/world/index.js',
-  './src/world/generate.js',
-  './src/world/terrain.js',
-  './src/world/biomes.js',
-  './src/world/caves.js',
-  './src/world/clouds.js',
-  './src/world/erosion.js',
-  './src/world/features.js',
-  './src/world/vegetation.js',
-  './src/world/water.js',
-  // Player
-  './src/player/index.js',
-  './src/player/physics.js',
-  './src/player/render.js',
-  './src/player/collision.js',
-  './src/player/movement.js',
-  './src/player/fixed_point.js',
-  // Fonts
+  './icons/icon-512.png'
+];
+
+// Western fonts - used for all environments
+const WESTERN_FONTS = [
   './fonts/fredoka-one-latin-400-normal.woff2',
   './fonts/fredoka-one-latin-400-normal.woff',
   './fonts/Nunito-Bold.woff2',
-  './fonts/Nunito-Regular.woff2',
-  './fonts/Jua-Regular.woff2',
-  './fonts/ZCOOLKuaiLe-Regular.woff2',
-  './fonts/ZenMaruGothic-Regular.woff2',
-  './fonts/ZenMaruGothic-Bold.woff2',
-  './fonts/MochiyPopOne-Regular.woff2'
+  './fonts/Nunito-Regular.woff2'
+];
+
+// Asian fonts - loaded on-demand per language
+const ASIAN_FONTS = {
+  ja: [
+    './fonts/ZenMaruGothic-Regular.woff2',
+    './fonts/ZenMaruGothic-Bold.woff2',
+    './fonts/MochiyPopOne-Regular.woff2'
+  ],
+  ko: [
+    './fonts/Jua-Regular.woff2'
+  ],
+  zh: [
+    './fonts/ZCOOLKuaiLe-Regular.woff2'
+  ],
+  'zh-TW': [
+    './fonts/ZCOOLKuaiLe-Regular.woff2'
+  ]
+};
+
+// Assets to cache on install (core + PWA icons + western fonts)
+const ASSETS_TO_CACHE = [
+  ...CORE_ASSETS,
+  ...PWA_ICONS,
+  ...WESTERN_FONTS
 ];
 
 // Install event - cache all assets
@@ -120,4 +102,17 @@ self.addEventListener('fetch', (event) => {
           });
       })
   );
+});
+
+// Message handler - cache Asian fonts on language change
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CACHE_LANGUAGE_FONTS') {
+    const lang = event.data.lang;
+    const fonts = ASIAN_FONTS[lang];
+    if (fonts && fonts.length > 0) {
+      caches.open(CACHE_NAME).then((cache) => {
+        cache.addAll(fonts);
+      });
+    }
+  }
 });
