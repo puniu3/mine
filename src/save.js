@@ -6,7 +6,7 @@
 import { rleDecode } from './utils.js';
 
 const SAVE_KEY = 'blockCraftSave';
-const AUTOSAVE_INTERVAL = 5000;
+const AUTOSAVE_INTERVAL = 1000;
 
 /**
  * Inline Worker code as a string (to work with bundled builds)
