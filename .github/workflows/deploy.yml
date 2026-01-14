@@ -1,6 +1,13 @@
 name: Deploy to GitHub Pages
 
 on:
+  # buildワークフロー完了時にトリガー（app.jsの自動生成後）
+  workflow_run:
+    workflows: ["Build"]
+    types:
+      - completed
+    branches: [main]
+  # 手動でファイルをpushした時もトリガー
   push:
     branches: [main]
     paths:
@@ -24,6 +31,8 @@ permissions:
 
 jobs:
   deploy:
+    # workflow_runの場合はビルド成功時のみ実行、pushの場合は常に実行
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
