@@ -9,8 +9,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url('../fonts/fredoka-one-latin-400-normal.woff2') format('woff2'),
-         url('../fonts/fredoka-one-latin-400-normal.woff') format('woff');
+    src: url('../fonts/fredoka-subset.woff2') format('woff2');
 }
 
 /* Local Fonts for Body */
