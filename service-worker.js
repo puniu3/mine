@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pictoco-v20';
+const CACHE_NAME = 'pictoco-v21';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -57,8 +57,8 @@ const ASSETS_TO_CACHE = [
   // Fonts
   './fonts/fredoka-one-latin-400-normal.woff2',
   './fonts/fredoka-one-latin-400-normal.woff',
-  './fonts/Nunito-Bold.ttf',
-  './fonts/Nunito-Regular.ttf',
+  './fonts/Nunito-Bold.woff2',
+  './fonts/Nunito-Regular.woff2',
   './fonts/Jua-Regular.woff2',
   './fonts/ZCOOLKuaiLe-Regular.woff2',
   './fonts/ZenMaruGothic-Regular.woff2',
