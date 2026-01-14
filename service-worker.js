@@ -17,8 +17,7 @@ const PWA_ICONS = [
 
 // Western fonts - used for all environments
 const WESTERN_FONTS = [
-  './fonts/fredoka-one-latin-400-normal.woff2',
-  './fonts/fredoka-one-latin-400-normal.woff',
+  './fonts/fredoka-subset.woff2',
   './fonts/Nunito-Bold.woff2',
   './fonts/Nunito-Regular.woff2'
 ];
