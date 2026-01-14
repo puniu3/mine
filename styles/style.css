@@ -19,7 +19,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url('../fonts/Jua-Regular.ttf') format('truetype');
+    src: url('../fonts/Jua-Regular.woff2') format('woff2');
 }
 
 @font-face {
@@ -27,7 +27,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url('../fonts/MochiyPopOne-Regular.ttf') format('truetype');
+    src: url('../fonts/MochiyPopOne-Regular.woff2') format('woff2');
 }
 
 @font-face {
@@ -51,7 +51,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url('../fonts/ZCOOLKuaiLe-Regular.ttf') format('truetype');
+    src: url('../fonts/ZCOOLKuaiLe-Regular.woff2') format('woff2');
 }
 
 @font-face {
@@ -59,7 +59,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url('../fonts/ZenMaruGothic-Regular.ttf') format('truetype');
+    src: url('../fonts/ZenMaruGothic-Regular.woff2') format('woff2');
 }
 
 @font-face {
@@ -67,7 +67,7 @@
     font-style: normal;
     font-weight: 700;
     font-display: swap;
-    src: url('../fonts/ZenMaruGothic-Bold.ttf') format('truetype');
+    src: url('../fonts/ZenMaruGothic-Bold.woff2') format('woff2');
 }
 
 body {
