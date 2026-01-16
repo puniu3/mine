@@ -85,6 +85,9 @@ export function generate(world) {
         }
     }
 
+    // Generate Tar Pits (Coal Deposits) in Ocean
+    generateTarPits(world, heights, biomeByColumn);
+
     // Water Physics Simulation (Fixes walls and floating water)
     simulateWaterSettling(world);
 
@@ -92,4 +95,33 @@ export function generate(world) {
     restoreOceanLevels(world, biomeByColumn, SEA_LEVEL);
 
     generateClouds(world, heights);
+}
+
+function generateTarPits(world, heights, biomeByColumn) {
+    for (let x = 0; x < world.width; x++) {
+        if (biomeByColumn[x] === BIOMES.OCEAN) {
+            // Simple pseudo-random noise for tar pit placement
+            // Combine two sine waves for more natural spacing
+            // Lower frequency for wider patches (approx 20-30 blocks)
+            const noise = Math.sin(x * 0.03) + Math.sin(x * 0.1) * 0.5;
+
+            // Threshold > 1.15 creates rare patches
+            if (noise > 1.15) {
+                const h = heights[x];
+                // Replace surface and 1-3 blocks below
+                // Use x as seed for depth variation
+                const depth = 2 + (x % 2);
+
+                for (let i = 0; i < depth; i++) {
+                    const y = h + i;
+                    if (y < world.height) {
+                        // Ensure we don't replace water (though unlikely given h is surface)
+                        if (world.getBlock(x, y) !== BLOCKS.WATER) {
+                            world.setBlock(x, y, BLOCKS.COAL);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
