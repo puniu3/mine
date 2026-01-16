@@ -13,6 +13,21 @@ import { BLOCKS, TILE_SIZE } from './constants.js';
  * @returns {Object.<number, HTMLCanvasElement>} A dictionary mapping block IDs to their corresponding texture canvases.
  */
 export function generateTextures() {
+    // Seed for the pseudo-random number generator to ensure deterministic results.
+    // Changing this value will change the "random" patterns for all blocks.
+    let seed = 163905381571422;
+
+    /**
+     * A deterministic pseudo-random number generator (Mulberry32 algorithm).
+     * @returns {number} A number between 0 (inclusive) and 1 (exclusive).
+     */
+    const random = () => {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+
     const textures = {};
 
     /**
@@ -38,7 +53,8 @@ export function generateTextures() {
         const id = ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE);
         const d = id.data;
         for (let i = 0; i < d.length; i += 4) {
-            const noise = (Math.random() - 0.5) * amount * 255;
+            // Use deterministic random() instead of Math.random()
+            const noise = (random() - 0.5) * amount * 255;
             d[i] += noise;
             d[i + 1] += noise;
             d[i + 2] += noise;
@@ -60,7 +76,8 @@ export function generateTextures() {
         ctx.fillRect(0, 0, s, s / 3);
         addNoise(ctx, 0.1);
         for (let i = 0; i < s; i += 4) {
-            if (Math.random() > 0.5) ctx.fillRect(i, s / 3, 4, 4);
+            // Use deterministic random()
+            if (random() > 0.5) ctx.fillRect(i, s / 3, 4, 4);
         }
     });
 
@@ -75,7 +92,8 @@ export function generateTextures() {
         ctx.fillRect(0, 0, s, s);
         ctx.fillStyle = '#c2aa63';
         for (let i = 0; i < 12; i++) {
-            ctx.fillRect(Math.random() * s, Math.random() * s, 3, 3);
+            // Use deterministic random()
+            ctx.fillRect(random() * s, random() * s, 3, 3);
         }
         addNoise(ctx, 0.12);
     });
@@ -88,7 +106,8 @@ export function generateTextures() {
         ctx.fillRect(0, 0, s, s);
         ctx.fillStyle = '#b0c4de';
         for (let i = 0; i < 8; i++) {
-            ctx.fillRect(Math.random() * s, Math.random() * s, 2, 2);
+            // Use deterministic random()
+            ctx.fillRect(random() * s, random() * s, 2, 2);
         }
         addNoise(ctx, 0.06);
     });
@@ -106,7 +125,10 @@ export function generateTextures() {
         ctx.fillRect(0, 0, s, s);
         addNoise(ctx, 0.2);
         ctx.fillStyle = '#1b5e20';
-        for (let i = 0; i < 10; i++) ctx.fillRect(Math.random() * s, Math.random() * s, 4, 4);
+        for (let i = 0; i < 10; i++) {
+            // Use deterministic random()
+            ctx.fillRect(random() * s, random() * s, 4, 4);
+        }
     });
 
     createTexture(BLOCKS.SAPLING, (ctx, s) => {
@@ -182,7 +204,10 @@ export function generateTextures() {
         ctx.fillRect(0, 0, s, s);
         addNoise(ctx, 0.2);
         ctx.fillStyle = speckColor;
-        for (let i = 0; i < 6; i++) ctx.fillRect(Math.random() * (s - 6), Math.random() * (s - 6), 6, 6);
+        // Use deterministic random() to ensure specks appear in the same place every time
+        for (let i = 0; i < 6; i++) {
+            ctx.fillRect(random() * (s - 6), random() * (s - 6), 6, 6);
+        }
     };
 
     createTexture(BLOCKS.COAL, createOre('#757575', '#000'));
@@ -197,9 +222,10 @@ export function generateTextures() {
 
         ctx.fillStyle = '#f9a825';
         for (let i = 0; i < 6; i++) {
-            const w = 6 + Math.random() * 4;
-            const h = 6 + Math.random() * 4;
-            ctx.fillRect(4 + Math.random() * (s - 8 - w), 4 + Math.random() * (s - 8 - h), w, h);
+            // Use deterministic random()
+            const w = 6 + random() * 4;
+            const h = 6 + random() * 4;
+            ctx.fillRect(4 + random() * (s - 8 - w), 4 + random() * (s - 8 - h), w, h);
         }
 
         ctx.strokeStyle = '#fff9c4';
