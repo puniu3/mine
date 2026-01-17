@@ -168,6 +168,101 @@ export function initUI(callbacks) {
     }
     if(importFile) importFile.addEventListener('change', updateWorldModalState);
 
+    // --- Export Preview Modal Logic ---
+    const exportPreviewModal = document.getElementById('export-preview-modal');
+    const previewImg = document.getElementById('export-preview-img');
+    const previewDownloadBtn = document.getElementById('preview-download-btn');
+    const previewShareBtn = document.getElementById('preview-share-btn');
+    const previewPostBtn = document.getElementById('preview-post-btn');
+    const previewCloseBtn = document.getElementById('preview-close-btn');
+
+    let currentExportBlob = null;
+    let currentExportUrl = null;
+
+    function showExportPreview(blob) {
+        if (!exportPreviewModal) return;
+
+        currentExportBlob = blob;
+        if (currentExportUrl) {
+            URL.revokeObjectURL(currentExportUrl);
+        }
+        currentExportUrl = URL.createObjectURL(blob);
+
+        if (previewImg) previewImg.src = currentExportUrl;
+
+        exportPreviewModal.classList.add('visible');
+        hideWorldModal();
+    }
+
+    function hideExportPreview() {
+        if (exportPreviewModal) {
+            exportPreviewModal.classList.remove('visible');
+        }
+        // Go back to world modal
+        showWorldModal();
+    }
+
+    if (previewCloseBtn) {
+        previewCloseBtn.addEventListener('click', hideExportPreview);
+    }
+
+    if (previewDownloadBtn) {
+        previewDownloadBtn.addEventListener('click', () => {
+            if (!currentExportBlob) return;
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+            downloadBlob(currentExportBlob, `world_${timestamp}.png`);
+        });
+    }
+
+    if (previewShareBtn) {
+        previewShareBtn.addEventListener('click', async () => {
+            if (!currentExportBlob) return;
+
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+            const filename = `world_${timestamp}.png`;
+            const file = new File([currentExportBlob], filename, { type: 'image/png' });
+
+            const shareData = {
+                title: 'Pictoco World',
+                text: 'Check out my world in Pictoco! https://puniu3.github.io/mine/',
+                url: 'https://puniu3.github.io/mine/'
+            };
+
+            // Try to share file + link
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                shareData.files = [file];
+            }
+
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                console.log('Share failed or canceled:', err);
+                // Fallback or ignore (user might have canceled)
+            }
+        });
+    }
+
+    if (previewPostBtn) {
+        previewPostBtn.addEventListener('click', () => {
+             // Twitter/X Intent
+             // Note: We cannot programmatically attach the image via Web Intent.
+             // We just populate the text and link.
+             const text = encodeURIComponent('Check out my world in #pictoco !');
+             const url = encodeURIComponent('https://puniu3.github.io/mine/');
+             const intentUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+             window.open(intentUrl, '_blank');
+        });
+    }
+
+    // Close preview on outside click
+    if (exportPreviewModal) {
+        exportPreviewModal.addEventListener('click', (e) => {
+            if (e.target === exportPreviewModal) {
+                hideExportPreview();
+            }
+        });
+    }
+
     // Event: Export World
     if(exportBtn) {
         exportBtn.addEventListener('click', async () => {
@@ -181,9 +276,12 @@ export function initUI(callbacks) {
                 worldMap[i] = binary.charCodeAt(i);
             }
 
-            const blob = await exportWorldToImage(worldMap, savedState.world.width, savedState.world.height);
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-            downloadBlob(blob, `world_${timestamp}.png`);
+            try {
+                const blob = await exportWorldToImage(worldMap, savedState.world.width, savedState.world.height);
+                showExportPreview(blob);
+            } catch (err) {
+                console.error('Export failed:', err);
+            }
         });
     }
 
