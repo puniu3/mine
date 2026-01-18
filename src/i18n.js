@@ -27,7 +27,7 @@ export const resources = {
         world_export_desc: "Export world data as a PNG image. 1 tile converts to 1 pixel, allowing the world to be viewed directly as an image.",
         world_export_btn: "Button to execute export.",
         world_save_btn: "Button to download the world image.",
-        world_share_btn: "Button to share the world image.",
+        world_share_btn: "Button to trigger Web Share API. Shares the world image and game link to external apps (e.g., Discord, X).",
         world_import_title: "Header for the import section.",
         world_import_desc: "Imports an image, converts it to world data, and starts the game. Keeps existing player data. Forces closest-color matching for any uploaded image.",
         world_import_btn: "Button to execute import.",
