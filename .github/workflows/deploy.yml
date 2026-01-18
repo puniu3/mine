@@ -1,60 +1,52 @@
-name: Deploy to GitHub Pages
+name: Build and Deploy
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'src/**'
-      - 'index.html'
-      - 'manifest.json'
-      - 'styles/**'
-      - 'icons/**'
-      - 'fonts/**'
-      - 'service-worker.js'
 
-# 重要: 同時実行を制御し、古いデプロイをキャンセル
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 concurrency:
   group: pages
   cancel-in-progress: true
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install esbuild
-        run: npm install esbuild
+      - run: npm install esbuild
 
-      - name: Build
-        run: npx esbuild src/main.js --bundle --minify --outfile=app.js
+      - run: npx esbuild src/main.js --bundle --minify --outfile=app.js
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: Commit and push if changed
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add app.js
+          git diff --staged --quiet || git commit -m "build"
+          git push || true
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
 
   deploy:
     needs: build
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
