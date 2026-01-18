@@ -25,35 +25,30 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      src_changed: ${{ steps.check.outputs.src_changed }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
-      - name: Check if src changed
-        id: check
-        run: |
-          if git diff --name-only HEAD~1 HEAD | grep -q '^src/'; then
-            echo "src_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "src_changed=false" >> $GITHUB_OUTPUT
-          fi
+      - name: Check changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            src:
+              - 'src/**'
 
       - name: Setup Node.js
-        if: steps.check.outputs.src_changed == 'true'
+        if: steps.filter.outputs.src == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install esbuild
-        if: steps.check.outputs.src_changed == 'true'
+        if: steps.filter.outputs.src == 'true'
         run: npm install esbuild
 
       - name: Build
-        if: steps.check.outputs.src_changed == 'true'
+        if: steps.filter.outputs.src == 'true'
         run: npx esbuild src/main.js --bundle --minify --outfile=app.js
 
       - name: Setup Pages
