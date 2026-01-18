@@ -131,19 +131,59 @@ export function initUI(callbacks) {
     const worldModal = document.getElementById('world-modal');
     const worldBtn = document.getElementById('world-btn');
     const worldCloseBtn = document.getElementById('world-close-btn');
-    const exportBtn = document.getElementById('export-btn');
+    const worldPreview = document.getElementById('world-preview');
+    const saveBtn = document.getElementById('btn-save-world');
+    const shareBtn = document.getElementById('btn-share-world');
     const importBtn = document.getElementById('import-btn');
     const importFile = document.getElementById('import-file');
 
+    let currentWorldBlob = null;
+
     function updateWorldModalState() {
-        // Export button: disabled if no save data
-        if (exportBtn) {
-            const savedState = loadGameState();
-            exportBtn.disabled = !savedState || !savedState.world || !savedState.world.map;
-        }
         // Import button: disabled if no file selected
         if (importBtn && importFile) {
             importBtn.disabled = !importFile.files[0];
+        }
+    }
+
+    async function updateWorldPreview() {
+        if (!worldPreview) return;
+
+        // Reset state
+        if (worldPreview.src && worldPreview.src.startsWith('blob:')) {
+            URL.revokeObjectURL(worldPreview.src);
+        }
+        worldPreview.style.display = 'none';
+        worldPreview.src = '';
+        currentWorldBlob = null;
+        if (saveBtn) saveBtn.disabled = true;
+        if (shareBtn) shareBtn.disabled = true;
+
+        const savedState = loadGameState();
+        if (!savedState || !savedState.world || !savedState.world.map) {
+            return;
+        }
+
+        // Generate Image
+        try {
+            const binary = atob(savedState.world.map);
+            const worldMap = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                worldMap[i] = binary.charCodeAt(i);
+            }
+
+            const blob = await exportWorldToImage(worldMap, savedState.world.width, savedState.world.height);
+            currentWorldBlob = blob;
+
+            const url = URL.createObjectURL(blob);
+            worldPreview.src = url;
+            worldPreview.style.display = 'block';
+
+            if (saveBtn) saveBtn.disabled = false;
+            if (shareBtn) shareBtn.disabled = false;
+
+        } catch (e) {
+            console.error("Preview generation failed", e);
         }
     }
 
@@ -151,6 +191,7 @@ export function initUI(callbacks) {
         if (worldModal) {
             worldModal.classList.add('visible');
             updateWorldModalState();
+            updateWorldPreview();
         }
     }
     function hideWorldModal() { if(worldModal) worldModal.classList.remove('visible'); }
@@ -168,24 +209,66 @@ export function initUI(callbacks) {
     }
     if(importFile) importFile.addEventListener('change', updateWorldModalState);
 
-    // Event: Export World
-    if(exportBtn) {
-        exportBtn.addEventListener('click', async () => {
-            const savedState = loadGameState();
-            if (!savedState || !savedState.world || !savedState.world.map) return;
-
-            // Decode base64 to Uint8Array
-            const binary = atob(savedState.world.map);
-            const worldMap = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-                worldMap[i] = binary.charCodeAt(i);
+    // Event: Save World (Download)
+    if(saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            if (currentWorldBlob) {
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+                downloadBlob(currentWorldBlob, `world_${timestamp}.png`);
             }
-
-            const blob = await exportWorldToImage(worldMap, savedState.world.width, savedState.world.height);
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-            downloadBlob(blob, `world_${timestamp}.png`);
         });
     }
+
+    // Event: Share World
+    if(shareBtn) {
+        shareBtn.addEventListener('click', async () => {
+            if (!currentWorldBlob) return;
+            if (!navigator.share) {
+                alert("Web Share API is not supported on this browser.");
+                return;
+            }
+
+            try {
+                const file = new File([currentWorldBlob], 'world.png', { type: 'image/png' });
+                const shareData = {
+                    files: [file],
+                    title: 'Pictoco World',
+                    text: 'Check out my world!',
+                    url: 'https://puniu3.github.io/mine/'
+                };
+
+                if (navigator.canShare && navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                } else {
+                     await navigator.share({
+                        title: 'Pictoco World',
+                        url: 'https://puniu3.github.io/mine/'
+                     });
+                }
+            } catch (err) {
+                console.error("Share failed", err);
+            }
+        });
+    }
+
+    // Global Drag & Drop Import
+    const handleDrop = async (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            try {
+                const worldMap = await importWorldFromImage(file);
+                hideWorldModal();
+                hideStartScreen();
+                onImportWorld(worldMap);
+            } catch (err) {
+                alert(strings.msg_import_err);
+            }
+        }
+    };
+
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', handleDrop);
 
     // Event: Import World
     if(importBtn && importFile) {

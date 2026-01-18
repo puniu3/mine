@@ -850,7 +850,7 @@ button {
     color: #666; /* Medium gray */
 }
 
-#export-btn, #import-btn {
+#btn-save-world, #btn-share-world, #import-btn {
     background: #FF9800; /* Match World Theme */
     color: white;
     border-bottom: 4px solid #F57C00;
@@ -858,16 +858,46 @@ button {
     font-size: 16px;
 }
 
-#export-btn:active:not(:disabled), #import-btn:active:not(:disabled) {
+#btn-save-world:active:not(:disabled), #btn-share-world:active:not(:disabled), #import-btn:active:not(:disabled) {
     border-bottom-width: 0;
     transform: translateY(4px);
 }
 
-#export-btn:disabled, #import-btn:disabled {
+#btn-save-world:disabled, #btn-share-world:disabled, #import-btn:disabled {
     background: #ccc;
     border-bottom-color: #aaa;
     color: #888;
     cursor: not-allowed;
+}
+
+#world-preview-container {
+    margin: 12px 0;
+    text-align: center;
+    background: #333;
+    border-radius: 4px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+#world-preview {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    border: 1px solid #555;
+    image-rendering: pixelated;
+}
+
+.world-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.world-actions button {
+    flex: 1;
+    min-width: 0;
 }
 
 #import-file {
