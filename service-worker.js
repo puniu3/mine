@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pictoco-v23';
+const CACHE_NAME = 'pictoco-v24';
 
 // Core assets - always cached
 const CORE_ASSETS = [
