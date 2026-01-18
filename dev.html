@@ -165,6 +165,10 @@
         </div>
     </div>
 
+    <div id="drag-overlay">
+        <div class="drag-icon"></div>
+    </div>
+
     <div id="world-modal">
         <div class="world-modal-content">
             <h2 data-i18n="world_modal_title">My World</h2>
@@ -172,7 +176,13 @@
             <div class="world-section">
                 <h3 data-i18n="world_export_title">Save</h3>
                 <p data-i18n="world_export_desc">Turn your world into a picture.</p>
-                <button id="export-btn" data-i18n="world_export_btn">Make Picture</button>
+                <div id="world-preview-container">
+                    <img id="world-preview" alt="World Preview" style="display: none;">
+                </div>
+                <div class="world-actions">
+                    <button id="btn-save-world" data-i18n="world_save_btn">Save</button>
+                    <button id="btn-share-world" data-i18n="world_share_btn">Share</button>
+                </div>
             </div>
 
             <div class="world-section">
@@ -186,6 +196,6 @@
         </div>
     </div>
 
-    <script type="module" src="src/main.js"></script>
+    <script type="module" src="./src/main.js"></script>
 </body>
 </html>
