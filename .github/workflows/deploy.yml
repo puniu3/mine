@@ -29,26 +29,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check changed paths
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            src:
-              - 'src/**'
-
       - name: Setup Node.js
-        if: steps.filter.outputs.src == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install esbuild
-        if: steps.filter.outputs.src == 'true'
         run: npm install esbuild
 
       - name: Build
-        if: steps.filter.outputs.src == 'true'
         run: npx esbuild src/main.js --bundle --minify --outfile=app.js
 
       - name: Setup Pages
