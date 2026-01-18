@@ -1,24 +1,33 @@
 /**
  * World Share Module
  * Export/Import world as image (1 tile = 1 pixel)
+ * * CHANGES:
+ * - Optimized color palette for better compression resilience (Psychovisual Tuning).
+ * - Removed Floyd-Steinberg dithering to prevent noise propagation in save data.
+ * - Removed strict tolerance checks to ensure valid world generation even from degraded images.
  */
 
 import { BLOCKS, BLOCK_PROPS, WORLD_WIDTH, WORLD_HEIGHT } from './constants.js';
 import { World } from './world/index.js';
 import { rleDecode } from './utils.js';
 
-// Color mapping for export (WOOD uses different color to avoid collision with DIRT)
+// Color mapping for export
+// Tuned to maximize RGB distance between visually similar blocks (especially browns)
 const EXPORT_COLORS = {
-    [BLOCKS.AIR]: '#87CEEB',           // Sky blue for AIR
-    [BLOCKS.DIRT]: '#5d4037',
+    [BLOCKS.AIR]: '#87CEEB',           // Sky Blue
+    
+    // --- BROWN GROUP (Separated by Luminance & Hue) ---
+    [BLOCKS.DIRT]: '#5d4037',          // Dark Brown (Base anchor)
+    [BLOCKS.WOOD]: '#bcaaa4',          // Light Tan/Grayish (High luminance to separate from Dirt)
+    [BLOCKS.WORKBENCH]: '#795548',     // Reddish Medium Brown (Distinct hue from Wood/Dirt)
+    // --------------------------------------------------
+
     [BLOCKS.GRASS]: '#388e3c',
     [BLOCKS.STONE]: '#757575',
-    [BLOCKS.WOOD]: '#6d4c41',          // Different brown to avoid DIRT collision
     [BLOCKS.LEAVES]: '#2e7d32',
     [BLOCKS.BEDROCK]: '#000000',
     [BLOCKS.COAL]: '#212121',
     [BLOCKS.GOLD]: '#ffb300',
-    [BLOCKS.WORKBENCH]: '#8d6e63',
     [BLOCKS.SAND]: '#d7c27a',
     [BLOCKS.SNOW]: '#e0f7fa',
     [BLOCKS.CLOUD]: '#ffffff',
@@ -31,10 +40,6 @@ const EXPORT_COLORS = {
     [BLOCKS.ACCELERATOR_RIGHT]: '#66bb6a',
     [BLOCKS.WATER]: '#2196f3'
 };
-
-// Strict tolerance for specific blocks (Redmean distance threshold)
-// Lower value = stricter matching required
-const STRICT_TOLERANCE = 30; 
 
 /**
  * Convert hex color to RGB
@@ -56,8 +61,7 @@ for (const [blockId, color] of Object.entries(EXPORT_COLORS)) {
 
 /**
  * Calculate color distance using "Redmean" formula.
- * This approximates human vision better than simple Euclidean distance.
- * (Humans are more sensitive to Green, less to Blue)
+ * Approximates human vision (sensitive to Green, less to Blue).
  */
 function getRedmeanDistance(r1, g1, b1, r2, g2, b2) {
     const rMean = (r1 + r2) / 2;
@@ -65,8 +69,6 @@ function getRedmeanDistance(r1, g1, b1, r2, g2, b2) {
     const g = g1 - g2;
     const b = b1 - b2;
     
-    // Formula: sqrt( (2 + rMean/256)*r^2 + 4*g^2 + (2 + (255-rMean)/256)*b^2 )
-    // We omit sqrt for performance in comparisons, but include it here for threshold consistency
     const weightR = 2 + (rMean / 256);
     const weightG = 4.0;
     const weightB = 2 + ((255 - rMean) / 256);
@@ -75,23 +77,16 @@ function getRedmeanDistance(r1, g1, b1, r2, g2, b2) {
 }
 
 /**
- * Find nearest block ID by color distance (Perceptual)
+ * Find nearest block ID by color distance.
+ * Removed strict tolerance checks to prioritize robustness against compression artifacts.
  */
 function findNearestBlock(r, g, b) {
     let minDist = Infinity;
-    let nearestId = BLOCKS.DIRT; // Default fallback if everything fails
+    let nearestId = BLOCKS.AIR; // Default to AIR for safety (prevent getting stuck in walls)
 
     for (const [blockIdStr, rgb] of Object.entries(BLOCK_RGB_MAP)) {
         const blockId = parseInt(blockIdStr);
         const dist = getRedmeanDistance(r, g, b, rgb.r, rgb.g, rgb.b);
-
-        // --- STRICTNESS CHECK ---
-        // If the candidate is AIR or WORKBENCH, require extremely close match.
-        // If the color is not very close, we skip this block as a candidate.
-        if ((blockId === BLOCKS.AIR || blockId === BLOCKS.WORKBENCH) && dist > STRICT_TOLERANCE) {
-            continue;
-        }
-        // ------------------------
 
         if (dist < minDist) {
             minDist = dist;
@@ -104,7 +99,7 @@ function findNearestBlock(r, g, b) {
 
 /**
  * Export world to PNG image (1 tile = 1 pixel).
- * Assumes input is RLE compressed (latest save schema).
+ * Assumes input is RLE compressed.
  * @param {Uint8Array} compressedMap - RLE compressed world map data
  * @param {number} width - World width in tiles
  * @param {number} height - World height in tiles
@@ -132,7 +127,7 @@ export function exportWorldToImage(compressedMap, width, height) {
                 data[pixelIndex] = rgb.r;
                 data[pixelIndex + 1] = rgb.g;
                 data[pixelIndex + 2] = rgb.b;
-                data[pixelIndex + 3] = 255; // Alpha (Always opaque for export)
+                data[pixelIndex + 3] = 255; // Alpha
             }
         }
 
@@ -142,9 +137,9 @@ export function exportWorldToImage(compressedMap, width, height) {
 }
 
 /**
- * Import world from image file
- * Overlays image onto a newly generated world with Floyd-Steinberg Dithering.
- * Transparent pixels in the image preserve the underlying world.
+ * Import world from image file.
+ * Uses Nearest Neighbor approach to prevent noise propagation (no dithering).
+ * Robust against SNS compression and color profile shifts.
  * @param {File} file - Image file
  * @returns {Promise<Uint8Array>} World map data
  */
@@ -156,8 +151,7 @@ export function importWorldFromImage(file) {
             const img = new Image();
 
             img.onload = () => {
-                // 1. Generate a base world first (Terrain, Trees, etc.)
-                // The World constructor calls generate() automatically.
+                // 1. Generate a base world first
                 const baseWorld = new World(WORLD_WIDTH, WORLD_HEIGHT);
                 const worldMap = baseWorld.map;
 
@@ -201,79 +195,35 @@ export function importWorldFromImage(file) {
                 const imageData = ctx.getImageData(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
                 const data = imageData.data;
 
-                // --- Floyd-Steinberg Dithering Setup ---
-                // We use a Float32Array to hold pixel data so we can store 
-                // negative errors or values > 255 during the diffusion process.
-                const floatData = new Float32Array(data.length);
-                for (let i = 0; i < data.length; i++) {
-                    floatData[i] = data[i];
-                }
-
-                // Calculate bounds for the drawn image to optimize checks
+                // Calculate bounds for the drawn image
                 const startX = Math.floor(offsetX);
                 const endX = Math.floor(offsetX + drawWidth);
                 const startY = Math.floor(offsetY);
                 const endY = Math.floor(offsetY + drawHeight);
 
-                // 3. Process Dithering and Map Generation
+                // 3. Process Map Generation (Direct Mapping / Nearest Neighbor)
+                // Removed Dithering to prevent single-pixel noise from corrupting neighbors
                 for (let y = 0; y < WORLD_HEIGHT; y++) {
                     for (let x = 0; x < WORLD_WIDTH; x++) {
                         
                         const index = y * WORLD_WIDTH + x;
                         const pixelIndex = index * 4;
 
-                        // Check transparency directly from the float buffer
-                        // Alpha channel is at +3
-                        const alpha = floatData[pixelIndex + 3];
+                        // Check transparency
+                        const alpha = data[pixelIndex + 3];
 
                         // Only process if the pixel is inside the image bounds and opaque enough
                         const isInsideImage = (x >= startX && x < endX && y >= startY && y < endY);
                         
                         if (isInsideImage && alpha >= 128) {
-                            
-                            // Get current color (potentially modified by previous error diffusion)
-                            const oldR = floatData[pixelIndex];
-                            const oldG = floatData[pixelIndex + 1];
-                            const oldB = floatData[pixelIndex + 2];
+                            const r = data[pixelIndex];
+                            const g = data[pixelIndex + 1];
+                            const b = data[pixelIndex + 2];
 
-                            // Find nearest block palette color
-                            const blockId = findNearestBlock(oldR, oldG, oldB);
-                            worldMap[index] = blockId;
-
-                            // Get the ACTUAL color of the chosen block
-                            // (We default to DIRT if something goes wrong, though findNearestBlock handles it)
-                            const paletteRgb = BLOCK_RGB_MAP[blockId] || BLOCK_RGB_MAP[BLOCKS.DIRT];
-
-                            // Calculate Quantization Error
-                            const errR = oldR - paletteRgb.r;
-                            const errG = oldG - paletteRgb.g;
-                            const errB = oldB - paletteRgb.b;
-
-                            // --- Floyd-Steinberg Error Diffusion ---
-                            // Distribute error to neighboring pixels:
-                            //         X   7
-                            //     3   5   1
-                            // (/16)
-
-                            const distributeError = (dx, dy, factor) => {
-                                const nx = x + dx;
-                                const ny = y + dy;
-
-                                // Boundary check
-                                if (nx >= 0 && nx < WORLD_WIDTH && ny >= 0 && ny < WORLD_HEIGHT) {
-                                    const nIndex = (ny * WORLD_WIDTH + nx) * 4;
-                                    
-                                    // Add fraction of error to neighbor
-                                    floatData[nIndex]     += errR * factor / 16;
-                                    floatData[nIndex + 1] += errG * factor / 16;
-                                    floatData[nIndex + 2] += errB * factor / 16;
-                                }
-                            };
-
-                            distributeError(1, 0, 7);   // Right
-                            distributeError(-1, 1, 3);  // Bottom Left
-                            distributeError(0, 1, 5);   // Bottom
-                            distributeError(1, 1, 1);   // Bottom Right
+                            // Directly find the nearest block without error diffusion.
+                            // This ensures that compression artifacts stay localized 
+                            // and don't spread to turn the sky into dirt.
+                            worldMap[index] = findNearestBlock(r, g, b);
                         }
                     }
                 }
