@@ -1,16 +1,10 @@
 name: Deploy to GitHub Pages
 
 on:
-  # buildワークフロー完了時にトリガー（app.jsの自動生成後）
-  workflow_run:
-    workflows: ["Build"]
-    types:
-      - completed
-    branches: [main]
-  # 手動でファイルをpushした時もトリガー（app.jsはbuild.yml経由のためworkflow_runで処理）
   push:
     branches: [main]
     paths:
+      - 'src/**'
       - 'index.html'
       - 'manifest.json'
       - 'styles/**'
@@ -29,16 +23,38 @@ permissions:
   id-token: write
 
 jobs:
-  deploy:
-    # workflow_runの場合はビルド成功時のみ実行、pushの場合は常に実行
-    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      src_changed: ${{ steps.check.outputs.src_changed }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if src changed
+        id: check
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q '^src/'; then
+            echo "src_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "src_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        if: steps.check.outputs.src_changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install esbuild
+        if: steps.check.outputs.src_changed == 'true'
+        run: npm install esbuild
+
+      - name: Build
+        if: steps.check.outputs.src_changed == 'true'
+        run: npx esbuild src/main.js --bundle --minify --outfile=app.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -48,6 +64,13 @@ jobs:
         with:
           path: '.'
 
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
