@@ -233,7 +233,7 @@ export function initUI(callbacks) {
                 const shareData = {
                     files: [file],
                     title: 'Pictoco World',
-                    text: 'Check out my world!',
+                    // text field removed per request
                     url: 'https://puniu3.github.io/mine/'
                 };
 
@@ -252,22 +252,44 @@ export function initUI(callbacks) {
     }
 
     // Global Drag & Drop Import
-    const handleDrop = async (e) => {
+    const dragOverlay = document.getElementById('drag-overlay');
+    let dragCounter = 0;
+
+    const handleDragEnter = (e) => {
         e.preventDefault();
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            try {
-                const worldMap = await importWorldFromImage(file);
-                hideWorldModal();
-                hideStartScreen();
-                onImportWorld(worldMap);
-            } catch (err) {
-                alert(strings.msg_import_err);
-            }
+        dragCounter++;
+        if (dragOverlay) dragOverlay.classList.add('active');
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter === 0 && dragOverlay) {
+            dragOverlay.classList.remove('active');
         }
     };
 
+    const handleDrop = (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        if (dragOverlay) dragOverlay.classList.remove('active');
+
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/') && importFile) {
+            // Assign file to input
+            importFile.files = e.dataTransfer.files;
+
+            // Trigger UI update
+            updateWorldModalState();
+
+            // Open modal to show the selection
+            showWorldModal();
+        }
+    };
+
+    window.addEventListener('dragenter', handleDragEnter);
     window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('dragleave', handleDragLeave);
     window.addEventListener('drop', handleDrop);
 
     // Event: Import World
