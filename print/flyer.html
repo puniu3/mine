@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マイン・ワールドであそぼう！</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            font-family: "Hiragino Maru Gothic Pro", "Yu Gothic UI", "Meiryo", sans-serif;
+            -webkit-print-color-adjust: exact;
+            color: #333;
+        }
+        .sheet {
+            width: 210mm;
+            height: 297mm;
+            overflow: hidden;
+            position: relative;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Header */
+        .header {
+            width: 100%;
+            padding: 20px 0 10px;
+            text-align: center;
+            background: #fff;
+            z-index: 10;
+        }
+        .title {
+            font-size: 36px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 0;
+            text-shadow: 2px 2px 0px #eee;
+            border-bottom: 4px solid #4CA1AF;
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+
+        /* Hero Image (Game Screen Mockup) */
+        .hero-container {
+            width: 90%;
+            height: 35%; /* Approx 100mm */
+            margin: 10px auto;
+            border: 8px solid #333;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #4CA1AF, #C4E0E5);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        /* CSS Art for Game Elements */
+        .pixel-art {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Blocks grid size approx 30px for visual scale */
+        .block {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            box-sizing: border-box;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .grass { background-color: #388e3c; }
+        .dirt { background-color: #5d4037; }
+        .wood { background-color: #5d4037; border: 2px solid #4e342e; }
+        .leaves { background-color: #2e7d32; }
+        .cloud { background-color: #ffffff; opacity: 0.9; }
+        .stone { background-color: #757575; }
+
+        /* Constructing the scene */
+        /* Ground */
+        .ground-row-1 { bottom: 30px; }
+        .ground-row-0 { bottom: 0px; }
+
+        /* Player Character */
+        .player {
+            position: absolute;
+            bottom: 60px; /* On top of grass */
+            left: 40%;
+            width: 30px;
+            height: 60px;
+        }
+        .player-head {
+            width: 30px;
+            height: 30px;
+            background: #f1c27d; /* Skin */
+            border: 2px solid #333;
+            box-sizing: border-box;
+        }
+        .player-body {
+            width: 30px;
+            height: 30px;
+            background: #2196f3; /* Blue shirt */
+            border: 2px solid #333;
+            box-sizing: border-box;
+        }
+
+        /* UI Overlay Mockup */
+        .ui-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-family: monospace;
+            color: white;
+            font-size: 14px;
+            text-shadow: 1px 1px 0 #000;
+        }
+        .hotbar {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 2px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .slot {
+            width: 25px;
+            height: 25px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid #aaa;
+        }
+        .slot.active { border: 2px solid white; }
+
+        /* QR Code Section */
+        .qr-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            margin: 10px auto;
+            padding: 20px;
+            background-color: #e0f7fa;
+            border-radius: 20px;
+            border: 4px dashed #4CA1AF;
+            width: 80%;
+        }
+        .qr-code {
+            width: 150px;
+            height: 150px;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .qr-text h2 {
+            margin: 0 0 10px 0;
+            color: #006064;
+            font-size: 28px;
+        }
+        .qr-text p {
+            margin: 0;
+            font-size: 16px;
+            color: #00838f;
+        }
+        .btn-start {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #ff7043;
+            color: white;
+            font-weight: bold;
+            border-radius: 50px;
+            text-decoration: none;
+            box-shadow: 0 4px 0 #d84315;
+        }
+
+        /* Features Grid */
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 90%;
+            margin: 20px auto;
+        }
+        .feature-card {
+            background: #fff;
+            border: 3px solid #eee;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 5px 0 #ddd;
+        }
+        .feature-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .feature-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #555;
+            line-height: 1.4;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: auto;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #777;
+            font-size: 12px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="sheet">
+    <div class="header">
+        <h1 class="title">マイン・ワールドで あそぼう！</h1>
+    </div>
+
+    <!-- Game Screen Mockup -->
+    <div class="hero-container">
+        <!-- Sky & Clouds -->
+        <div class="block cloud" style="top: 30px; left: 50px; width: 60px;"></div>
+        <div class="block cloud" style="top: 60px; right: 80px; width: 90px;"></div>
+
+        <!-- Tree -->
+        <div class="block wood" style="bottom: 60px; left: 150px;"></div>
+        <div class="block wood" style="bottom: 90px; left: 150px;"></div>
+        <div class="block wood" style="bottom: 120px; left: 150px;"></div>
+        <div class="block leaves" style="bottom: 150px; left: 150px;"></div>
+        <div class="block leaves" style="bottom: 150px; left: 120px;"></div>
+        <div class="block leaves" style="bottom: 150px; left: 180px;"></div>
+        <div class="block leaves" style="bottom: 180px; left: 150px;"></div>
+
+        <!-- Ruins / Structure Mockup -->
+        <div class="block stone" style="bottom: 60px; right: 100px;"></div>
+        <div class="block stone" style="bottom: 60px; right: 70px;"></div>
+        <div class="block stone" style="bottom: 90px; right: 70px;"></div>
+        <div class="block stone" style="bottom: 90px; right: 100px; background: #ffd54f;"></div> <!-- Gold/Jackpot hint -->
+
+        <!-- Player -->
+        <div class="player">
+            <div class="player-head"></div>
+            <div class="player-body"></div>
+        </div>
+
+        <!-- Ground (Generated via JS or simple repetition manually for reliability in print) -->
+        <!-- Just doing a solid bar for simplicity in CSS art for print, but blocks look better -->
+        <div style="position: absolute; bottom: 0; width: 100%; height: 60px;">
+            <!-- Row 1 (Dirt) -->
+            <div style="width: 100%; height: 30px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAALUlEQVRYR+3QQREAAAzCsOFf5HJ4QAOtaxc9gwQJECBAgAABAgQIECBAgAABAn8F20QD/W9i3U0AAAAASUVORK5CYII='); background-color: #5d4037;"></div>
+            <!-- Row 2 (Grass) -->
+            <div style="width: 100%; height: 30px; background-color: #388e3c; border-top: 4px solid #4caf50;"></div>
+        </div>
+
+        <div class="ui-overlay">FPS: 60</div>
+        <div class="hotbar">
+            <div class="slot active" style="background-color: #5d4037;"></div> <!-- Dirt -->
+            <div class="slot" style="background-color: #757575;"></div> <!-- Stone -->
+            <div class="slot" style="background-color: #5d4037; border-color: #4e342e;"></div> <!-- Wood -->
+            <div class="slot" style="background-color: #d32f2f;"></div> <!-- TNT -->
+            <div class="slot" style="background-color: #ab47bc;"></div> <!-- Jump Pad -->
+        </div>
+    </div>
+
+    <!-- QR Code Section -->
+    <div class="qr-section">
+        <img class="qr-code" src="https://quickchart.io/qr?text=https://puniu3.github.io/mine/&size=200" alt="QR Code">
+        <div class="qr-text">
+            <h2>ここから スタート！</h2>
+            <p>スマホ や パソコン で</p>
+            <p><strong>https://puniu3.github.io/mine/</strong></p>
+            <p>に アクセスしてね！</p>
+        </div>
+    </div>
+
+    <!-- Features -->
+    <div class="features">
+        <div class="feature-card">
+            <span class="feature-icon">⛏️</span>
+            <div class="feature-text">ブロックを こわして<br>あつめよう！</div>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon">🏠</span>
+            <div class="feature-text">すきなものを<br>つくろう！</div>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon">🏃</span>
+            <div class="feature-text">ジャンプや ダッシュで<br>かけまわれ！</div>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon">🗺️</span>
+            <div class="feature-text">ひろい せかいを<br>たんけん！</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>Created by Puniu3 - Free to Play</p>
+    </div>
+</div>
+
+</body>
+</html>
